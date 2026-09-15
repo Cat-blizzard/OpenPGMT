@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# IDE
+.idea/
+.vscode/
+
+# Training artifacts
+runs/
+logs/
+*.ckpt
+*.pt
+*.pth
+wandb/
+
+# Data (raw/processed are large; scripts are tracked)
+data/raw/
+data/processed/
+
+# Env
+.env
+
+# Claude Code 本地配置
+.claude/settings.local.json

@@ -1,0 +1,5 @@
+# 脚本与 Python 代码强制 LF：本机 Windows 编辑、服务器 Linux 运行，CRLF 会破坏 .sh
+*.sh text eol=lf
+*.py text eol=lf
+*.bat text eol=crlf
+*.md text eol=lf

@@ -1,0 +1,11 @@
+# PGMT 服务器训练依赖 —— 路径 B: Isaac Gym PP4 + RTX 5880 Ada
+# Python 3.9（官方绑定 gym_39.so；若仅 gym_38.so 则 3.8）
+# torch 2.1.2 cu121 由 install_server_isaacgym.sh 单独安装（勿用 cu128）
+
+numpy<2              # isaacgym 绑定不兼容 numpy 2.x（py3.9→1.26.4 / py3.8→1.24.4 自动选择）
+rsl-rl-lib==2.1.2    # legged_gym 标准搭配（torch 2.1 时代）
+tensorboard
+pyyaml
+matplotlib
+pandas
+scipy
