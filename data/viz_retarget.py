@@ -13,31 +13,30 @@ import numpy as np
 
 
 def plot_frames(bvh_path: str, out_png: str, frames, title: str = ""):
+    """源（蓝）与 G1 精修后（绿）并排，双骨架骨盆对齐到原点。
+
+    关键：源 FK 先经 W 变换转到 G1 世界系（上=+z、米）再画——曾直接
+    画 rig 原始坐标（上=+x），骨架横躺且超出轴限制，观感全错。
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     from data.bvh import load_bvh
-    from data.retarget_lafan1 import G1_JOINT_NAMES, g1_forward_kinematics, retarget
+    from data.retarget_lafan1 import W, g1_forward_kinematics, retarget
+    from data.ik_refine import refine_full
 
     bvh = load_bvh(bvh_path)
-    data = retarget(bvh)
+    data = refine_full(retarget(bvh), bvh)
     T = data["qpos"].shape[0]
     frames = [min(f, T - 1) for f in frames]
 
-    # 源 FK（米，世界系）
-    gpos_src, _ = bvh.fk(unit_scale=float(data["scale"]))
+    # 源 FK（G1 世界系、米）
+    gpos_cm, _ = bvh.fk(unit_scale=1.0)
+    gpos_src = gpos_cm @ W.T * float(data["scale"])
 
     # G1 FK
-    q = data["qpos"]
-    g1_pos = g1_forward_kinematics(q, data["root_pos"], data["root_rot"])
-
-    def skeleton_lines(pos: dict, joints):
-        lines = []
-        for a, b in joints:
-            if a in pos and b in pos:
-                lines.append((pos[a], pos[b]))
-        return lines
+    g1_pos = g1_forward_kinematics(data["qpos"], data["root_pos"], data["root_rot"])
 
     src_joints = [("Hips", "Spine"), ("Spine", "Spine2"), ("Spine2", "Neck"),
                   ("Neck", "Head"),
@@ -68,27 +67,29 @@ def plot_frames(bvh_path: str, out_png: str, frames, title: str = ""):
     n = len(frames)
     fig, axes = plt.subplots(2, n, figsize=(4 * n, 9), subplot_kw={"projection": "3d"})
     for col, f in enumerate(frames):
-        # 源
+        # 源（骨盆对齐原点）
         ax = axes[0, col]
         src_pos = {name: gpos_src[f, bvh.joint_index(name)] for name in bvh.names}
+        root = src_pos["Hips"]
         for a, b in src_joints:
-            if a in src_pos and b in src_pos:
-                ax.plot([src_pos[a][0], src_pos[b][0]],
-                        [src_pos[a][1], src_pos[b][1]],
-                        [src_pos[a][2], src_pos[b][2]], "b-", lw=2)
-        ax.plot([src_pos["Hips"][0]], [src_pos["Hips"][1]], [src_pos["Hips"][2]], "ro", ms=6)
+            ax.plot([src_pos[a][0] - root[0], src_pos[b][0] - root[0]],
+                    [src_pos[a][1] - root[1], src_pos[b][1] - root[1]],
+                    [src_pos[a][2] - root[2], src_pos[b][2] - root[2]], "b-", lw=2)
+        ax.plot([0], [0], [0], "ro", ms=6)
         ax.set_title(f"source f={f}")
-        ax.set_xlim(-1, 1); ax.set_ylim(-1, 1); ax.set_zlim(0, 2)
-        ax.set_xlabel("x"); ax.set_ylabel("y"); ax.set_zlabel("z")
-        # G1
+        # G1（骨盆对齐原点）
         ax = axes[1, col]
+        g1_root = g1_pos["pelvis"][f]
         for a, b in g1_joints:
-            ax.plot([g1_pos[a][f, 0], g1_pos[b][f, 0]],
-                    [g1_pos[a][f, 1], g1_pos[b][f, 1]],
-                    [g1_pos[a][f, 2], g1_pos[b][f, 2]], "g-", lw=2)
-        ax.plot([g1_pos["pelvis"][f, 0]], [g1_pos["pelvis"][f, 1]], [g1_pos["pelvis"][f, 2]], "ro", ms=6)
+            ax.plot([g1_pos[a][f, 0] - g1_root[0], g1_pos[b][f, 0] - g1_root[0]],
+                    [g1_pos[a][f, 1] - g1_root[1], g1_pos[b][f, 1] - g1_root[1]],
+                    [g1_pos[a][f, 2] - g1_root[2], g1_pos[b][f, 2] - g1_root[2]], "g-", lw=2)
+        ax.plot([0], [0], [0], "ro", ms=6)
         ax.set_title(f"G1 f={f}")
-        ax.set_xlim(-1, 1); ax.set_ylim(-1, 1); ax.set_zlim(0, 2)
+    for ax in axes.flat:
+        # 骨盆在原点：足 ≈ −0.8m，源头顶 ≈ +0.65m
+        ax.set_xlim(-0.6, 0.6); ax.set_ylim(-0.6, 0.6); ax.set_zlim(-0.9, 0.7)
+        ax.set_box_aspect((1.2, 1.2, 1.6))
         ax.set_xlabel("x"); ax.set_ylabel("y"); ax.set_zlabel("z")
     fig.suptitle(title)
     os.makedirs(os.path.dirname(out_png), exist_ok=True)
