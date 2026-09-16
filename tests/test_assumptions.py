@@ -10,7 +10,7 @@ from pgmt.cfg.assumptions import ASSUMPTIONS, dump, get
 
 def test_all_assumptions_registered_in_order():
     ids = list(ASSUMPTIONS)
-    assert ids == [f"A{i}" for i in range(1, 17)], "A1–A16 应齐全且有序"
+    assert ids == [f"A{i}" for i in range(1, 18)], "A1–A17 应齐全且有序"
 
 
 def test_duplicate_ids_impossible():

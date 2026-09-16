@@ -189,6 +189,17 @@ class AdaptiveSamplingCfg:
     fail_boost: float = 1.0
 
 
+@dataclass(frozen=True)
+class DataFilterCfg:
+    """A17：训练数据过滤（M1.5c ground 类裁定）。
+
+    ground 类（躺地/翻滚）FK 误差 63 cm——G1 无脊柱且躺地时欧拉分解
+    退化，参考不可用；从训练集排除。摔倒池用 fall/push（28 cm）。
+    """
+
+    excluded_prefixes: tuple = ("ground",)
+
+
 # ---------------------------------------------------------------------------
 # 注册表
 # ---------------------------------------------------------------------------
@@ -235,6 +246,8 @@ ASSUMPTIONS: Dict[str, Assumption] = {
                      "论文只给 Ng=4、patch 5×5；MLP 规模按 A4 风格，位置输出 tanh×1m 保证落在地图内"),
     "A16": Assumption("A16", "adaptive_sampling", AdaptiveSamplingCfg(),
                      "论文只说失败频次提高采样概率并保留全覆盖；取线性软加权"),
+    "A17": Assumption("A17", "data_filter", DataFilterCfg(),
+                     "ground 类重定向退化（63 cm，G1 无脊柱），排除训练集；论文未提数据过滤"),
 }
 
 

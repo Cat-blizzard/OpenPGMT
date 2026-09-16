@@ -20,7 +20,7 @@ import os
 import numpy as np
 
 from data.bvh import load_bvh
-from data.retarget_lafan1 import W, g1_forward_kinematics, retarget
+from data.retarget_lafan1 import G1_JOINT_LIMITS, W, g1_forward_kinematics, retarget
 
 SRC_DIR = "data/raw/lafan1"
 NPZ_DIR = "data/processed/lafan1_g1"
@@ -47,24 +47,7 @@ KEYPOINTS = [
     ("RightToe", "right_ankle_roll_link"),
 ]
 
-# G1 关节限位（rad，源自 g1_29dof_rev_1_0.xml；右侧取镜像范围）
-_LEFT_LIMITS = {
-    "left_hip_pitch": (-2.5307, 2.8798), "left_hip_roll": (-0.5236, 2.9671),
-    "left_hip_yaw": (-2.7576, 2.7576), "left_knee": (-0.087267, 2.8798),
-    "left_ankle_pitch": (-0.87267, 0.5236), "left_ankle_roll": (-0.2618, 0.2618),
-    "right_hip_pitch": (-2.5307, 2.8798), "right_hip_roll": (-2.9671, 0.5236),
-    "right_hip_yaw": (-2.7576, 2.7576), "right_knee": (-0.087267, 2.8798),
-    "right_ankle_pitch": (-0.87267, 0.5236), "right_ankle_roll": (-0.2618, 0.2618),
-    "waist_yaw": (-2.618, 2.618), "waist_roll": (-0.52, 0.52), "waist_pitch": (-0.52, 0.52),
-    "left_shoulder_pitch": (-3.0892, 2.6704), "left_shoulder_roll": (-1.5882, 2.2515),
-    "left_shoulder_yaw": (-2.618, 2.618), "left_elbow": (-1.0472, 2.0944),
-    "left_wrist_roll": (-1.97222, 1.97222), "left_wrist_pitch": (-1.61443, 1.61443),
-    "left_wrist_yaw": (-1.61443, 1.61443),
-    "right_shoulder_pitch": (-3.0892, 2.6704), "right_shoulder_roll": (-2.2515, 1.5882),
-    "right_shoulder_yaw": (-2.618, 2.618), "right_elbow": (-1.0472, 2.0944),
-    "right_wrist_roll": (-1.97222, 1.97222), "right_wrist_pitch": (-1.61443, 1.61443),
-    "right_wrist_yaw": (-1.61443, 1.61443),
-}
+_LEFT_LIMITS = G1_JOINT_LIMITS
 
 
 def _motion_type(name: str) -> str:
@@ -77,7 +60,9 @@ def _motion_type(name: str) -> str:
 
 def evaluate(seq_name: str) -> dict:
     bvh = load_bvh(os.path.join(SRC_DIR, seq_name + ".bvh"))
-    data = retarget(bvh)
+    data_raw = retarget(bvh)
+    from data.ik_refine import refine_full
+    data = refine_full(data_raw, bvh)
     T = bvh.num_frames
     scale = float(data["scale"])
 
@@ -104,12 +89,12 @@ def evaluate(seq_name: str) -> dict:
     # 3. 速度尖峰
     spike = float((np.abs(data["qvel"]) > 30).mean())
 
-    # 4. 接触一致率：G1 FK 足速阈值法 vs 存储的源接触标签
+    # 4. 接触一致率：G1 FK 统一协议标签 vs 源统一协议标签（data_raw
+    # contacts = 源足端速度+高度+滤波；精修后重算同协议，非循环度量）
+    from data.retarget_lafan1 import contact_labels
     g1_foot = np.stack([g1["left_ankle_roll_link"], g1["right_ankle_roll_link"]], axis=1)
-    g1_vel = np.zeros_like(g1_foot)
-    g1_vel[1:] = (g1_foot[1:] - g1_foot[:-1]) / float(data["frame_time"])
-    g1_contact = np.linalg.norm(g1_vel, axis=-1) < 0.15
-    agree = (g1_contact == data["contacts"]).mean()
+    g1_contact = contact_labels(g1_foot, float(data["frame_time"]), 0.15)
+    agree = (g1_contact == data_raw["contacts"]).mean()
     contact_agree = float(agree * 100)
 
     # 5. 限位超限

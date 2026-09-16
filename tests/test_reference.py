@@ -34,6 +34,20 @@ def test_db_load_and_lengths(db):
     assert list(db.lengths()) == [100, 40]
 
 
+def test_db_excludes_ground_sequences(tmp_path):
+    """A17：ground 类（重定向退化 63 cm）从训练集排除。"""
+    for name, T in [("ground1_subject1", 30), ("walk1_subject1", 30)]:
+        qpos = np.zeros((T, 29))
+        np.savez(tmp_path / f"{name}.npz", qpos=qpos, qvel=qpos,
+                 root_pos=np.zeros((T, 3)),
+                 root_rot=np.tile(np.array([1, 0, 0, 0]), (T, 1)),
+                 contacts=np.zeros((T, 2), dtype=bool),
+                 frame_time=np.float32(1 / 30), joint_names=np.zeros(29))
+    db2 = MotionDatabase(str(tmp_path))
+    assert db2.num_sequences == 1
+    assert db2.seqs[0]["name"] == "walk1_subject1"
+
+
 def test_ref_at_interpolation(db):
     q, qd = db.ref_at(0, 10.5)
     assert q[0] == pytest.approx(0.105)  # 帧 10 与 11 的中点

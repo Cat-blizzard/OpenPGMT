@@ -33,11 +33,15 @@ class MotionDatabase:
 
     def __init__(self, npz_dir: str):
         self.seqs: List[Dict[str, np.ndarray]] = []
+        excluded = tuple(get("A17").value.excluded_prefixes)
         for f in sorted(os.listdir(npz_dir)):
             if not f.endswith(".npz"):
                 continue
+            name = f[:-4]
+            if name.startswith(excluded):
+                continue  # A17：ground 类重定向退化，排除训练集
             d = {k: v for k, v in np.load(os.path.join(npz_dir, f)).items()}
-            d["name"] = f[:-4]
+            d["name"] = name
             self.seqs.append(d)
         if not self.seqs:
             raise ValueError(f"{npz_dir} 中没有 npz 序列（先跑 data.retarget_lafan1）")

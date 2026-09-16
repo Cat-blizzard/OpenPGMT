@@ -54,6 +54,26 @@ G1_JOINT_NAMES: List[str] = [
 
 G1_PELVIS_HEIGHT = 0.793  # 米（XML pelvis pos）
 
+# G1 关节限位（rad，源自 g1_29dof_rev_1_0.xml；右侧取镜像范围）
+G1_JOINT_LIMITS = {
+    "left_hip_pitch": (-2.5307, 2.8798), "left_hip_roll": (-0.5236, 2.9671),
+    "left_hip_yaw": (-2.7576, 2.7576), "left_knee": (-0.087267, 2.8798),
+    "left_ankle_pitch": (-0.87267, 0.5236), "left_ankle_roll": (-0.2618, 0.2618),
+    "right_hip_pitch": (-2.5307, 2.8798), "right_hip_roll": (-2.9671, 0.5236),
+    "right_hip_yaw": (-2.7576, 2.7576), "right_knee": (-0.087267, 2.8798),
+    "right_ankle_pitch": (-0.87267, 0.5236), "right_ankle_roll": (-0.2618, 0.2618),
+    "waist_yaw": (-2.618, 2.618), "waist_roll": (-0.52, 0.52), "waist_pitch": (-0.52, 0.52),
+    "left_shoulder_pitch": (-3.0892, 2.6704), "left_shoulder_roll": (-1.5882, 2.2515),
+    "left_shoulder_yaw": (-2.618, 2.618), "left_elbow": (-1.0472, 2.0944),
+    "left_wrist_roll": (-1.97222, 1.97222), "left_wrist_pitch": (-1.61443, 1.61443),
+    "left_wrist_yaw": (-1.61443, 1.61443),
+    "right_shoulder_pitch": (-3.0892, 2.6704), "right_shoulder_roll": (-2.2515, 1.5882),
+    "right_shoulder_yaw": (-2.618, 2.618), "right_elbow": (-1.0472, 2.0944),
+    "right_wrist_roll": (-1.97222, 1.97222), "right_wrist_pitch": (-1.61443, 1.61443),
+    "right_wrist_yaw": (-1.61443, 1.61443),
+}
+
+
 # G1 静止骨架（左半 + 骨盆/腰/躯干；右半镜像生成）。
 # body: (parent, pos, quat[w,x,y,z])，取自 XML body pos/quat。
 _G1_REST_LEFT: Dict[str, Tuple[Optional[str], np.ndarray, np.ndarray]] = {
@@ -313,6 +333,30 @@ def _chain_of(joint: str) -> Optional[str]:
     return None
 
 
+def contact_labels(foot_pos: np.ndarray, frame_time: float,
+                   vel_thresh: float = 0.15, clearance: float = 0.05) -> np.ndarray:
+    """接触标签统一协议（M1.5c 升级）：足速阈值 + 高度条件 + 中值滤波。
+
+    foot_pos: (T, 2, 3) 双足踝位置（米）。规则：
+      1. 足速 < vel_thresh（原 A14 协议）
+      2. 踝 z < 地面 + clearance——地面 = 序列双踝 z 的 2% 分位
+         （对轻微穿地鲁棒；排除空中缓速帧，如摆动腿最高点附近）
+      3. 窗 5 中值滤波消除单帧闪烁
+    源侧（retarget）与 G1 侧（ik_refine._finalize、eval）共用，接触
+    一致率在同等协议下比较。
+    """
+    foot_vel = np.zeros_like(foot_pos)
+    foot_vel[1:] = (foot_pos[1:] - foot_pos[:-1]) / frame_time
+    slow = np.linalg.norm(foot_vel, axis=-1) < vel_thresh
+    ground_z = float(np.percentile(foot_pos[..., 2], 2))
+    low = foot_pos[..., 2] < ground_z + clearance
+    labels = slow & low
+    out = labels.copy()
+    for t in range(2, labels.shape[0] - 2):
+        out[t] = labels[t - 2:t + 3].mean(axis=0) > 0.5
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 重定向主体
 # ---------------------------------------------------------------------------
@@ -406,18 +450,19 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
     qpos = _gimbal_protect(qpos)
 
     # ---- wrap 到 (−π,π] → 时间连续化（真实大角度动作如侧手翻）→ 速度 ----
-    qpos = (qpos + np.pi) % (2 * np.pi) - np.pi
-    qpos = np.unwrap(qpos, axis=0)
-    qvel = np.zeros_like(qpos)
-    qvel[1:] = (qpos[1:] - qpos[:-1]) / bvh.frame_time
+    # wrap 到规范值（(−π,π]）作为导出的 qpos（环境的 PD 参考按规范
+    # 角度比较）；qvel 由 unwrap 后的连续序列差分
+    qpos_w = (qpos + np.pi) % (2 * np.pi) - np.pi
+    qpos_u = np.unwrap(qpos_w, axis=0)
+    qvel = np.zeros_like(qpos_u)
+    qvel[1:] = (qpos_u[1:] - qpos_u[:-1]) / bvh.frame_time
+    qpos = qpos_w
 
-    # ---- 接触标签：足端世界速度 < A14 阈值 0.15 m/s ----
+    # ---- 接触标签：统一协议（足速 + 高度 + 中值滤波，见 contact_labels） ----
     thresh = get("A14").value.foot_vel_thresh
-    foot_vel = np.zeros((T, 2, 3))
     foot_pos = np.stack([gpos[:, bvh.joint_index("LeftFoot")],
                          gpos[:, bvh.joint_index("RightFoot")]], axis=1)
-    foot_vel[1:] = (foot_pos[1:] - foot_pos[:-1]) / bvh.frame_time
-    contacts = np.linalg.norm(foot_vel, axis=-1) < thresh
+    contacts = contact_labels(foot_pos, bvh.frame_time, thresh)
 
     return {
         "joint_names": np.array(G1_JOINT_NAMES),
@@ -510,8 +555,12 @@ def _decompose_chain(R: np.ndarray, chain: str) -> List[np.ndarray]:
 
 
 def g1_forward_kinematics(qpos: np.ndarray, root_pos: Optional[np.ndarray] = None,
-                          root_quat: Optional[np.ndarray] = None) -> Dict[str, np.ndarray]:
-    """G1 前向运动学：qpos (T,29) → {body: (T,3) 世界位置}（可视化用）。"""
+                          root_quat: Optional[np.ndarray] = None,
+                          return_quats: bool = False) -> Dict[str, np.ndarray]:
+    """G1 前向运动学：qpos (T,29) → {body: (T,3) 世界位置}。
+
+    return_quats=True 时返回 (pos, quat) 两字典（IK 雅可比需要世界朝向）。
+    """
     T = qpos.shape[0]
     if root_pos is None:
         root_pos = np.zeros((T, 3))
@@ -548,6 +597,8 @@ def g1_forward_kinematics(qpos: np.ndarray, root_pos: Optional[np.ndarray] = Non
             r_rot = quat_mul(quat[parent], rest_quat)
         quat[body] = r_rot
         pos[body] = pos[parent] + quat_rot_vec(quat[parent], rest_pos)
+    if return_quats:
+        return pos, quat
     return pos
 
 
@@ -555,7 +606,8 @@ def g1_forward_kinematics(qpos: np.ndarray, root_pos: Optional[np.ndarray] = Non
 # 批量导出
 # ---------------------------------------------------------------------------
 
-def retarget_all(bvh_dir: str, out_dir: str, verbose: bool = True) -> List[str]:
+def retarget_all(bvh_dir: str, out_dir: str, verbose: bool = True,
+                 refine: bool = True) -> List[str]:
     os.makedirs(out_dir, exist_ok=True)
     outs = []
     for fname in sorted(os.listdir(bvh_dir)):
@@ -564,6 +616,9 @@ def retarget_all(bvh_dir: str, out_dir: str, verbose: bool = True) -> List[str]:
         path = os.path.join(bvh_dir, fname)
         try:
             data = retarget(load_bvh(path))
+            if refine:
+                from data.ik_refine import refine_full
+                data = refine_full(data, load_bvh(path))
         except (ValueError, AssertionError) as e:
             print(f"[跳过] {fname}: {e}")
             continue
@@ -580,5 +635,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="LAFAN1 BVH → G1 29-DoF 重定向")
     ap.add_argument("--bvh-dir", default="data/raw/lafan1")
     ap.add_argument("--out-dir", default="data/processed/lafan1_g1")
+    ap.add_argument("--no-ik", action="store_true", help="跳过 IK 精修（对比用）")
     args = ap.parse_args()
-    retarget_all(args.bvh_dir, args.out_dir)
+    retarget_all(args.bvh_dir, args.out_dir, refine=not args.no_ik)
