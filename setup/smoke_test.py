@@ -1,16 +1,20 @@
 #!/usr/bin/env python
-"""M0 冒烟测试 —— 在训练服务器上运行，验证 Isaac Gym × Blackwell 全链路。
+"""M0 冒烟测试 —— 在训练服务器上运行，验证 Isaac Gym PP4 全链路。
 
-三阶段（任一失败即退出，退出码 = 失败阶段编号，0 = 全过）:
-  Phase 1: torch + CUDA + sm_120（Blackwell）张量运算
+目标硬件（README「服务器安装与冒烟」）:
+  10× RTX 5880 Ada（sm_89，48GB/卡），驱动 580 / CUDA 13.0
+  PP4 官方绑定是 cu11.8 时代产物 → python 3.9 + torch 2.1.2 cu121
+
+三阶段（任一阶段失败即跳过其后阶段，退出码 = 失败阶段编号，0 = 全过）:
+  Phase 1: torch + CUDA + sm_89 张量运算
   Phase 2: Isaac Gym 物理仿真（128 env 自由落体箱，100 步）
   Phase 3: rsl-rl PPO 训练闭环（128 env 最小任务，10 iter）
 
 用法:
   python setup/smoke_test.py [--num-envs 128] [--steps 100] [--iters 10]
 
-注意: 本文件针对 Isaac Gym（社区 PP4 适配版）路径编写；
-      Isaac Lab 路径用 smoke_test_isaaclab.py。
+注意: 本文件针对 Isaac Gym（官方 PP4）路径编写；
+      Isaac Lab 兜底路径用 smoke_test_isaaclab.py。
 """
 
 from __future__ import annotations
@@ -22,7 +26,7 @@ import sys
 
 def phase1() -> bool:
     print("\n" + "=" * 60)
-    print("Phase 1: torch + CUDA + Blackwell")
+    print("Phase 1: torch + CUDA")
     print("=" * 60)
     import torch
 
@@ -34,10 +38,12 @@ def phase1() -> bool:
 
     cap = torch.cuda.get_device_capability(0)
     print(f"[i] 计算能力 sm_{cap[0]}{cap[1]}")
-    if cap[0] < 12:
-        print(f"[WARN] 目标为 Blackwell sm_120，当前 sm_{cap[0]}{cap[1]}；继续但不代表目标硬件")
-    if torch.version.cuda != "12.8":
-        print(f"[WARN] torch 为 cu{torch.version.cuda}，期望 cu128（Blackwell 需要）")
+    # 目标 Ada sm_89；此处只做信息提示，不作为失败判据
+    # （换机器/换卡时不该让冒烟失败，真正判据是下面 Phase 2 的物理仿真）
+    if (cap[0], cap[1]) != (8, 9):
+        print(f"[WARN] 非目标架构（期望 sm_89 / RTX 5880 Ada），当前 sm_{cap[0]}{cap[1]}；继续")
+    if torch.version.cuda != "12.1":
+        print(f"[WARN] torch 为 cu{torch.version.cuda}，PP4 官方绑定期望 cu121（torch 2.1.2）")
 
     try:
         x = torch.randn(2048, 2048, device="cuda:0")
@@ -48,11 +54,15 @@ def phase1() -> bool:
         print(f"[FAIL] GPU 运算失败: {e}")
         return False
 
-    driver = subprocess.run(
-        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
-        capture_output=True, text=True,
-    ).stdout.strip().splitlines()[0]
-    print(f"[i] 驱动: {driver}")
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+            capture_output=True, text=True, check=False,
+        ).stdout.strip().splitlines()
+        print(f"[i] 驱动: {out[0] if out else '(nvidia-smi 无输出)'}")
+    except FileNotFoundError:
+        print("[WARN] 未找到 nvidia-smi（不影响 torch 判据）")
+
     print("[PASS] Phase 1")
     return True
 
@@ -155,10 +165,12 @@ def phase3(num_envs: int, iters: int) -> bool:
     class SmokeVecEnv(VecEnv):
         """最小任务：自由箱体受控，追踪随机目标点。观测 9 维，动作 3 维（力）。
 
-        按 rsl_rl 2.3.1 的 VecEnv 约定:
+        按 rsl-rl 2.1.2（requirements.txt 的钉版）的 VecEnv 约定:
           - get_observations()/reset() 返回 (obs_tensor, extras)，
             特权观测经 extras["observations"]["critic"] 传递
           - step() 返回 (obs, rewards, dones, infos)
+        依据: rsl_rl v2.1.2 的 vec_env.VecEnv 与 OnPolicyRunner（后者在
+        __init__ 与 learn() 中均读取 extras["observations"]["critic"]）。
         """
 
         def __init__(self, num_envs: int, device: str = "cuda:0"):
@@ -293,21 +305,34 @@ def main():
     p.add_argument("--iters", type=int, default=10)
     args = p.parse_args()
 
-    results = []
-    results.append(("Phase 1: torch/CUDA/Blackwell", phase1()))
-    results.append(("Phase 2: Isaac Gym 物理", phase2(args.num_envs, args.steps)))
-    results.append(("Phase 3: rsl-rl PPO", phase3(args.num_envs, args.iters)))
+    # 顺序执行并在首个失败处停止：后续阶段依赖前序阶段的可用性，
+    # 继续跑只会产生级联噪声报告（旧版会跑完全部阶段再把退出码归给首个失败项）。
+    phases = [
+        ("Phase 1: torch/CUDA", lambda: phase1()),
+        ("Phase 2: Isaac Gym 物理", lambda: phase2(args.num_envs, args.steps)),
+        ("Phase 3: rsl-rl PPO", lambda: phase3(args.num_envs, args.iters)),
+    ]
+    failed = 0
+    for i, (name, fn) in enumerate(phases, 1):
+        if fn():
+            continue
+        failed = i
+        break
 
     print("\n" + "=" * 60)
     print("冒烟测试汇总")
     print("=" * 60)
-    failed = 0
-    for i, (name, ok) in enumerate(results, 1):
-        print(f"  [{'PASS' if ok else 'FAIL'}] {name}")
-        if not ok and failed == 0:
-            failed = i
+    for i, (name, _) in enumerate(phases, 1):
+        if failed == 0 or i < failed:
+            status = "PASS"
+        elif i == failed:
+            status = "FAIL"
+        else:
+            status = "SKIP（前序阶段失败）"
+        print(f"  [{status}] {name}")
+
     if failed == 0:
-        print("\n全部通过 —— 可在本机开始 M2 训练。")
+        print("\n全部通过 —— PP4 路径可用，可开始 M2 训练。")
     else:
         print(f"\n阶段 {failed} 失败 —— 按 README「服务器安装与冒烟」决策树处置。")
     sys.exit(failed)

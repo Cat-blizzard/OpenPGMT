@@ -1,11 +1,21 @@
 # PGMT 服务器训练依赖 —— 路径 B: Isaac Gym PP4 + RTX 5880 Ada
 # Python 3.9（官方绑定 gym_39.so；若仅 gym_38.so 则 3.8）
 # torch 2.1.2 cu121 由 install_server_isaacgym.sh 单独安装（勿用 cu128）
+#
+# 本机开发（Windows，纯逻辑单测）用 setup/requirements-dev.txt，
+# 由 install_local.bat 安装 —— 两边 torch 均为 2.1.2，保证数值行为一致。
 
 numpy<2              # isaacgym 绑定不兼容 numpy 2.x（py3.9→1.26.4 / py3.8→1.24.4 自动选择）
 rsl-rl-lib==2.1.2    # legged_gym 标准搭配（torch 2.1 时代）
+                     # 注意: 2.1.2 的 VecEnv.get_observations() 返回 (obs, extras)，
+                     # 特权观测走 extras["observations"]["critic"] —— setup/smoke_test.py
+                     # 按此约定编写；升级 rsl-rl 需同步改该文件与训练入口。
 tensorboard
 pyyaml
 matplotlib
 pandas
 scipy
+pytest               # 服务器上也能跑 tests/（纯逻辑部分是 CPU-only，可当回归门禁）
+                     # 注意: 数据管线产物 data/processed/lafan1_g1/*.npz 被 .gitignore
+                     # 忽略，需在服务器上用 `python -m data.retarget_lafan1` 重新生成，
+                     # 之后 15 个 data-gated 测试才会真正执行（否则 skip）。

@@ -1,12 +1,16 @@
 """端到端集成：Stage 1 / Stage 2 完整策略组装（论文 Fig.2 架构）。
 
 把 History Encoder、IFM、Glimpse Encoder、Actor、Multi-Head Critic
-按论文接线拼成完整前向，验证维度与梯度通路。环境层（M2）接入时
-观测张量由此处的 mock 形状定义。
+按论文接线拼成完整前向，验证维度与梯度通路。张量形状取自
+`pgmt/contracts.py` 与 `pgmt/envs/observations.py`（观测契约的唯一出处），
+不再是本文件里的局部 mock 常量。断言中的字面量（256/4/29）刻意保留为
+**独立期望值**，这样假设（A3/A4/A15）被改动时测试会失败而不是跟着变。
 """
 
 import torch
 
+from pgmt.contracts import HISTORY_LEN, OBS_DIM, REF_FRAME_DIM
+from pgmt.envs.observations import PRIV_DIM  # A9 特权观测维度（唯一出处，勿再硬编码）
 from pgmt.policy.actor import Actor
 from pgmt.policy.glimpse_encoder import TerrainGlimpseEncoder
 from pgmt.policy.history_encoder import HistoryEncoder
@@ -17,15 +21,13 @@ from pgmt.policy.multi_head_critic import (
     MultiHeadCritic,
 )
 
-PRIV_DIM = 20  # A9 特权观测集展开维度（环境层最终确认）
-
 
 def _stage1_inputs(B=8):
     return {
-        "o": torch.randn(B, 96),          # o_t
-        "H": torch.randn(B, 10, 96),      # 10 帧历史
-        "C": torch.randn(B, 6, 61),       # C^K 未来参考帧
-        "priv": torch.randn(B, PRIV_DIM),
+        "o": torch.randn(B, OBS_DIM),               # o_t（契约：96）
+        "H": torch.randn(B, HISTORY_LEN, OBS_DIM),  # H_t（契约：10×96，不含 o_t）
+        "C": torch.randn(B, 6, REF_FRAME_DIM),      # C^K（论文 Eq.1：6×61）
+        "priv": torch.randn(B, PRIV_DIM),           # A9 特权观测
     }
 
 

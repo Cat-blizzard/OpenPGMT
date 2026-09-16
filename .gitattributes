@@ -3,3 +3,20 @@
 *.py text eol=lf
 *.bat text eol=crlf
 *.md text eol=lf
+
+# 配置与文本资源同样固定行尾（否则 requirements.txt 会随 core.autocrlf 漂移）
+*.txt text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+
+# 二进制资源：禁止行尾转换与 diff
+# （仓库内实际包含的二进制只有 eval/viz/*.png；*.npz / *.pdf / *.bvh 已被
+#  .gitignore 排除，此处保留规则是为了将来若改用 git-lfs 跟踪数据时仍然正确）
+*.npz binary
+*.png binary
+*.jpg binary
+*.pdf binary
+*.bvh -text
+

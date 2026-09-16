@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-"""M0 冒烟测试 —— Isaac Lab 路径（服务器运行）。
+"""M0 冒烟测试 —— Isaac Lab 路径（兜底，服务器运行）。
 
 两阶段:
-  Phase 1: torch + CUDA + sm_120（Blackwell）张量运算
+  Phase 1: torch + CUDA 张量运算
   Phase 2: Isaac Lab 物理仿真（headless 启动 + 自由落体箱 + 100 步）
 
 说明:
   - 完整 PPO 训练闭环在 M2 随真实环境一起验证（isaaclab_rl + manager-based env）。
   - 本文件按 Isaac Lab 2.2/2.3 的公开 API 编写，首次在服务器运行时若报
     API 差异（Isaac Lab 迭代快），按报错微调即可，这本身就是 M0 的验证目的。
+  - 仅当 PP4 路径（setup/install_server_isaacgym.sh + smoke_test.py）失败时才走这里。
 
 用法:
   python setup/smoke_test_isaaclab.py [--steps 100]
@@ -23,7 +24,7 @@ import sys
 
 def phase1() -> bool:
     print("\n" + "=" * 60)
-    print("Phase 1: torch + CUDA + Blackwell")
+    print("Phase 1: torch + CUDA")
     print("=" * 60)
     import torch
 
@@ -35,8 +36,9 @@ def phase1() -> bool:
 
     cap = torch.cuda.get_device_capability(0)
     print(f"[i] 计算能力 sm_{cap[0]}{cap[1]}")
-    if cap[0] < 12:
-        print(f"[WARN] 目标为 Blackwell sm_120，当前 sm_{cap[0]}{cap[1]}；继续但不代表目标硬件")
+    # 本路径（Isaac Lab + cu128）同样可跑在 Ada sm_89 上，只做信息提示
+    if (cap[0], cap[1]) != (8, 9):
+        print(f"[WARN] 非目标架构（期望 sm_89 / RTX 5880 Ada），当前 sm_{cap[0]}{cap[1]}；继续")
 
     try:
         x = torch.randn(2048, 2048, device="cuda:0")
@@ -47,11 +49,15 @@ def phase1() -> bool:
         print(f"[FAIL] GPU 运算失败: {e}")
         return False
 
-    driver = subprocess.run(
-        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
-        capture_output=True, text=True,
-    ).stdout.strip().splitlines()[0]
-    print(f"[i] 驱动: {driver}")
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+            capture_output=True, text=True, check=False,
+        ).stdout.strip().splitlines()
+        print(f"[i] 驱动: {out[0] if out else '(nvidia-smi 无输出)'}")
+    except FileNotFoundError:
+        print("[WARN] 未找到 nvidia-smi（不影响 torch 判据）")
+
     print("[PASS] Phase 1")
     return True
 
@@ -62,6 +68,7 @@ def phase2(steps: int) -> bool:
     print("=" * 60)
 
     # AppLauncher 必须在导入其他 isaaclab 模块之前初始化
+    simulation_app = None
     try:
         from isaaclab.app import AppLauncher
 
@@ -73,6 +80,7 @@ def phase2(steps: int) -> bool:
         print("      检查: isaaclab 安装完整性、驱动版本、--headless 环境（DISPLAY 变量）。")
         return False
 
+    sim = None
     try:
         import torch
 
@@ -111,14 +119,23 @@ def phase2(steps: int) -> bool:
         assert (z > 0.2).all() and (z < 0.6).all(), \
             f"箱体高度异常: z ∈ [{z.min():.3f}, {z.max():.3f}]（预期 ~0.25）"
         print(f"[i] 箱体静止高度 z ∈ [{z.min():.3f}, {z.max():.3f}]，物理仿真 OK")
-
-        sim.close()
-        simulation_app.close()
     except Exception as e:
         import traceback
         traceback.print_exc()
         print(f"[FAIL] Isaac Lab 物理仿真失败: {e}")
         return False
+    finally:
+        # 无论成败都要释放：失败路径不关会留下 Isaac Sim 进程占住 GPU
+        try:
+            if sim is not None:
+                sim.close()
+        except Exception:
+            pass
+        try:
+            if simulation_app is not None:
+                simulation_app.close()
+        except Exception:
+            pass
 
     print("[PASS] Phase 2")
     return True
@@ -129,21 +146,32 @@ def main():
     p.add_argument("--steps", type=int, default=100)
     args = p.parse_args()
 
-    results = [
-        ("Phase 1: torch/CUDA/Blackwell", phase1()),
-        ("Phase 2: Isaac Lab 物理", phase2(args.steps)),
+    # 首个失败即停止（Phase 2 依赖 Phase 1 的 torch/CUDA 可用性）
+    phases = [
+        ("Phase 1: torch/CUDA", phase1),
+        ("Phase 2: Isaac Lab 物理", lambda: phase2(args.steps)),
     ]
+    failed = 0
+    for i, (name, fn) in enumerate(phases, 1):
+        if fn():
+            continue
+        failed = i
+        break
 
     print("\n" + "=" * 60)
     print("冒烟测试汇总（Isaac Lab 路径）")
     print("=" * 60)
-    failed = 0
-    for i, (name, ok) in enumerate(results, 1):
-        print(f"  [{'PASS' if ok else 'FAIL'}] {name}")
-        if not ok and failed == 0:
-            failed = i
+    for i, (name, _) in enumerate(phases, 1):
+        if failed == 0 or i < failed:
+            status = "PASS"
+        elif i == failed:
+            status = "FAIL"
+        else:
+            status = "SKIP（前序阶段失败）"
+        print(f"  [{status}] {name}")
+
     if failed == 0:
-        print("\n全部通过 —— Isaac Lab × Blackwell 可用，M2 按 Isaac Lab API 编写环境。")
+        print("\n全部通过 —— Isaac Lab 路径可用，M2 按 Isaac Lab API 编写环境。")
     else:
         print(f"\n阶段 {failed} 失败 —— 按报错信息处置或反馈给开发侧。")
     sys.exit(failed)

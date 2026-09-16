@@ -32,7 +32,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from pgmt.cfg.assumptions import get
-from data.bvh import BVH, load_bvh, quat_inv, quat_mul, quat_rot_vec
+from data.bvh import BVH, load_bvh, quat_inv, quat_mul, quat_rot_vec, quat_to_mat
 
 # ---------------------------------------------------------------------------
 # G1 目标定义（源自 unitree_rl_gym/resources/robots/g1_description/
@@ -357,6 +357,27 @@ def contact_labels(foot_pos: np.ndarray, frame_time: float,
     return out
 
 
+def _estimate_scale(gpos_cm: np.ndarray, bvh: BVH) -> float:
+    """骨骼缩放：G1 骨盆高 / P90 源腿骨链长（大腿 + 小腿，cm）。
+
+    骨链长是刚体量，与姿态无关；旧版用"髋高 − 足底高度"（世界竖直
+    差），躺地时髋足同高导致尺度爆炸（ground1 0.0318 vs walk 0.0094）。
+    注意 LAFAN1 命名：LeftUpLeg 关节在髋部（Hips→LeftUpLeg 只是髋宽
+    偏移 ~11cm），大腿 = LeftUpLeg→LeftLeg，小腿 = LeftLeg→LeftFoot。
+    """
+    chains = []
+    for side in ("Left", "Right"):
+        hip_j = bvh.joint_index(side + "UpLeg")  # 髋关节（大腿起点）
+        knee = bvh.joint_index(side + "Leg")     # 膝关节
+        ankle = bvh.joint_index(side + "Foot")   # 踝关节
+        chains.append(np.linalg.norm(gpos_cm[:, hip_j] - gpos_cm[:, knee], axis=-1)
+                      + np.linalg.norm(gpos_cm[:, knee] - gpos_cm[:, ankle], axis=-1))
+    leg_cm = np.percentile(np.minimum(chains[0], chains[1]), 90)
+    if leg_cm < 1e-6:
+        raise ValueError("腿长估计异常")
+    return G1_PELVIS_HEIGHT / leg_cm  # m/cm
+
+
 # ---------------------------------------------------------------------------
 # 重定向主体
 # ---------------------------------------------------------------------------
@@ -373,15 +394,12 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
 
     T = bvh.num_frames
 
-    # ---- 尺度：P90 腿长（髋高 − 足底最小高度，世界系，cm）→ 米 ----
+    # ---- 尺度：P90 源腿骨链长（髋→膝 + 膝→踝，姿势无关）→ 米 ----
+    # 不能用"髋高 − 足底高度"（世界竖直差）：躺地时髋足同高，竖直差
+    # →0 → 尺度爆炸（实测 ground1 scale=0.0318 vs walk 0.0094，源骨架
+    # 被放大 3.4 倍）。骨长是刚体量，任何姿态下不变。
     gpos_cm, grot = bvh.fk(unit_scale=1.0)  # 世界位置（cm）/ 朝向
-    hip_y = gpos_cm[:, bvh.joint_index("Hips"), 1]
-    lf_y = gpos_cm[:, bvh.joint_index("LeftFoot"), 1]
-    rf_y = gpos_cm[:, bvh.joint_index("RightFoot"), 1]
-    leg_cm = np.percentile(hip_y - np.minimum(lf_y, rf_y), 90)
-    if leg_cm < 1e-6:
-        raise ValueError("腿长估计异常")
-    scale = G1_PELVIS_HEIGHT / leg_cm  # m/cm
+    scale = _estimate_scale(gpos_cm, bvh)
 
     # ---- 世界 → G1 系 ----
     gpos = gpos_cm @ W.T * scale  # (T,J,3) G1 系，米
@@ -478,6 +496,56 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
 
 def _parent_of(bvh: BVH, joint: str) -> str:
     return bvh.names[bvh.parents[bvh.joint_index(joint)]]
+
+
+# ---------------------------------------------------------------------------
+# 源根朝向 ↔ G1 基座朝向（唯一换算出处）
+# ---------------------------------------------------------------------------
+
+def source_root_quat_to_g1_base(q_src_rig: np.ndarray) -> np.ndarray:
+    """源（rig 约定）根朝向 → G1 基座约定朝向。
+
+    `retarget` 里的两步是::
+
+        grot_g1  = qw ⊗ q_src            # 世界 → G1 世界系（qw = _qW()，作为左乘基变换）
+        root_rot = grot_g1 ⊗ Q_MRIG_INV  # rig 局部轴 → G1 基座轴（前+x/左+y/上+z）
+
+    于是 ``root_rot = (qw ⊗ q_src) ⊗ Q_MRIG_INV``。
+
+    **乘法顺序陷阱**：qw 必须左乘（它是基变换，作用在源局部旋转之外），
+    而 Q_MRIG_INV 必须右乘（它把 rig 的局部轴约定换到 G1 的基座轴约定）。
+    写成 ``qw ⊗ q_src ⊗ Q_MRIG_INV`` 之外的任何组合（例如把 qw 右乘、
+    或漏掉 Q_MRIG_INV）都会得到错误朝向 —— 这正是对照评估里最易错的一处，
+    故单独抽成本函数并配单测。
+
+    Args:
+        q_src_rig: (...,4) 源骨架根关节世界朝向，[w,x,y,z]（如 ``bvh.fk()`` 的输出）
+    Returns:
+        (...,4) G1 基座朝向
+    """
+    q_src_rig = np.asarray(q_src_rig, dtype=np.float64)
+    qw = _qW()
+    shape = q_src_rig.shape[:-1]
+    return quat_mul(
+        quat_mul(np.tile(qw, (*shape, 1)), q_src_rig),
+        np.tile(Q_MRIG_INV, (*shape, 1)),
+    )
+
+
+def relative_rotation_angle_deg(q_a: np.ndarray, q_b: np.ndarray) -> np.ndarray:
+    """两个四元数所代表旋转之间的最小夹角（度）。
+
+    数值上取 ``trace`` 公式：``R_rel = Raᵀ·Rb``，夹角 ``= acos((tr(R_rel)−1)/2)``。
+    相比 ``2·acos(|w(rel)|)``，它在接近 0°/180° 两端更稳定。
+
+    符号歧义由公式本身消解 —— q 与 −q 对应同一个 R，故无需额外取绝对值
+    （`quat_to_mat` 是二次型，天然对整体符号不变）。
+    """
+    q_a = np.asarray(q_a, dtype=np.float64)
+    q_b = np.asarray(q_b, dtype=np.float64)
+    R_rel = np.swapaxes(quat_to_mat(q_a), -1, -2) @ quat_to_mat(q_b)
+    tr = np.trace(R_rel, axis1=-2, axis2=-1)
+    return np.degrees(np.arccos(np.clip((tr - 1.0) / 2.0, -1.0, 1.0)))
 
 
 def _chain_joints(chain: str) -> List[str]:

@@ -65,10 +65,7 @@ def test_knee_reconstruction_error_small(walk):
     bvh = load_bvh(os.path.join(DATA_DIR, "walk1_subject1.bvh"))
     T = bvh.num_frames
     gpos_cm, grot = bvh.fk(unit_scale=1.0)
-    hip_y = gpos_cm[:, bvh.joint_index("Hips"), 1]
-    lf_y = gpos_cm[:, bvh.joint_index("LeftFoot"), 1]
-    rf_y = gpos_cm[:, bvh.joint_index("RightFoot"), 1]
-    scale = R.G1_PELVIS_HEIGHT / np.percentile(hip_y - np.minimum(lf_y, rf_y), 90)
+    scale = R._estimate_scale(gpos_cm, bvh)
     grot_g1 = R.quat_mul(np.tile(R._qW(), (T, 1, 1)), grot)
     Rc = R._mat(grot_g1[:, bvh.joint_index("LeftLeg")])
     Rp = R._mat(grot_g1[:, bvh.joint_index("LeftUpLeg")])
@@ -91,6 +88,16 @@ def test_knee_reconstruction_error_small(walk):
 def test_scale_in_m_per_cm(walk):
     # 身高比例: LAFAN1 cm → G1 米, 比例应在 0.008~0.012 之间
     assert 0.006 < float(walk["scale"]) < 0.014
+
+
+def test_scale_pose_invariant_lying_down():
+    """躺地序列尺度不得爆炸（旧版竖直差法 ground1 scale=0.0318）。
+
+    回归防护：髋高−足底高度的竖直差在躺地时→0，骨链长法则姿态无关。
+    """
+    bvh = load_bvh(os.path.join(DATA_DIR, "ground1_subject1.bvh"))
+    d = retarget(bvh)
+    assert float(d["scale"]) < 0.015, f"躺地序列尺度异常: {d['scale']}"
 
 
 def test_fk_matches_manual_composition():

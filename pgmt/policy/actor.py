@@ -14,10 +14,9 @@ import torch
 import torch.nn as nn
 
 from pgmt.cfg.assumptions import get
+from pgmt.contracts import ACT_DIM as _ACT_DIM  # 29，唯一出处 pgmt/contracts.py
+from pgmt.contracts import OBS_DIM as _OBS_DIM  # 96
 from pgmt.policy.mlp import MLP
-
-_OBS_DIM = 96
-_ACT_DIM = 29  # G1 29-DoF 关节位置目标
 
 
 class Actor(nn.Module):

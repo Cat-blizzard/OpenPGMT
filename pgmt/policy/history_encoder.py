@@ -14,9 +14,8 @@ import torch
 import torch.nn as nn
 
 from pgmt.cfg.assumptions import get
+from pgmt.contracts import OBS_DIM as _OBS_DIM  # 96，唯一出处 pgmt/contracts.py
 from pgmt.policy.mhca import MHCA
-
-_OBS_DIM = 96  # 论文 §III：e_t(6)+ω_t(3)+q_t(29)+q̇_t(29)+a_{t−1}(29)
 
 
 class HistoryEncoder(nn.Module):

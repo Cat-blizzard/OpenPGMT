@@ -49,10 +49,20 @@ nvidia-smi --query-gpu=name,driver_version,compute_cap --format=csv,noheader
 
 echo "===== 1. 自动确定 Python 版本（按官方绑定） ====="
 if [[ -z "$PYTHON_VER" ]]; then
-  MAXPY=$(tar -tzf "$ISAACGYM_TAR" | grep -oE "gym_3[0-9]\.so" | grep -oE "3[0-9]" | sort -n | tail -1)
-  PYTHON_VER="3.${MAXPY:-8}"
-  echo "[i] 官方绑定最高支持 Python $PYTHON_VER"
+  # 从 gym_XX.so 提取次版本号。注意：gym_39.so 中 "39" 的 3 已是主版本，
+  # 不能再拼 "3." 前缀（旧版写法 grep -oE "3[0-9]" + "3.$X" 会得到 3.39）。
+  # `|| true` 保护：set -e 下管道无匹配会中止脚本，走不到兜底分支。
+  BINDING_VER=$(tar -tzf "$ISAACGYM_TAR" 2>/dev/null \
+    | grep -oE "gym_3[0-9]\.so" | grep -oE "[0-9]+" | sort -n | tail -1 || true)
+  if [[ -n "$BINDING_VER" ]]; then
+    PYTHON_VER="3.${BINDING_VER}"
+    echo "[i] 官方绑定最高支持 Python $PYTHON_VER"
+  else
+    PYTHON_VER="3.9"
+    echo "[!] 包内未找到 gym_3X.so 绑定，按 3.9 兜底（如需指定请用 --python）"
+  fi
 fi
+echo "[i] 将创建 conda 环境 python=$PYTHON_VER"
 
 if conda env list | grep -qE "^${ENV_NAME}[[:space:]]"; then
   echo "[i] conda 环境 ${ENV_NAME} 已存在，复用"
@@ -81,7 +91,17 @@ if python -c "import isaacgym" 2>/dev/null; then
 else
   TMPD=$(mktemp -d)
   tar -xzf "$ISAACGYM_TAR" -C "$TMPD"
-  pip install -e "$TMPD/isaacgym/python" || pip install "$TMPD/isaacgym/python"
+  # 注意：-e（editable）会在 site-packages 留一个指向上面的临时目录的
+  # egg-link，/tmp 被清理后 import 失效。因此解压到持久位置再 -e 安装。
+  DEST="${ISAACGYM_DIR:-$HOME/isaacgym}"
+  if [[ "$DEST" != "$TMPD" ]]; then
+    mkdir -p "$(dirname "$DEST")"
+    rm -rf "$DEST"
+    cp -r "$TMPD/isaacgym" "$DEST"
+    echo "[i] 包已解压到持久路径: $DEST（避免 /tmp 清理后 egg-link 失效）"
+  fi
+  pip install -e "$DEST/python" || pip install "$DEST/python"
+  rm -rf "$TMPD"
 fi
 
 echo "===== 5. 冒烟测试 ====="
@@ -93,4 +113,5 @@ fi
 
 echo "===== 完成 ====="
 echo "conda activate ${ENV_NAME} && python setup/smoke_test.py   # 随时重跑冒烟"
-echo "多卡并行: 每个训练 run 一个进程, CUDA_VISIBLE_DEVICES=k python pgmt/train/train_stage1.py"
+echo "跑本机单测: pip install pytest matplotlib && python -m pytest tests -q"
+echo "多卡并行: 每个训练 run 一个进程, CUDA_VISIBLE_DEVICES=k python -m pgmt.train.train_stage1（M2 交付后可用）"

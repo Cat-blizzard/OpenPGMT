@@ -25,6 +25,10 @@ fi
 TAR="$1"
 ARCH=""
 if [[ $# -ge 2 && "$2" == "--arch" ]]; then
+  if [[ $# -lt 3 ]]; then
+    echo "[!] --arch 需要取值，例如 --arch sm_89"
+    exit 1
+  fi
   ARCH="$3"
 fi
 
@@ -41,7 +45,8 @@ if [[ -z "$BINDINGS" ]]; then
   echo "[!] 未找到 gym_3X.so 绑定，包结构可能异常"
 else
   echo "$BINDINGS" | sed 's/^/  /'
-  MAXPY=$(echo "$BINDINGS" | grep -oE "3[0-9]" | sort -n | tail -1)
+  # gym_39.so 中 "39" 的 3 已是主版本号，不可再拼 "3." 前缀（旧写法会打印 3.39）
+  MAXPY=$(echo "$BINDINGS" | grep -oE "[0-9]+" | sort -n | tail -1)
   echo "[结论] 官方绑定支持的最高 Python: 3.$MAXPY"
 fi
 
@@ -80,14 +85,15 @@ else
     elif cuobjdump --list-ptx "$SO" | grep -qE "compute_${ARCH_NUM}"; then
       echo "[结论] 含 compute_${ARCH_NUM} PTX（可 JIT）—— PP4 可运行"
     else
-      # PTX 向前兼容: 低版本 compute_X 的 PTX 可 JIT 到更高架构
-      MAXPTX=$(cuobjdump --list-ptx "$SO" | grep -oE "compute_[0-9]+" | sort -u | tail -1)
+      # PTX 向前兼容: 低版本 compute_X 的 PTX 可 JIT 到更高架构。
+      # 必须按数值比较，不能字典序（compute_100 < compute_90，三字节架构号会取错）
+      MAXPTX=$(cuobjdump --list-ptx "$SO" | grep -oE "compute_[0-9]+" \
+        | grep -oE "[0-9]+" | sort -n | tail -1)
       if [[ -n "$MAXPTX" ]]; then
-        MAXPTX_NUM=$(echo "$MAXPTX" | grep -oE "[0-9]+")
-        if [[ "$MAXPTX_NUM" -le "$ARCH_NUM" ]]; then
-          echo "[结论] 最高 PTX 为 $MAXPTX，可 JIT 至 $ARCH（PTX 向前兼容）—— PP4 可运行"
+        if [[ "$MAXPTX" -le "$ARCH_NUM" ]]; then
+          echo "[结论] 最高 PTX 为 compute_$MAXPTX，可 JIT 至 $ARCH（PTX 向前兼容）—— PP4 可运行"
         else
-          echo "[结论] 无 $ARCH 内核且 PTX 不向前兼容 —— PP4 在本机 GPU 上无解，转 Isaac Lab"
+          echo "[结论] 无 $ARCH 内核且 PTX 不向前兼容（最高 compute_$MAXPTX）—— PP4 在本机 GPU 上无解，转 Isaac Lab"
         fi
       else
         echo "[结论] 无 $ARCH 内核且无任何 PTX —— PP4 在本机 GPU 上无解，转 Isaac Lab"

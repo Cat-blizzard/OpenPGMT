@@ -10,17 +10,64 @@ dist/
 .idea/
 .vscode/
 
-# Training artifacts
+# 训练产物
 runs/
 logs/
-*.ckpt
-*.pt
-*.pth
 wandb/
 
-# Data (raw/processed are large; scripts are tracked)
-data/raw/
-data/processed/
+# 检查点：*不再整体忽略* —— Stage 1 checkpoint 是全部 Stage 2 变体的共享前提，
+# 需要通过 git 在机器间传递（单个 ckpt 数 MB）。只忽略训练中途的临时导出。
+*.tmp.pt
+*.tmp.pth
+
+# 原始数据：默认排除（lafan1.zip ~144MB、lafan1/*.bvh 均可重新下载）。
+# 规则顺序说明：被排除的「目录」不能再放行其内部文件，因此只有文件与
+# 「被重新放行的目录」可以用 ! 列出。.external/human2humanoid/.gitignore 会把
+# 该目录内所有内容重新排除 —— 贡献者需对署名文件显式执行一次:
+#   git add -f data/raw/.external/human2humanoid/LICENSE-CC-BY-NC-4.0.md \
+#              data/raw/.external/human2humanoid/README.md
+data/raw/*
+!data/raw/g1/
+!data/raw/g1/**
+!data/raw/.external/
+!data/raw/.external/human2humanoid/
+!data/raw/.external/human2humanoid/README.md
+!data/raw/.external/human2humanoid/LICENSE-CC-BY-NC-4.0.md
+
+# 处理产物：默认排除，显式放行**评估产物**（质量报告与可视化）。
+#
+# 重定向后的 npz **不纳入版本控制**（决定见 NOTICE.md「本仓库不包含的内容」）：
+#   - 体积为数十 MB 级二进制，不适合放代码仓库
+#   - 属 LAFAN1 衍生数据，重分发受其许可约束
+# 需要时在本地生成（约数分钟 ~ 一小时）：
+#   python -m data.retarget_lafan1 --bvh-dir data/raw/lafan1 --out-dir data/processed/lafan1_g1
+#   python -m data.eval_retarget          # 重新生成 quality_report.csv
+#
+# 注意规则顺序：`data/processed/lafan1_g1/` 整目录被排除后，其内部文件**不能**
+# 再用 ! 放行（被排除的目录不能再放行子文件）。因此这里只放行同级的两个文件/目录。
+data/processed/*
+!data/processed/quality_report.csv
+!data/processed/viz/
+!data/processed/viz/**
+
+# 论文原文与其全文抽取：**不纳入版本控制**（IEEE 版权内容）。
+# 引用请以 arXiv 为准：https://arxiv.org/abs/2609.08511
+2609.08511v2.pdf
+out.txt
+
+# Isaac Gym PP4 安装包（数百 MB ~ 2GB+，NVIDIA 许可，需自行注册下载）。
+# GitHub 单文件上限 100MB，误提交会被直接拒收。
+IsaacGym_Preview_4_Package.tar
+IsaacGym_Preview_4_Package.tar.gz
+*.tar
+*.tar.gz
+*.tgz
+
+# 误操作产生的文件（如 shell 引号问题导致的 "tatus --short"）与备份
+tatus*
+*.bak
+*.orig
+*~
 
 # Env
 .env

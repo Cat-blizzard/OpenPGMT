@@ -10,6 +10,10 @@ import os
 import numpy as np
 import pytest
 
+# matplotlib 只在真跑可视化时才需要（data/viz_retarget.py 内延迟 import）。
+# 缺它时跳过本模块而不是让整套测试变红 —— 可视化不是逻辑正确性的前提。
+pytest.importorskip("matplotlib", reason="需要 matplotlib（setup/requirements-dev.txt）")
+
 from data.bvh import load_bvh
 from data.retarget_lafan1 import W, retarget
 from data.viz_retarget import plot_frames

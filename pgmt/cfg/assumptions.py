@@ -1,7 +1,7 @@
 """假设注册表（Assumption Registry）——论文未公开超参的唯一出处。
 
 论文 arXiv:2609.08511v2 未给出全部实现细节。凡需自行拍定的取值，
-一律在此登记为编号假设（A1–A15），并附带理由。约定：
+一律在此登记为编号假设（A1–A18），并附带理由。约定：
   - 所有模块从这里 import 取值，禁止在别处硬编码；
   - 训练启动时调用 `dump()` 写入运行日志，使每个 checkpoint 可追溯到具体假设值；
   - 最终报告以本文件为基准，与实际取值逐项对照并说明偏差。
@@ -191,13 +191,72 @@ class AdaptiveSamplingCfg:
 
 @dataclass(frozen=True)
 class DataFilterCfg:
-    """A17：训练数据过滤（M1.5c ground 类裁定）。
+    """A17：训练数据过滤（M1.5c ground 类裁定）——**结论待复核**。
 
-    ground 类（躺地/翻滚）FK 误差 63 cm——G1 无脊柱且躺地时欧拉分解
-    退化，参考不可用；从训练集排除。摔倒池用 fall/push（28 cm）。
+    原裁定理由：ground 类（躺地/翻滚）分解退化（38–116 cm），G1 无脊柱
+    且躺地时欧拉分解退化，参考不可用；从训练集排除，摔倒池改用
+    fall/push 类（28 cm）。
+
+    ⚠️ 复核状态：该 38–116 cm 观测来自 lafan1_g1_v1_snapshot（v1 版数据）。
+    当前 data/processed/quality_report.csv 中 ground 五个序列为
+    14.45 / 15.17 / 15.71 / 15.74 / 15.92 cm（均值 15.40，最差但无病态），
+    排除理由在当前数据上不成立。注意 eval_retarget 的 FK 误差与 ik_refine
+    的优化目标高度重叠（13/18 关键点相同），且只用骨盆平移对齐，属"自证"
+    指标 —— 因此**不能仅凭该数字就恢复**，需先用留出关键点 + 绝对位置/
+    根朝向误差的独立口径重测。
+
+    在重测完成前保留本过滤行为（保守）；重测通过后应清空
+    excluded_prefixes —— 论文的 fall recovery 与 recovery curriculum 正
+    需要躺地类动作，排除它们使摔倒池只能依赖 fall/push 类。
     """
 
     excluded_prefixes: tuple = ("ground",)
+
+
+@dataclass(frozen=True)
+class RewardImpl:
+    """A18：奖励核函数与松弛细节（论文 Table I 给了权重，但几处形式未写出）。
+
+    论文明确的（照搬在 `pgmt/rewards/spec.py`，不是假设）：
+      - 分组结构 Eq.5 / Eq.9 与全部逐项权重（Table I）
+      - 松弛形式 Eq.10 `ẽ = [ e − α·χ(κ)·τ_{mh}(d) ]₊`
+      - χ(κ) 只在 slopes/stairs/boxes 激活；TA 只作用于 lower body 的
+        link position / link orientation / joint position
+
+    论文**未**写出的（本假设负责拍定）：
+      - **指数跟踪奖励的核函数**：论文只说 ẽ "replaces e in the exponential
+        tracking reward"，未写形式，且用定冠词 "**the** exponential tracking
+        reward" —— 即引用该领域既有约定而非自定义。
+        取 **`exp(−e²/σ)`（高斯式，误差的平方）**，依据是 PGMT 明示继承的
+        tracking 实现：OmniH2O 论文奖励表把 body position 项写作
+        `exp(−0.5‖p−p̂‖²₂)`，其配置注释亦明写
+        `tracking reward : exp(-error^2/sigma)`。
+        （我最初按"通用形式"写成线性核 `exp(−e/scale)`，是错的，已更正。）
+      - **各跟踪目标的 σ 取值**：论文未给 → 见 `pgmt/rewards/spec.py` 的
+        `SIGMAS` 表，量级与"上/下半身分离"的结构参照 OmniH2O
+        （上半身位置 σ 明显小于下半身，对应论文 §IV "upper-body 保姿态保真 /
+        lower-body 让位给平衡与接触"）。σ 量纲是**误差平方**，
+        与线性核的"误差尺度"不可直接换算。
+      - **τ_{mh}(d) 的斜率与饱和值**：论文只说线性增长并饱和 → 以
+        `saturation_value`（单位同**误差**，不是误差平方）表示饱和量；
+        A12.tau_saturation=0.05 即"饱和值 ≈ 各目标 5% 量级"。
+        注意 Eq.10 的 τ 与误差同量纲，须先钳再平方（见
+        `spec.relaxed_tracking_reward` 的单位说明）。
+      - **σ 的可用区间**：由"该项不饱和/不消失"这一可验证条件划定，
+        见 `data/probe_reward_scales.py` 对真实参考运动的实测。
+
+    这些都属于 A1–A18 假设体系，训练启动时随 `dump()` 写入日志。
+    """
+
+    tracking_kernel: str = "exp_neg_squared_error_over_sigma"
+    sigma_source: str = "OmniH2O/HOVER tracking 约定（PGMT 明示继承），量级见 spec.SIGMAS"
+    tau_linear_from_zero: bool = True  # τ 在 L0 处为 0，线性升至饱和值
+    # 松弛预算的饱和量（单位同**误差**，不是误差平方）：A12 的 5% 量级换算
+    tau_saturation: Dict[str, float] = field(default_factory=lambda: {
+        "ta_link_pos": 0.05,    # m
+        "ta_link_ori": 0.1,     # rad（约 5.7°）
+        "ta_joint_pos": 0.1,    # rad
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -247,7 +306,12 @@ ASSUMPTIONS: Dict[str, Assumption] = {
     "A16": Assumption("A16", "adaptive_sampling", AdaptiveSamplingCfg(),
                      "论文只说失败频次提高采样概率并保留全覆盖；取线性软加权"),
     "A17": Assumption("A17", "data_filter", DataFilterCfg(),
-                     "ground 类重定向退化（63 cm，G1 无脊柱），排除训练集；论文未提数据过滤"),
+                     "ground 类重定向退化（待复核，见 DataFilterCfg docstring）；论文未提数据过滤"),
+    "A18": Assumption("A18", "reward_impl", RewardImpl(),
+                      "Table I 权重与 Eq.10 松弛形式照搬论文；核函数取 exp(−e²/σ)"
+                      "（依据 OmniH2O 奖励表 exp(−0.5‖p−p̂‖²) 与其配置注释"
+                      "exp(-error^2/sigma)）；σ 取值与 τ 斜率/饱和值见 spec.SIGMAS 与"
+                      " data/probe_reward_scales.py 实测"),
 }
 
 
