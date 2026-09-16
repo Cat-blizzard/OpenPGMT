@@ -105,13 +105,14 @@ def test_stage1_to_stage2_head_remap_preserves_values():
     from pgmt.policy.multi_head_critic import stage1_to_stage2_head
 
     torch.manual_seed(0)
-    w = torch.randn(8, 3)
-    b = torch.randn(3)
+    critic = MultiHeadCritic(priv_dim=48, mlp_dims=(8,))
+    w = critic.head.weight
+    b = critic.head.bias
     w2, b2 = stage1_to_stage2_head(w, b)
-    assert w2.shape == (8, 4) and b2.shape == (4,)
-    assert torch.equal(w2[:, 0], w[:, 0])   # upper
-    assert torch.equal(w2[:, 1], w[:, 1])   # lower
-    assert torch.equal(w2[:, 3], w[:, 2])   # aux → 第 4 列（Eq.9 顺序）
+    assert w2.shape == (4, 8) and b2.shape == (4,)
+    assert torch.equal(w2[0], w[0])   # upper
+    assert torch.equal(w2[1], w[1])   # lower
+    assert torch.equal(w2[3], w[2])   # aux → 第 4 行（Eq.9 顺序）
     assert torch.equal(b2[0], b[0]) and torch.equal(b2[3], b[2])
 
 

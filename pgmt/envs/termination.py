@@ -96,7 +96,8 @@ def termination_cfg() -> TerminationCfg:
 # ---------------------------------------------------------------------------
 
 
-def tolerance_budget(terrain_family: str, level: int) -> float:
+def tolerance_budget(terrain_family: str, level: int,
+                     cfg: Optional[TerminationCfg] = None) -> float:
     """终止用的容忍区（米）—— 与 A12 的松弛预算同源。
 
     平地与 rough 的 χ=0（`spec.chi`），故容忍区退化为基准值；slopes/stairs/boxes
@@ -109,7 +110,7 @@ def tolerance_budget(terrain_family: str, level: int) -> float:
     """
     from pgmt.rewards.spec import chi, tau_budget
 
-    cfg = termination_cfg()
+    cfg = cfg or termination_cfg()
     chi_v = chi(terrain_family)
     if chi_v == 0.0:
         return cfg.ref_deviation_base
@@ -120,13 +121,13 @@ def tolerance_budget(terrain_family: str, level: int) -> float:
 
 
 def termination_delay(reason: TerminationReason, terrain_family: str,
-                      level: int) -> float:
+                      level: int, cfg: Optional[TerminationCfg] = None) -> float:
     """该原因在该 (族, 级) 上的延迟（秒）。
 
     地形**只会延长**延迟（`terrain_delay_scale · τ`），不会缩短 ——
     高难度地形上策略需要更多时间调整，这正是 §V-C 的意图。
     """
-    cfg = termination_cfg()
+    cfg = cfg or termination_cfg()
     base = cfg.delay_s.get(reason.value, 0.0)
     if reason is not TerminationReason.REF_DEVIATION:
         return base
@@ -144,11 +145,12 @@ def termination_delay(reason: TerminationReason, terrain_family: str,
 
 
 def ref_deviation_exceeded(mean_body_pos_error: float, terrain_family: str,
-                           level: int) -> bool:
+                           level: int,
+                           cfg: Optional[TerminationCfg] = None) -> bool:
     """跟踪误差是否**超出容忍区**（论文的 drift-tolerant：区内不算失败）。"""
     if mean_body_pos_error < 0.0:
         raise ValueError(f"误差应为非负，得到 {mean_body_pos_error}")
-    return bool(mean_body_pos_error > tolerance_budget(terrain_family, level))
+    return bool(mean_body_pos_error > tolerance_budget(terrain_family, level, cfg))
 
 
 def root_too_low(root_height: float, cfg: Optional[TerminationCfg] = None) -> bool:
@@ -160,9 +162,12 @@ def tilt_deg_from_projected_gravity(gravity_z: float) -> float:
     """由"投影重力"的 z 分量反推基座倾角（度）。
 
     基座竖直时 `projected_gravity = (0, 0, −1)`（体坐标系下重力指向下方），
-    故 `|g_z| = cos(倾角)`。倾角 0° → `|g_z| = 1`，倾角 90° → `|g_z| = 0`。
+    故 `g_z = -cos(倾角)`，相对直立的有向倾角范围是 [0°, 180°]。
+    直立 g_z=-1、侧躺 g_z=0、倒立 g_z=+1；不能取绝对值抹去倒立方向。
     """
-    return float(np.degrees(np.arccos(np.clip(abs(gravity_z), 0.0, 1.0))))
+    if not np.isfinite(gravity_z):
+        raise ValueError("gravity_z 必须为有限值")
+    return float(np.degrees(np.arccos(np.clip(-gravity_z, -1.0, 1.0))))
 
 
 def tilted(gravity_z: float, cfg: Optional[TerminationCfg] = None) -> bool:
@@ -298,15 +303,15 @@ def compute_termination(state: TerminationState,
 
     active = {
         TerminationReason.REF_DEVIATION: np.array(
-            [ref_deviation_exceeded(float(e), f, int(l))
+            [ref_deviation_exceeded(float(e), f, int(l), state.cfg)
              for e, f, l in zip(mean_body_pos_error, fams, level)], dtype=bool),
         TerminationReason.ROOT_LOW: np.array(
-            [root_too_low(float(h)) for h in root_height], dtype=bool),
+            [root_too_low(float(h), state.cfg) for h in root_height], dtype=bool),
         TerminationReason.TILTED: np.array(
-            [tilted(float(g)) for g in gravity_z], dtype=bool),
+            [tilted(float(g), state.cfg) for g in gravity_z], dtype=bool),
     }
     delay = {
-        reason: np.array([termination_delay(reason, f, int(l))
+        reason: np.array([termination_delay(reason, f, int(l), state.cfg)
                           for f, l in zip(fams, level)], dtype=np.float64)
         for reason in FAILURE_REASONS
     }

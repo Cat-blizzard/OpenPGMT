@@ -1,27 +1,19 @@
 """LAFAN1（BVH）→ Unitree G1 29-DoF 重定向（假设 A14）。
 
-LAFAN1 实测约定（从数据反推，见 data/raw/lafan1/ 验证脚本结论）：
-  - 世界系：y = 上、z = 左、前向 = −x（步行位移 −x；左膝屈曲轴 = +z、
-    右膝 = −z，均 93% 置信）；单位为 cm；30 fps
-  - 绑定姿态（offsets）不可信（腿折叠的怪异绑定），且通道旋转里混有
-    绑定→站立的偏移。因此**所有对齐量均从运动数据本身估计**：
-    d_m（链接方向）= 时间平均的世界方向；a_m（铰链屈曲轴）= 去均值
-    相对旋转的主导轴；投影角按圆均值居中（去绑定偏移）。
+约定：源为 cm、30 fps、y-up；世界变换 W 把源 x/y/z 映射到 G1 −x/z/y。
+根朝向另用右乘 Q_MRIG_INV，把源 rig 局部轴换成 G1 基座轴。
 
-管线（与 v1 假设无关的稳健版）：
-  1. 解析 BVH（data/bvh.py，官方 zyx 约定）→ FK 世界位置/朝向
-  2. W 映射到 G1 系（z-up、x 前、y 左）：x→−x, y→z, z→y
-  3. 源关节相对旋转 R_src = R_parent⁻¹·R_child（世界系）→ W 共轭到 G1 系
-  4. R_align：球关节 = d_m→d_g 最小扭转；铰链 = (a_m, d_m)→(a_g, d_g) 双轴
-  5. 逐 G1 铰链轴投影（轴与父帧取自 unitree_rl_gym g1_29dof_rev_1_0.xml），
-     角度按圆均值居中
-  6. 根：位置 W·(root·s)（s = 0.793 / P90 腿长），xy 居中、足底贴地；
-     朝向 q' = q_W ⊗ q_root
-  7. 脚部接触：足端世界速度 < 0.15 m/s（A14）
-  8. 导出 npz
+管线：
+  1. BVH 解析与 FK，按 P90 腿骨链长估算 m/cm 缩放。
+  2. 以固定 M_RIG 和 G1 静止链基框架对齐源关节相对旋转。
+  3. 除腰部外用旋转均值去绑定偏移，再按链做欧拉分解、奇异区保护。
+     中间帧静止倾斜采用近似；IK 精修补偿位置误差。
+  4. 根位置做序列 xy 居中与高度重锚。高度是启发式，躺倒/跨障需要复核。
+  5. 29 个有限关节投影到机械限位，速度直接差分导出坐标，不用 wrap/unwrap。
+  6. 接触标签用足速、序列高度阈值与中值滤波；批量导出默认再做全链 IK。
 
-未映射：Neck/Head（G1-29 无颈关节）、Toe（无脚趾关节）、手指、
-脊柱除胸廓外的多余自由度。
+未映射：Neck/Head、Toe 独立自由度、手指、部分脊柱自由度。
+输出四元数为 [w,x,y,z]；root_pos 是 G1 世界坐标，不是随动锚点坐标。
 """
 
 from __future__ import annotations
@@ -382,8 +374,26 @@ def _estimate_scale(gpos_cm: np.ndarray, bvh: BVH) -> float:
 # 重定向主体
 # ---------------------------------------------------------------------------
 
+def bounded_joint_trajectory(qpos: np.ndarray, frame_time: float) -> Tuple[np.ndarray, np.ndarray]:
+    """Project G1 hinge coordinates into their limits and differentiate them.
+
+    All 29 actuated joints in g1_29dof_rev_1_0.xml have finite ranges inside
+    (-pi, pi). They are not continuous rotation joints: an apparent short path
+    across +/-pi crosses a mechanical stop. Neither wrapping positions nor
+    unwrapping differences is valid for these joint coordinates.
+    """
+    lo = np.array([G1_JOINT_LIMITS[n][0] for n in G1_JOINT_NAMES])
+    hi = np.array([G1_JOINT_LIMITS[n][1] for n in G1_JOINT_NAMES])
+    positions = np.clip(np.asarray(qpos, dtype=np.float64), lo, hi).astype(np.float32)
+    # Differentiate the coordinates that are actually exported, in float64 to
+    # avoid adding arithmetic roundoff before the final float32 conversion.
+    velocities = np.zeros_like(positions)
+    velocities[1:] = np.diff(positions.astype(np.float64), axis=0) / frame_time
+    return positions, velocities
+
+
 def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
-    """LAFAN1 BVH → G1 29-DoF（数据驱动对齐，见模块 docstring）。"""
+    """LAFAN1 BVH → G1 29-DoF（固定 rig 对齐与数据均值去偏移）。"""
     for name in ("Hips", "LeftUpLeg", "LeftLeg", "LeftFoot", "LeftToe",
                  "RightUpLeg", "RightLeg", "RightFoot", "RightToe",
                  "LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand",
@@ -421,8 +431,7 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
                           gpos[:, bvh.joint_index("RightFoot"), 2]) - hip_z
     root_pos[:, 2] += G1_ANKLE_REL - foot_rel.min()
     # 根朝向：rig 约定 → G1 基座约定（G1 局部前 +x / 左 +y / 上 +z）
-    root_rot = quat_mul(grot_g1[:, bvh.joint_index("Hips")],
-                        np.tile(Q_MRIG_INV, (T, 1)))
+    root_rot = source_root_quat_to_g1_base(grot[:, bvh.joint_index("Hips")])
 
     # ---- 源关节相对旋转（G1 系） ----
     def rel_rot(joint: str, parent: str) -> np.ndarray:
@@ -467,14 +476,8 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
     # 插值替换奇异区的外角，消除速度尖峰。 ----
     qpos = _gimbal_protect(qpos)
 
-    # ---- wrap 到 (−π,π] → 时间连续化（真实大角度动作如侧手翻）→ 速度 ----
-    # wrap 到规范值（(−π,π]）作为导出的 qpos（环境的 PD 参考按规范
-    # 角度比较）；qvel 由 unwrap 后的连续序列差分
-    qpos_w = (qpos + np.pi) % (2 * np.pi) - np.pi
-    qpos_u = np.unwrap(qpos_w, axis=0)
-    qvel = np.zeros_like(qpos_u)
-    qvel[1:] = (qpos_u[1:] - qpos_u[:-1]) / bvh.frame_time
-    qpos = qpos_w
+    # Finite G1 hinges: project into limits, then directly differentiate.
+    qpos, qvel = bounded_joint_trajectory(qpos, float(np.float32(bvh.frame_time)))
 
     # ---- 接触标签：统一协议（足速 + 高度 + 中值滤波，见 contact_labels） ----
     thresh = get("A14").value.foot_vel_thresh

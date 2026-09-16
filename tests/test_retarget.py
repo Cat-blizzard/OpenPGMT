@@ -46,8 +46,17 @@ def test_joint_ranges_physically_sane(walk):
     assert np.abs(deg.mean(0)).max() < 30
 
 
-def test_feet_do_not_penetrate_ground(walk):
-    g1 = g1_forward_kinematics(walk["qpos"], walk["root_pos"], walk["root_rot"])
+def test_full_reference_feet_do_not_penetrate_ground(walk):
+    """The clearance gate applies to the complete default export pipeline.
+
+    Projecting the rotation-only seed into mechanical limits can lower an ankle
+    (walk1 currently reaches -0.057 m before IK). Do not hide that by loosening
+    this gate: validate the actual refined reference with the original bound.
+    """
+    from data.ik_refine import refine_full
+    bvh = load_bvh(os.path.join(DATA_DIR, "walk1_subject1.bvh"))
+    reference = refine_full(walk, bvh)
+    g1 = g1_forward_kinematics(reference["qpos"], reference["root_pos"], reference["root_rot"])
     min_z = min(g1["left_ankle_roll_link"][:, 2].min(),
                 g1["right_ankle_roll_link"][:, 2].min())
     assert min_z > -0.05, f"足底穿地: {min_z:.3f} m"

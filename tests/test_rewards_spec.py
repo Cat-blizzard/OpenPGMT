@@ -534,3 +534,13 @@ def test_assumptions_include_a18():
 
     assert "A18" in ASSUMPTIONS
     assert ASSUMPTIONS["A18"].name == "reward_impl"
+
+
+def test_chi_registry_log_and_runtime_use_the_same_values():
+    from pgmt.cfg.assumptions import dump, get
+
+    expected = {"flat": 0.0, "slopes": 1.0, "stairs": 1.0,
+                "boxes": 1.0, "rough": 0.0}
+    assert get("A12").value.chi == expected
+    assert dump()["A12"]["value"]["chi"] == expected
+    assert {family: chi(family) for family in TERRAIN_FAMILIES} == expected

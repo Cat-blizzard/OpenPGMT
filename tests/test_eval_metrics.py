@@ -8,6 +8,8 @@
 这里会失败 —— 那正是 A17 旧裁定失效的根因（13/18 重叠）。
 """
 
+import os
+
 import numpy as np
 import pytest
 
@@ -94,3 +96,54 @@ def test_mean_err_cm_skips_missing_entries():
 ])
 def test_motion_type_classification(name, expected):
     assert _motion_type(name) == expected
+
+
+# ---------------------------------------------------------------------------
+# 输出路径：`--only` 绝不覆盖完整报告（数据安全）
+# ---------------------------------------------------------------------------
+
+def test_resolve_out_path_never_overwrites_full_report():
+    """`--only` 必须写子集专用文件，**绝不覆盖**完整报告。
+
+    这是一条数据安全测试。README 推荐用 `--only ground` 做 A17 复核，而改造前
+    这条命令会把仓库里 77 行的 `quality_report.csv` 静默改写成 5 行 —— 没有
+    任何提示，且文件已在版本控制中，一次误跑就丢掉了全量基线。
+    """
+    from data.eval_retarget import FULL_REPORT_PATH, resolve_out_path
+
+    # 不带 --only ⇒ 完整报告
+    assert resolve_out_path(None, None) == FULL_REPORT_PATH
+
+    # 带 --only 且省略 --out ⇒ 子集专用文件，路径与完整报告不同
+    got = resolve_out_path("ground", None)
+    assert got == "data/processed/quality_report_ground.csv"
+    assert os.path.abspath(got) != os.path.abspath(FULL_REPORT_PATH)
+
+    # 显式 --out 到别处 ⇒ 尊重调用方
+    assert resolve_out_path("ground", "tmp/x.csv") == "tmp/x.csv"
+
+    # 显式 --out 指向完整报告 + 有 --only ⇒ 拒绝
+    with pytest.raises(ValueError, match="拒绝写入"):
+        resolve_out_path("ground", FULL_REPORT_PATH)
+
+    # 不带 --only 时显式写完整报告是合法的（那本来就是全量结果）
+    assert resolve_out_path(None, FULL_REPORT_PATH) == FULL_REPORT_PATH
+
+
+def test_legacy_fk_err_cm_divides_by_18_not_17():
+    """旧口径的分母是 18（含骨盆），不是 17 条误差条目。
+
+    骨盆是对齐基准、不参与误差统计，故 `kp_errs` 只有 17 条；但旧口径把它作为
+    0 计入了分母。若误用 17，均值会抬高 18/17 ≈ 5.9%，**新旧 CSV 不可比** ——
+    而保留这一列的唯一用途正是对比改造前后的数值变化。
+    """
+    from data.eval_retarget import legacy_fk_err_cm
+
+    assert len(KEYPOINTS) == 18, "本测试按 18 写死；关键点数变化时须同步"
+
+    # 17 条误差、每条 1cm ⇒ 旧口径 17/18 cm（而非 1cm）
+    errs = {f"k{i}->b{i}": np.array([0.01]) for i in range(17)}
+    assert legacy_fk_err_cm(errs) == pytest.approx(17.0 / 18.0)
+    assert legacy_fk_err_cm(errs) != pytest.approx(1.0)
+
+    assert np.isnan(legacy_fk_err_cm({}))

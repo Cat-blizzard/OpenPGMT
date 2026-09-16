@@ -65,6 +65,8 @@ import math
 from dataclasses import dataclass
 from typing import Dict, Mapping, Tuple
 
+from pgmt.cfg.assumptions import get
+
 # ---------------------------------------------------------------------------
 # 逐项权重（论文 Table I）
 # ---------------------------------------------------------------------------
@@ -121,7 +123,9 @@ RELAXED_TERMS: Tuple[str, ...] = ("ta_link_pos", "ta_link_ori", "ta_joint_pos")
 
 #: χ(κ)：哪些地形族激活松弛。论文：只在 slopes / stairs / boxes 上激活，
 #: flat 与 random rough 不激活。
-CHI_ACTIVE_FAMILIES: Tuple[str, ...] = ("slopes", "stairs", "boxes")
+CHI_ACTIVE_FAMILIES: Tuple[str, ...] = tuple(
+    family for family, active in get("A12").value.chi.items() if active == 1.0
+)
 
 #: 地形族全集（论文 §V-A：5 族 × L0–L9）
 TERRAIN_FAMILIES: Tuple[str, ...] = ("flat", "slopes", "stairs", "boxes", "rough")
@@ -274,7 +278,7 @@ def chi(terrain_family: str) -> float:
     """
     if terrain_family not in TERRAIN_FAMILIES:
         raise ValueError(f"未知地形族 {terrain_family!r}（可选 {TERRAIN_FAMILIES}）")
-    return 1.0 if terrain_family in CHI_ACTIVE_FAMILIES else 0.0
+    return float(get("A12").value.chi[terrain_family])
 
 
 def tau_budget(level: int, saturation_value: float, *,

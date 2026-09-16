@@ -7,7 +7,7 @@ MHCA 配备 RoPE：KV 中时间 token（s_hist 与未来参考帧）按帧偏移
 使注意力感知参考帧间的时间距离；地形 token 为空间信息（位置已编码在
 z_j 内部，见 glimpse_encoder），下标取 0 = 恒等旋转。
 
-RoPE 位置下标（相对当前帧 t）：
+RoPE 位置下标（相对当前控制步 t，独立于运动数据源帧率）：
   [s_hist]            → 0
   [C^K_k, k=0..5]     → τ_k = 2^k − 1（0,1,3,7,15,31，A2）
   [z_1..z_4]          → 0（不旋转）
@@ -20,10 +20,11 @@ import torch
 import torch.nn as nn
 
 from pgmt.cfg.assumptions import get
+from pgmt.contracts import REF_FRAME_DIM
 from pgmt.policy.mhca import MHCA
 from pgmt.policy.rope import RotaryPositionEmbedding
 
-_REF_DIM = 61  # 论文 Eq.1：q^r(29)+q̇^r(29)+ṽ^r(3)
+_REF_DIM = REF_FRAME_DIM  # Eq.1 的维度契约
 
 
 class IFM(nn.Module):
@@ -57,7 +58,7 @@ class IFM(nn.Module):
         self.attn = MHCA(token_dim, heads,
                          rope=RotaryPositionEmbedding(rope_dim, rope_cfg.base))
 
-        # RoPE 位置下标（帧）：Q=[0]；KV Stage1=[0]+τ_k，Stage2 追加 num_glimpses 个 0
+        # RoPE 位置下标（控制步）：Q=[0]；KV Stage1=[0]+τ_k，Stage2 追加 num_glimpses 个 0
         offsets = get("A2").value.offsets
         self.register_buffer("q_idx", torch.tensor([0.0]), persistent=False)
         self.register_buffer("k_idx_s1", torch.tensor([0.0] + list(offsets)), persistent=False)

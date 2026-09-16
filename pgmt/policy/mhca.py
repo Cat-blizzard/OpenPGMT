@@ -23,7 +23,7 @@ class MHCA(nn.Module):
         rope: RotaryPositionEmbedding 或 None；None 即普通注意力。
 
     输入/输出: q (B, Lq, d_model)；k, v (B, Lk, d_model) → (B, Lq, d_model)。
-    RoPE 开启时须同时给 q_idx (Lq,) 与 k_idx (Lk,)，下标单位 = 帧（τ=2^k−1）。
+    RoPE 开启时须同时给 q_idx (Lq,) 与 k_idx (Lk,)，下标单位 = 控制步（τ=2^k−1）。
     """
 
     def __init__(self, d_model: int, heads: int, rope: RotaryPositionEmbedding | None = None):

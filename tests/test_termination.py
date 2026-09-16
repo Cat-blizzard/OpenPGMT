@@ -162,22 +162,22 @@ def test_ref_deviation_rejects_negative_error():
 
 def test_tilt_from_projected_gravity_endpoints():
     assert tilt_deg_from_projected_gravity(-1.0) == pytest.approx(0.0)
-    assert tilt_deg_from_projected_gravity(1.0) == pytest.approx(0.0), "符号无关"
+    assert tilt_deg_from_projected_gravity(1.0) == pytest.approx(180.0)
     assert tilt_deg_from_projected_gravity(0.0) == pytest.approx(90.0)
 
 
 def test_tilt_matches_analytic_angle():
-    """倾角 60° 时 |g_z| = cos60° = 0.5，反演应得 60°。"""
+    """投影重力 g_z=-cos60°，反演相对直立倾角应得 60°。"""
     import math
-    gz = math.cos(math.radians(60.0))
+    gz = -math.cos(math.radians(60.0))
     assert tilt_deg_from_projected_gravity(gz) == pytest.approx(60.0)
 
 
 def test_tilted_threshold():
     cfg = termination_cfg()
     import math
-    just_under = math.cos(math.radians(cfg.tilt_max_deg - 1.0))
-    just_over = math.cos(math.radians(cfg.tilt_max_deg + 1.0))
+    just_under = -math.cos(math.radians(cfg.tilt_max_deg - 1.0))
+    just_over = -math.cos(math.radians(cfg.tilt_max_deg + 1.0))
     assert not tilted(just_under)
     assert tilted(just_over)
 
@@ -421,3 +421,48 @@ def test_a20_is_registered():
         TerminationReason.TILTED.value,
     }, "delay_s 的键必须覆盖全部失败原因"
     assert cfg.terrain_delay_scale >= 0.0
+
+
+@pytest.mark.parametrize("angle", [0.0, 45.0, 90.0, 120.0, 180.0])
+def test_tilt_distinguishes_upright_sideways_and_inverted(angle):
+    gravity_z = -np.cos(np.radians(angle))
+    assert tilt_deg_from_projected_gravity(gravity_z) == pytest.approx(angle)
+    assert tilted(gravity_z) == (angle > termination_cfg().tilt_max_deg)
+
+
+@pytest.mark.parametrize("gravity_z", [float("nan"), float("inf"), -float("inf")])
+def test_tilt_rejects_nonfinite_gravity(gravity_z):
+    with pytest.raises(ValueError, match="有限"):
+        tilt_deg_from_projected_gravity(gravity_z)
+
+
+def test_compute_termination_uses_custom_thresholds_and_delays_for_every_reason():
+    from dataclasses import replace
+
+    cfg = replace(termination_cfg(), ref_deviation_base=0.1,
+                  root_height_min=0.6, tilt_max_deg=45.0,
+                  delay_s={r.value: 0.2 for r in FAILURE_REASONS})
+    st = TerminationState(3, dt=0.1, cfg=cfg)
+    args = (np.array([0.2, 0.0, 0.0]), np.array([0.8, 0.5, 0.8]),
+            np.array([-1.0, -1.0, -0.5]), ["flat"] * 3, np.zeros(3, dtype=int))
+    term, _, _ = compute_termination(st, *args)
+    assert not term.any(), "自定义延迟尚未达到，不应立即终止"
+    term, primary, _ = compute_termination(st, *args)
+    assert term.all()
+    assert primary["ref_deviation"].tolist() == [True, False, False]
+    assert primary["root_low"].tolist() == [False, True, False]
+    assert primary["tilted"].tolist() == [False, False, True]
+
+
+def test_compute_termination_uses_custom_terrain_delay_scale():
+    from dataclasses import replace
+
+    cfg = replace(termination_cfg(), terrain_delay_scale=4.0,
+                  delay_s={"ref_deviation": 0.1, "root_low": 0.0, "tilted": 0.0})
+    st = TerminationState(1, dt=0.1, cfg=cfg)
+    args = (np.array([1.0]), np.array([0.8]), np.array([-1.0]),
+            ["stairs"], np.array([9]))
+    # 0.1 s + 4 s/m * 0.05 m = 0.3 s，第三步触发。
+    assert not compute_termination(st, *args)[0].any()
+    assert not compute_termination(st, *args)[0].any()
+    assert compute_termination(st, *args)[0].all()

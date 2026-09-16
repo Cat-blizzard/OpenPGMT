@@ -6,7 +6,7 @@
 - ref_rot：任意时刻（小数帧）参考锚点朝向——四元数**最短弧插值**，
   供 `o_t` 的 `e_t`（参考相对 anchor 朝向）使用
 - future_refs：C^K 未来参考帧（论文 Eq.1，61 维 = q^r(29)+q̇^r(29)+ṽ^r(3)），
-  偏移 τ = t + 2^k − 1（A2），越界截断到序列末帧
+  偏移 2^k − 1 按控制步计（A1/A2），换算成源帧后采样并截断到序列末帧
 - correct_anchor_velocity：A13 全局位置修正速度接口（Stage 2 用）
 - AdaptiveSampler：失败频次软加权采样（A16），保留全覆盖
 
@@ -22,9 +22,10 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from pgmt.cfg.assumptions import get
-from pgmt.policy.rotation import normalize_quat, quat_slerp
+from pgmt.contracts import ACT_DIM, REF_FRAME_DIM
+from pgmt.policy.rotation import normalize_quat, quat_slerp, quat_to_mat
 
-_REF_DIM = 61  # q^r(29) + q̇^r(29) + ṽ^r(3)
+_REF_DIM = REF_FRAME_DIM  # q^r + q̇^r + ṽ^r
 
 
 class MotionDatabase:
@@ -47,9 +48,9 @@ class MotionDatabase:
             name = f[:-4]
             if name.startswith(excluded):
                 continue  # A17：ground 类重定向退化，排除训练集
-            d = {k: v for k, v in np.load(os.path.join(npz_dir, f)).items()}
-            d["name"] = name
-            self.seqs.append(d)
+            with np.load(os.path.join(npz_dir, f)) as npz:
+                d = {k: v for k, v in npz.items()}
+            self.seqs.append(self._validate_sequence(d, name))
         if not self.seqs:
             raise ValueError(f"{npz_dir} 中没有 npz 序列（先跑 data.retarget_lafan1）")
 
@@ -67,20 +68,40 @@ class MotionDatabase:
         obj = cls.__new__(cls)
         obj.seqs = []
         excluded = tuple(get("A17").value.excluded_prefixes)
-        required = ("qpos", "qvel", "root_pos", "root_rot", "frame_time")
         for d in sequences:
             name = str(d.get("name", f"seq{len(obj.seqs)}"))
             if apply_a17_filter and name.startswith(excluded):
                 continue
-            missing = [k for k in required if k not in d]
-            if missing:
-                raise ValueError(f"序列 {name} 缺字段: {missing}")
-            e = dict(d)
-            e["name"] = name
-            obj.seqs.append(e)
+            obj.seqs.append(cls._validate_sequence(d, name))
         if not obj.seqs:
             raise ValueError("from_sequences: 过滤后没有可用序列")
         return obj
+
+    @staticmethod
+    def _validate_sequence(d: Dict, name: str) -> Dict:
+        """两种加载入口共享的帧数、维度和时间契约。"""
+        required = ("qpos", "qvel", "root_pos", "root_rot", "frame_time")
+        missing = [key for key in required if key not in d]
+        if missing:
+            raise ValueError(f"序列 {name} 缺字段: {missing}")
+        out = dict(d, name=name)
+        qpos = np.asarray(d["qpos"])
+        if qpos.ndim != 2 or qpos.shape[0] == 0:
+            raise ValueError(f"序列 {name} qpos 必须是非空二维帧数组")
+        n_frames = qpos.shape[0]
+        for key, dim in (("qpos", ACT_DIM), ("qvel", ACT_DIM),
+                         ("root_pos", 3), ("root_rot", 4)):
+            arr = np.asarray(d[key])
+            if arr.shape != (n_frames, dim) or not np.isfinite(arr).all():
+                raise ValueError(f"序列 {name} {key} 应为有限数组 ({n_frames},{dim})，得到 {arr.shape}")
+            out[key] = arr
+        dt = np.asarray(d["frame_time"])
+        if dt.size != 1 or not np.isfinite(dt).all() or float(dt.reshape(-1)[0]) <= 0:
+            raise ValueError(f"序列 {name} frame_time 必须为正的有限标量")
+        out["frame_time"] = float(dt.reshape(-1)[0])
+        if np.any(np.linalg.norm(out["root_rot"], axis=-1) < 1e-8):
+            raise ValueError(f"序列 {name} root_rot 含无效零四元数")
+        return out
 
     @property
     def num_sequences(self) -> int:
@@ -125,35 +146,52 @@ class MotionDatabase:
             return normalize_quat(q[-1])
         return quat_slerp(normalize_quat(q[i0]), normalize_quat(q[i0 + 1]), t - i0)
 
-    def anchor_velocity(self, seq_idx: int, t: float) -> np.ndarray:
-        """参考锚点速度 v^r（平面 xy，z=0），root_pos 有限差分（m/s）。
+    def anchor_velocity(self, seq_idx: int, t: float, *,
+                        anchor_t: float | None = None) -> np.ndarray:
+        """时刻 t 的参考速度，表达在 anchor_t 的参考锚点系，z=0。
 
-        速度按帧差分换算为每秒（数据帧率 ≠ 控制帧率）。
+        root_pos 为世界系位置；先以源数据帧率差分得到世界速度，再按
+        R_ref(anchor_t).T 转入参考锚点系，最后提取 xy 分量。采用完整
+        参考旋转，与论文位置误差 [R_ref(t).T @ (p_ref-p_robot)]_xy 一致。
+        anchor_t 默认 t；future_refs 显式传当前 t，使所有未来速度与
+        当前 e_p 处于同一坐标系。单帧序列没有位移信息，速度定义为零。
         """
         rp = self.seqs[seq_idx]["root_pos"]
         t = float(np.clip(t, 0.0, rp.shape[0] - 1))
-        i0 = int(np.floor(t))
-        if i0 >= rp.shape[0] - 1:
-            i0 = rp.shape[0] - 2
-        v = (rp[i0 + 1] - rp[i0]) / float(self.seqs[seq_idx]["frame_time"])
-        return np.array([v[0], v[1], 0.0])
+        if rp.shape[0] == 1:
+            return np.zeros(3, dtype=np.float64)
+        i0 = min(int(np.floor(t)), rp.shape[0] - 2)
+        v_world = (rp[i0 + 1] - rp[i0]) / float(self.seqs[seq_idx]["frame_time"])
+        R_ref = quat_to_mat(self.ref_rot(seq_idx, t if anchor_t is None else anchor_t))
+        v_anchor = R_ref.T @ v_world
+        return np.array([v_anchor[0], v_anchor[1], 0.0])
 
     def future_refs(self, seq_idx: int, t: float, e_p: Optional[np.ndarray] = None,
                     lambda_pos: Optional[float] = None) -> np.ndarray:
         """C^K 未来参考帧 (K, 61)。
 
+        坐标约定：全部未来速度统一表达在当前 t 的参考锚点系。论文明确
+        位置误差使用该坐标系，但没有细化未来 token 的换基时刻；这里
+        固定用当前锚点，避免转弯时将不同帧坐标系的速度与同一个 e_p 相加。
+
+        时间约定：t 的单位为源帧，可为小数；A2 的偏移以 A1 控制步为
+        单位，按 control_dt / source_frame_time 换算。默认最长前瞻
+        为 31 × 0.02 = 0.62 秒，与源数据帧率无关。
+
         Args:
-            e_p: 参考锚点系平面位置误差 (2,)，None = 零（Stage 1）
+            t: 当前源帧下标（可为小数）
+            e_p: 当前 t 参考锚点系平面位置误差 (2,)，None = 零（Stage 1）
             lambda_pos: A13 增益，None = 取 A13 默认
         """
         cfg = get("A2").value
         K = cfg.K
         T = self.seq_len(seq_idx)
+        source_frames_per_step = get("A1").value.dt / float(self.seqs[seq_idx]["frame_time"])
         out = np.zeros((K, _REF_DIM))
         for k, tau in enumerate(cfg.offsets):
-            tt = min(t + tau, T - 1)  # 越界截断
+            tt = min(t + tau * source_frames_per_step, T - 1)  # 控制步 → 源帧
             q, qd = self.ref_at(seq_idx, tt)
-            v = self.anchor_velocity(seq_idx, tt)
+            v = self.anchor_velocity(seq_idx, tt, anchor_t=t)
             if e_p is not None:
                 v[:2] = correct_anchor_velocity(v[:2], e_p, lambda_pos)[:2]
             out[k] = np.concatenate([q, qd, v])
@@ -161,6 +199,8 @@ class MotionDatabase:
 
     def sample_segment(self, rng: np.random.Generator, seg_len: int) -> Tuple[int, int]:
         """均匀采样运动段：按序列长度加权的 (seq_idx, start_frame)。"""
+        if not isinstance(seg_len, (int, np.integer)) or seg_len <= 0:
+            raise ValueError(f"seg_len 必须为正整数，得到 {seg_len}")
         lengths = self.lengths()
         usable = np.maximum(lengths - seg_len + 1, 1)
         seq_idx = int(rng.choice(len(lengths), p=usable / usable.sum()))
@@ -173,15 +213,17 @@ def correct_anchor_velocity(v_xy: np.ndarray, e_p: np.ndarray,
     """A13 全局位置修正：ṽ = v + clip(g(‖v‖)·λ_pos·e^p, ±v̄)。
 
     Args:
-        v_xy: 名义平面参考速度 (2,)
+        v_xy: 当前参考锚点系名义平面速度 (2,)，须与 e_p 同系
         e_p:  参考锚点系平面位置误差 (2,)（环境运行时计算）
     Returns:
-        修正后平面速度 (2,)
+        同一参考锚点系的修正后平面速度 (2,)
     """
     cfg = get("A13").value
     lam = cfg.lambda_pos if lambda_pos is None else lambda_pos
     v = np.asarray(v_xy, dtype=np.float64)
     e = np.asarray(e_p, dtype=np.float64)
+    if v.shape != (2,) or e.shape != (2,):
+        raise ValueError(f"v_xy 与 e_p 必须为形状 (2,)，得到 {v.shape}/{e.shape}")
     speed = float(np.linalg.norm(v))
     # smoothstep 门控：静止归零
     g = _smoothstep(cfg.gate_v0, cfg.gate_v1, speed)
@@ -208,10 +250,12 @@ class AdaptiveSampler:
 
     def __init__(self, db: MotionDatabase, seg_len: int, fail_boost: Optional[float] = None):
         self.db = db
+        if not isinstance(seg_len, (int, np.integer)) or seg_len <= 0:
+            raise ValueError(f"seg_len 必须为正整数，得到 {seg_len}")
         self.seg_len = int(seg_len)
-        if self.seg_len <= 0:
-            raise ValueError(f"seg_len 必须为正，得到 {seg_len}")
         self.fail_boost = get("A16").value.fail_boost if fail_boost is None else fail_boost
+        if not np.isfinite(self.fail_boost) or self.fail_boost < 0:
+            raise ValueError(f"fail_boost 必须非负且有限，得到 {self.fail_boost}")
         self.fails: Dict[Tuple[int, int], float] = {}
         self._cands: Optional[List[Tuple[int, int]]] = None
         self._keys: Optional[np.ndarray] = None  # (N,2) 整数，供向量化查权重

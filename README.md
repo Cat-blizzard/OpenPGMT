@@ -11,7 +11,7 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 完成并验证**（623 passed）；M0 待服务器冒烟；M2 的环境层与训练入口未开始
+- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 完成并验证**（728 passed, 2 skipped（CUDA））；M0 待服务器冒烟；M2 的环境层与训练入口未开始
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
 
@@ -35,7 +35,7 @@ pgmt/train/       训练入口与多头 PPO（M2，未实现；critic 网络已�
 data/             ✅ LAFAN1 下载 + BVH 解析 + 重定向 + IK 精修 + 质量评估 + 奖励尺度探针
 eval/             基准评估与消融（M5，未实现）；eval/viz/ 为 M1.5 可视化
 baselines/        RGMT-Reimpl（M6，尽力而为）
-tests/            623 个测试（约 55 个需真实数据，缺失时自动 skip）
+tests/            730 个测试（约 55 个需真实数据，缺失时自动 skip）
 ```
 
 **不纳入版本控制**（体积大 / 许可约束，需自行生成）：`data/raw/lafan1/`（LAFAN1 原始 BVH）、
@@ -47,7 +47,7 @@ tests/            623 个测试（约 55 个需真实数据，缺失时自动 sk
 setup\install_local.bat          REM 创建 conda 环境 pgmt-dev、装依赖、跑测试
 conda activate pgmt-dev
 cd /d D:\PGMT
-python -m pytest tests -q        REM 623 passed（约 55 个需真实数据，缺失时 skip）
+python -m pytest tests -q        REM 728 passed, 2 skipped（CUDA）（约 55 个需真实数据，缺失时 skip）
 ```
 
 本机只做纯逻辑开发与单测（torch 2.1.2 **CPU**，版本与服务器对齐以避免数值漂移）；训练在服务器进行。
@@ -143,7 +143,7 @@ python -m data.viz_terrain --dump stairs 9       REM 无 matplotlib 时打印高
 - **A17（数据过滤）待复核**：其"ground 类重定向退化（38–116cm）"的依据来自旧版数据，当前质量报告显示 ground 五个序列为 14.45–15.92cm（最差但无病态）。需用独立指标重测后决定是否恢复这 5 个躺地/翻滚序列进训练集——详见 `复现方案.md` §M1.5。
 - **A18（奖励实现）**：Table I 的逐项权重与 Eq.10 的松弛形式**照搬论文**（见 `pgmt/rewards/spec.py`，并有逐字对照的回归测试）。论文未写出的部分：核函数取 **`exp(−e²/σ)`（高斯式，误差平方）**，依据是 PGMT 明示继承的 tracking 实现（OmniH2O 奖励表 `exp(−0.5‖p−p̂‖²)` 与其配置注释 `exp(-error^2/sigma)`）；σ 取值见 `spec.SIGMAS`。
   - `python -m data.probe_reward_scales` 用真实参考运动暴露量纲错误、给出各 σ 的响应区；**但它量的是参考运动幅度而非跟踪误差，不能用来验证 σ 已标定正确** —— 最终标定须等训练时读到实际误差分布，详见 `复现方案.md` §M2.0b。
-  - `pgmt/rewards/semantics.py` 是 Table I 逐项语义对照表（28 条，标注与参照实现的对应关系：identical 11 / approx 8 / PGMT-specific 5 / **待定 4**）。待定项为 `head_torso_impact`、`ee_accel_mismatch`、`floating_anchor_pos`、`ta_link_ori` —— 论文或参照实现未给出足够依据，实现前需拍定。标注纪律由测试强制：note 里出现"未确认/未见/未验证"等措辞时只能标待定。
+  - `pgmt/rewards/semantics.py` 是 Table I 逐项语义对照表（28 条，标注与参照实现的对应关系：identical / approx / PGMT-specific / **待定 4 项**）。待定项为 `head_torso_impact`、`ee_accel_mismatch`、`floating_anchor_pos`、`ta_link_ori` —— 论文或参照实现未给出足够依据，现已按 A18/A21 的显式假设实现，但参照依据仍待核对。标注纪律由测试强制：note 里出现"未确认/未见/未验证"等措辞时只能标待定。
 - **A19–A22（M3 / M2 新增）**：`A19` tile 规格（边长 / 留白 / 级数）、`A20` 终止条件与容忍区、`A21` auxiliary 组 10 项的度量与阈值、`A22` terrain-contact 组 6 项的度量与阈值（仅 Stage 2）。后两者论文**只给项名与权重**（Table I 里 terrain-contact 那一段连公式都没有），度量方式全部属本仓库拍定，各项依据强度分级写在对应 dataclass 的 docstring 里。
 - **奖励项的符号约定**：Table I 中所有项的值**恒 ≥ 0**，正负完全由权重携带（负权重即惩罚项）。`RewardGroup.sum` 在运行时拒绝负值与 NaN —— 惩罚项若自身返回负值，与负权重相乘会变成**正贡献**（惩罚反转成奖励），这类错误在训练曲线上只表现为"学出怪行为"，极难定位。
 - **一处已知的数据源差异**：`reference_contact_match` 的参考接触标签，论文取自 offline terrain-mesh queries，本仓库取 LAFAN1 足部位置的**速度阈值**（`data/retarget_lafan1.py`）。两者不同源，该项数值有系统性偏差。
@@ -155,23 +155,71 @@ python -m data.viz_terrain --dump stairs 9       REM 无 matplotlib 时打印高
   **不纳入版本控制**（数十 MB 二进制 + LAFAN1 衍生数据许可约束），用 `python -m data.retarget_lafan1` 生成
 - `data/processed/quality_report.csv` — 质量报告，**含在仓库内**
 
-> ⚠️ **仓库里这份 CSV 是旧口径**（表头只有 `fk_err_cm`），需重跑
-> `python -m data.eval_retarget` 才会得到下面四列的新口径。
+现有 CSV 已包含拟合点与留出点的分离指标，但保存的是修复前 IK 的评估结果。
+`python -m data.eval_retarget` 现在默认评价磁盘上的实际 NPZ，不再静默从 BVH
+重新生成参考。`--regenerate` 用当前算法重算候选，默认写独立的
+`quality_report_regenerated.csv`；报告的 `reference_source` 列区分两种来源。
+评估过程先保存同目录的独立 `.partial.csv`，全部选中序列成功后才原子替换正式报告；
+失败或中断保留原报告并返回非零退出码，打印已保存的部分结果路径。
+修复后的 IK 会改变输出，旧 NPZ 不会因代码更新自动变更，正式训练前应另目录生成并复核。
 
-新口径把"参考质量"拆成**独立**与**非独立**两组：
+各类指标提供不同的诊断信息，均不能单独证明动作物理可执行：
 
 | 指标 | 含义 | 独立性 |
 |---|---|---|
 | `fitted_err_cm` | 13 个被 IK 优化过的关键点位置误差 | ❌ IK 训练残差，仅回归监控 |
-| `holdout_err_cm` | 4 个 **IK 从未优化**的关键点（左右髋、左右趾）误差 | ✅ 独立证据 |
-| `abs_pos_err_cm` | 不做骨盆平移对齐的绝对位置误差 | ✅ 补上全局漂移盲点 |
-| `root_rot_err_deg` | 根朝向误差（IK 冻结 root_rot，故完全由旋转映射决定） | ✅ 补上朝向盲点 |
+| `holdout_err_cm` | 4 个**未进入 IK 优化目标**的关键点（左右髋、左右趾）误差 | ⚠️ 泛化检验，非独立 |
+| `upright_holdout_err_cm` | 同上 4 点，但把根朝向强制为单位朝向 | ⚠️ 泛化检验，非独立 |
+| `min_foot_z` / `spike_pct` / `contact_agree` / `limit_over_pct` | 踝原点高度 / 速度尖峰 / 接触一致 / 限位超限 | 与 IK 位置目标不同的诊断；踝原点不等于足底碰撞几何 |
+
+**为什么"留出"只能算泛化检验**：那 4 个点确实没有目标牵引它们，但
+`refine_full` 优化的是 `list(range(29))`——**全部 29 个关节**，改动髋/踝关节角
+会直接移动左右髋与左右趾，它们与拟合点共享同一条运动链。所以数值低不足以
+证明物理可执行，数值高提示需要检查目标映射、骨架差异和运动链。
+
+`holdout_err_cm` 与 `upright_holdout_err_cm` 的平移部分**完全相同**（都逐帧把
+骨盆对到源 Hips），唯一差别是根朝向。后者只是把根朝向强制设为单位旋转的
+对照，不能直接当作真实根朝向误差；合理转向、躺倒也会改变它。两者均不衡量累积平移漂移。
+
+> ⚠️ **曾列在报告里的 `root_rot_err_deg` 已确认是恒等式，不是指标**：
+> `retarget()` 的 `root_rot = (qw ⊗ grot_src[Hips]) ⊗ Q_MRIG_INV` 与评估里调用的
+> `source_root_quat_to_g1_base()` 是同一个式子，故按构造相等 —— 77 个序列实测
+> **恒为 0.01°**（float32 舍入），无法区分任何序列，不得用作 A17 证据。它一度
+> 被标为"完全独立"，那是**独立但无用**：换算本身的正确性由
+> `tests/test_root_frame.py` 对真实数据的闭环测试保证。
 
 > 旧的单一 `fk_err_cm` 与 `ik_refine.refine_full` 的优化目标重叠 13/18 个关键点，
 > 且逐帧只用骨盆平移对齐 —— 它**不能**用来判断参考是否可用。A17（排除 ground 类）
 > 的原始裁定正是基于这个自证指标，因此需要重裁：先重跑 `data.eval_retarget`，
-> 再看 `holdout_err_cm` / `abs_pos_err_cm` / `root_rot_err_deg` 在 ground 类上是否真的异常。
+> 再结合留出点、速度尖峰、关节限位、接触与碰撞几何复核 ground 类。
+> `root_rot_err_deg` 不能作为恢复或排除动作的裁定依据。
 > 快速复核命令：`python -m data.eval_retarget --only ground`
+> （写 `quality_report_ground.csv`，**不会**动完整报告）
+
+## 代码复核（2026-09-16）
+
+本轮修复覆盖以下已确认问题，并增加对应回归测试：
+
+- **IK 与导出**：正则梯度、候选接受使用同一总目标；初始与最终关节限位；有界关节位置直接差分得到速度。
+- **参考时空约定**：A2 偏移是控制步，按 `control_dt/source_dt` 换算数据帧，默认前瞻 0.62 s；全部未来速度表达在当前参考锚点系，与位置修正误差同系。辅助速度奖励使用世界系，环境适配时需旋回。
+- **网络迁移**：critic 使用真实 PyTorch `(3,H) → (4,H)` 权重布局，保留 device/dtype 与原有三头输出。
+- **奖励与终止**：修复参考 yaw 对齐方向；A12 χ 配置与执行统一；自定义终止配置生效；倾角区分直立与倒立；缺少目标 body 显式报错。
+- **环境脚本**：包内绑定正确解析为 Python 3.8/3.9 等，支持 `.tar`/`.tar.gz`；检查已有环境版本；冒烟各阶段独立进程，Isaac Gym 先于 PyTorch 导入；GPU 施力使用张量 API；Isaac Lab 箱体启用碰撞。
+- **评估来源与保存**：默认读取实际 NPZ，显式 `--regenerate` 才重算；候选报告另存，失败或中断不覆盖已有正式报告。
+
+最终回归：`python -m pytest tests -q -ra -p no:cacheprovider`，**728 passed / 2 skipped**，耗时 147.39 s。另通过全部 Bash 安装脚本语法检查及 Python 3.8 语法解析。
+
+本机验证使用 Python 3.10 / PyTorch 2.7.1 CPU，服务器安装脚本目标仍为
+PyTorch 2.1.2 cu121；两者不能视为同环境验证。CUDA 迁移测试在本机跳过，
+真实 Isaac Gym / Isaac Lab 仿真仍需服务器冒烟。恢复/倒立动作的终止门控、
+未公开奖励定义及 A17 数据过滤仍需通过训练与物理诊断确定。
+
+旧 NPZ/CSV 原样保留。建议以独立目录复核新产物：
+
+```bash
+python -m data.retarget_lafan1 --bvh-dir data/raw/lafan1 --out-dir data/processed/lafan1_g1_fixed
+python -m data.eval_retarget --npz-dir data/processed/lafan1_g1_fixed --out data/processed/quality_report_fixed.csv
+```
 
 ## 里程碑
 

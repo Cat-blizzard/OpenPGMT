@@ -11,6 +11,8 @@ V_inj = (V_upper, V_lower, V_terrain, V_aux)                                Stag
 
 from __future__ import annotations
 
+import math
+
 import torch
 import torch.nn as nn
 
@@ -64,19 +66,21 @@ class MultiHeadCritic(nn.Module):
 
 
 def stage1_to_stage2_head(w: torch.Tensor, b: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """Stage 1 三头末层权重 → Stage 2 四头末层权重（Eq.9 顺序重排）。
+    """将真实 nn.Linear 的 Stage 1 参数迁移到 Stage 2（Eq.9）。
 
-    Stage 1 头序 (upper, lower, aux) → Stage 2 (upper, lower, terrain, aux)：
-    upper/lower 直接复制；aux 移到第 4 列；terrain 头（第 3 列）随机初始化，
-    返回的权重与 torch 默认初始化分布一致，可直接作为新末层参数。
+    权重采用 PyTorch 的 (out_features, in_features) 布局，即 (3,H) →
+    (4,H)。upper/lower 原位复制，aux 从第 3 行移到第 4 行；新增 terrain
+    行按 nn.Linear 默认分布初始化。输入参数的 dtype/device 分别保留，
+    返回结果可直接放入 Stage 2 的 state_dict。
     """
-    if w.dim() != 2 or w.shape[1] != 3 or b.shape != (3,):
-        raise ValueError(f"期望 Stage 1 末层形状 (H,3)/(3,)，得到 {tuple(w.shape)}/{tuple(b.shape)}")
-    w2 = torch.empty(w.shape[0], 4, dtype=w.dtype)
-    b2 = torch.empty(4, dtype=b.dtype)
-    nn.init.xavier_uniform_(w2)
-    nn.init.zeros_(b2)
+    if w.dim() != 2 or w.shape[0] != 3 or w.shape[1] < 1 or b.shape != (3,):
+        raise ValueError(f"期望 Stage 1 末层形状 (3,H)/(3,)，得到 {tuple(w.shape)}/{tuple(b.shape)}")
+    w2 = w.new_empty((4, w.shape[1]))
+    b2 = b.new_empty(4)
+    nn.init.kaiming_uniform_(w2, a=math.sqrt(5))
+    bound = 1.0 / math.sqrt(w.shape[1])
+    nn.init.uniform_(b2, -bound, bound)
     with torch.no_grad():
-        w2[:, 0], w2[:, 1], w2[:, 3] = w[:, 0], w[:, 1], w[:, 2]
+        w2[0], w2[1], w2[3] = w[0], w[1], w[2]
         b2[0], b2[1], b2[3] = b[0], b[1], b[2]
     return w2, b2

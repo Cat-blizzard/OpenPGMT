@@ -1,5 +1,6 @@
 """actor.py / multi_head_critic.py：形状、头顺序、Stage1→2 权重重排。"""
 
+import pytest
 import torch
 
 from pgmt.policy.actor import Actor
@@ -50,23 +51,36 @@ def test_critic_aggregate_single_head():
     assert critic(torch.randn(4, 20), torch.randn(4, 256)).shape == (4, 1)
 
 
-def test_stage1_to_stage2_head_remap():
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+@pytest.mark.parametrize("device", ["cpu", pytest.param("cuda", marks=pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="CUDA unavailable"))])
+def test_stage1_to_stage2_head_remap_real_state_dict(dtype, device):
+    """迁移真实 checkpoint 后，原来三个值头的输出必须保持一致。"""
     torch.manual_seed(0)
-    w = torch.randn(128, 3)
-    b = torch.randn(3)
+    old = MultiHeadCritic(priv_dim=48).to(device=device, dtype=dtype)
+    new = MultiHeadCritic(priv_dim=48, head_names=HEAD_ORDER_STAGE2).to(device=device, dtype=dtype)
+    state = old.state_dict()
+    w, b = state["head.weight"], state["head.bias"]
+    w_before, b_before = w.clone(), b.clone()
     w2, b2 = stage1_to_stage2_head(w, b)
-    assert w2.shape == (128, 4) and b2.shape == (4,)
-    # upper/lower 直接复制；aux 移到第 4 列；terrain（第 3 列）随机初始化
-    assert torch.equal(w2[:, 0], w[:, 0]) and torch.equal(w2[:, 1], w[:, 1])
-    assert torch.equal(w2[:, 3], w[:, 2])
-    assert not torch.equal(w2[:, 2], w[:, 0])  # 新 terrain 头非复制
-    assert torch.equal(b2[0], b[0]) and torch.equal(b2[1], b[1]) and torch.equal(b2[3], b[2])
-    assert b2[2].item() == 0.0  # 新头零初始化
+    assert w2.shape == new.head.weight.shape == (4, 128)
+    assert b2.shape == (4,)
+    assert w2.dtype == dtype and b2.dtype == dtype
+    assert w2.device == w.device and b2.device == b.device
+    assert torch.equal(w2[[0, 1, 3]], w) and torch.equal(b2[[0, 1, 3]], b)
+    assert torch.equal(w, w_before) and torch.equal(b, b_before)
+    # 新 terrain 行遵循 Linear 默认初始化范围。
+    bound = 128 ** -0.5
+    assert torch.isfinite(w2[2]).all() and (w2[2].abs() <= bound).all()
+    assert torch.isfinite(b2[2]) and b2[2].abs() <= bound
+    state["head.weight"], state["head.bias"] = w2, b2
+    new.load_state_dict(state, strict=True)
+    priv = torch.randn(5, 48, dtype=dtype, device=device)
+    intent = torch.randn(5, 256, dtype=dtype, device=device)
+    assert torch.allclose(new(priv, intent)[:, [0, 1, 3]], old(priv, intent), atol=1e-7)
 
 
-def test_stage1_to_stage2_head_bad_shape_raises():
-    try:
-        stage1_to_stage2_head(torch.randn(128, 4), torch.randn(3))
-    except ValueError:
-        return
-    raise AssertionError("形状不符应报错")
+@pytest.mark.parametrize("shape", [(128, 3), (4, 128), (3, 0)])
+def test_stage1_to_stage2_head_bad_shape_raises(shape):
+    with pytest.raises(ValueError):
+        stage1_to_stage2_head(torch.randn(*shape), torch.randn(3))

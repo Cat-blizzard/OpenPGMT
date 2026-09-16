@@ -81,8 +81,9 @@ def corrected_root_vel_residual(state_lin_vel_world: np.ndarray,
     """修正后根速度残差（m/s）：世界系速度差的范数。
 
     `ref_anchor_lin_vel_world` 应是**已修正**的参考锚点速度 —— 即 A13 的
-    `ṽ^r = v^r + clip(g(‖v^r‖)λ_pos e^p, ±v̄)`（由
-    `reference_sampler.correct_anchor_velocity` 施加，环境层传入）。
+    `ṽ^r = v^r + clip(g(‖v^r‖)λ_pos e^p, ±v̄)`。
+    `reference_sampler` 在参考锚点系计算该目标；环境层必须用对应参考锚点的
+    完整朝向旋转回世界系，再与机器人的世界系速度一起传入，不能混用坐标系。
     本函数不重复施加修正，避免两处口径。
     """
     a = np.asarray(state_lin_vel_world, dtype=np.float64)

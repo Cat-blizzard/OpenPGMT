@@ -34,7 +34,6 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
-from pgmt.policy.rotation import quat_to_mat
 from pgmt.rewards.spec import SIGMAS, exp_tracking_reward, relaxed_error
 
 # ---------------------------------------------------------------------------
@@ -112,7 +111,9 @@ class RobotState:
 class ReferenceFrame:
     """参考运动在某一时刻的状态（由 `reference_sampler` 提供）。
 
-    与 `RobotState` 同构，但只有跟踪残差需要的量；缺的量以 None 表示"该项跳过"。
+    与 `RobotState` 同构，但只有跟踪残差需要的量。调用单项残差时，
+    `bodies` 可显式选择非空子集；所选 body 在该项的两侧字典中都必须存在。
+    `compute_residuals` 计算全部六项，因此需要所选 body 的全部四类连杆量。
     """
 
     joint_pos: np.ndarray
@@ -225,21 +226,43 @@ def ref_anchor_from_links(ref: ReferenceFrame) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def relative_rotation_angle(a: np.ndarray, b: np.ndarray) -> float:
-    """两个朝向之间的**旋转角**（rad）∈ [0, π]。
+    """两个四元数朝向之间的最短旋转角（rad）∈ [0, π]。
 
-    用 trace 公式（`R_rel = Raᵀ·Rb`，夹角只依赖 trace），并夹紧到定义域。
-    选"旋转角"而非"6D 差的范数"是因为前者有直接物理含义（姿态差多少度），
-    与 σ 的量纲（rad²）语义一致。
+    对相对四元数用 atan2，避免 trace/acos 在零误差附近将舍入噪声放大。
+    q 与 -q 等价；有限非零四元数会先归一化。
     """
-    Ra, Rb = quat_to_mat(np.asarray(a, dtype=np.float64)), \
-        quat_to_mat(np.asarray(b, dtype=np.float64))
-    R_rel = Ra.T @ Rb
-    tr = float(np.trace(R_rel))
-    return float(np.arccos(np.clip((tr - 1.0) / 2.0, -1.0, 1.0)))
+    qa, qb = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
+    for name, q in (("a", qa), ("b", qb)):
+        if q.shape != (4,) or not np.all(np.isfinite(q)):
+            raise ValueError(f"{name} 必须为有限的 (4,) 四元数")
+        if np.linalg.norm(q) < 1e-12:
+            raise ValueError(f"{name} 不能是零四元数")
+    qa = qa / np.linalg.norm(qa)
+    qb = qb / np.linalg.norm(qb)
+    # conjugate(qa) * qb；实部取绝对值选择最短弧。
+    vector = qa[0] * qb[1:] - qb[0] * qa[1:] - np.cross(qa[1:], qb[1:])
+    scalar = abs(float(np.dot(qa, qb)))
+    return float(2.0 * np.arctan2(np.linalg.norm(vector), scalar))
 
 
 def _mean(values: Sequence[float]) -> float:
-    return float(np.mean(values)) if len(values) else 0.0
+    if not len(values):
+        raise ValueError("跟踪目标不能为空；空残差不能作为完美跟踪")
+    return float(np.mean(values))
+
+
+def _require_bodies(state: RobotState, ref: ReferenceFrame,
+                    bodies: Sequence[str], field_name: str) -> None:
+    """子集由调用者显式选定；缺测量不能静默缩小目标集并提高奖励。"""
+    if not len(bodies):
+        raise ValueError("bodies 不能为空；请显式选择要跟踪的 body 子集")
+    if len(set(bodies)) != len(bodies):
+        raise ValueError("bodies 不得重复，否则会重复加权")
+    for side, values in (("state", getattr(state, field_name)),
+                         ("ref", getattr(ref, field_name))):
+        missing = set(bodies) - set(values)
+        if missing:
+            raise KeyError(f"{side}.{field_name} 缺少请求的 body: {sorted(missing)}")
 
 
 def _check_same_length(a: np.ndarray, b: np.ndarray, what: str) -> None:
@@ -259,10 +282,9 @@ def link_pos_residual(state: RobotState, ref: ReferenceFrame,
     root-centric：调用方应先把参考锚点对齐到机器人锚点（见 `align_reference`），
     因此这里直接比较世界位置即可。
     """
+    _require_bodies(state, ref, bodies, "link_pos")
     errs: List[float] = []
     for b in bodies:
-        if b not in state.link_pos or b not in ref.link_pos:
-            continue
         errs.append(float(np.linalg.norm(
             np.asarray(state.link_pos[b]) - np.asarray(ref.link_pos[b]))))
     return _mean(errs)
@@ -271,10 +293,9 @@ def link_pos_residual(state: RobotState, ref: ReferenceFrame,
 def link_ori_residual(state: RobotState, ref: ReferenceFrame,
                       bodies: Sequence[str]) -> float:
     """连杆朝向残差（rad）：各自的旋转角，再对 body 取均值。"""
+    _require_bodies(state, ref, bodies, "link_quat")
     errs: List[float] = []
     for b in bodies:
-        if b not in state.link_quat or b not in ref.link_quat:
-            continue
         errs.append(relative_rotation_angle(state.link_quat[b], ref.link_quat[b]))
     return _mean(errs)
 
@@ -282,10 +303,9 @@ def link_ori_residual(state: RobotState, ref: ReferenceFrame,
 def link_lin_vel_residual(state: RobotState, ref: ReferenceFrame,
                           bodies: Sequence[str]) -> float:
     """连杆线速度残差（m/s）：差向量范数，对 body 取均值。"""
+    _require_bodies(state, ref, bodies, "link_lin_vel")
     errs: List[float] = []
     for b in bodies:
-        if b not in state.link_lin_vel or b not in ref.link_lin_vel:
-            continue
         errs.append(float(np.linalg.norm(
             np.asarray(state.link_lin_vel[b]) - np.asarray(ref.link_lin_vel[b]))))
     return _mean(errs)
@@ -294,10 +314,9 @@ def link_lin_vel_residual(state: RobotState, ref: ReferenceFrame,
 def link_ang_vel_residual(state: RobotState, ref: ReferenceFrame,
                           bodies: Sequence[str]) -> float:
     """连杆角速度残差（rad/s）：差向量范数，对 body 取均值。"""
+    _require_bodies(state, ref, bodies, "link_ang_vel")
     errs: List[float] = []
     for b in bodies:
-        if b not in state.link_ang_vel or b not in ref.link_ang_vel:
-            continue
         errs.append(float(np.linalg.norm(
             np.asarray(state.link_ang_vel[b]) - np.asarray(ref.link_ang_vel[b]))))
     return _mean(errs)
@@ -310,7 +329,7 @@ def joint_pos_residual(state: RobotState, ref: ReferenceFrame,
     d = np.abs(np.asarray(state.joint_pos) - np.asarray(ref.joint_pos))
     if joint_idx is not None:
         d = d[np.asarray(list(joint_idx), dtype=np.int64)]
-    return float(np.mean(d))
+    return _mean(d)
 
 
 def joint_vel_residual(state: RobotState, ref: ReferenceFrame,
@@ -320,7 +339,7 @@ def joint_vel_residual(state: RobotState, ref: ReferenceFrame,
     d = np.abs(np.asarray(state.joint_vel) - np.asarray(ref.joint_vel))
     if joint_idx is not None:
         d = d[np.asarray(list(joint_idx), dtype=np.int64)]
-    return float(np.mean(d))
+    return _mean(d)
 
 
 # ---------------------------------------------------------------------------
@@ -355,29 +374,22 @@ def align_reference(state: RobotState, ref: ReferenceFrame,
         )
         return out
 
-    # yaw-only：把参考从世界系**换到机器人锚点系**
-    #
-    # 正确的换系是 `p_robot = R(-dyaw)·(p_ref − anchor_pos) + base_pos`
-    # —— **先减锚点、再旋转、最后加机器人基座**。
-    # 第一版写成了 `R(dyaw)·p_ref + (base_pos − anchor_pos)`（绕世界原点旋转），
-    # 只有锚点恰在世界原点时才等价；锚点不在原点时会把整条参考绕原点转偏
-    # （症状：robot 与 world-ref 本是同一配置，对齐后 link_pos 残差却是锚点到
-    #  pelvis 的距离 0.0767）。
+    # 将参考朝向主动旋转到机器人朝向，所有输出仍在世界坐标系。
+    # 先减参考锚点、再转 R(yaw_robot-yaw_ref)、最后加机器人基座。
     yaw_r = _yaw_of(state.base_quat)
     yaw_f = _yaw_of(ref.anchor_quat)
     dyaw = yaw_r - yaw_f
     c, s = float(np.cos(dyaw)), float(np.sin(dyaw))
-    # R(-dyaw)：把参考朝向转成机器人朝向
-    Rz_inv = np.array([[c, s, 0.0], [-s, c, 0.0], [0.0, 0.0, 1.0]])
+    Rz = np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
     anchor = np.asarray(ref.anchor_pos, dtype=np.float64)
     base = np.asarray(state.base_pos, dtype=np.float64)
 
     def to_robot_frame(v):
-        return Rz_inv @ (np.asarray(v, dtype=np.float64) - anchor) + base
+        return Rz @ (np.asarray(v, dtype=np.float64) - anchor) + base
 
     def rot_q(q):
-        # 绕 z 旋转 (-dyaw) 的四元数左乘
-        hq = np.array([np.cos(dyaw / 2.0), 0.0, 0.0, -np.sin(dyaw / 2.0)])
+        # 与位置、速度使用同一个主动 yaw 旋转。
+        hq = np.array([np.cos(dyaw / 2.0), 0.0, 0.0, np.sin(dyaw / 2.0)])
         w1, x1, y1, z1 = hq
         w2, x2, y2, z2 = np.asarray(q, dtype=np.float64)
         return np.array([
@@ -393,9 +405,9 @@ def align_reference(state: RobotState, ref: ReferenceFrame,
         anchor_quat=rot_q(ref.anchor_quat),
         link_pos={k: to_robot_frame(v) for k, v in ref.link_pos.items()},
         link_quat={k: rot_q(v) for k, v in ref.link_quat.items()},
-        link_lin_vel={k: Rz_inv @ np.asarray(v, dtype=np.float64)
+        link_lin_vel={k: Rz @ np.asarray(v, dtype=np.float64)
                       for k, v in ref.link_lin_vel.items()},
-        link_ang_vel={k: Rz_inv @ np.asarray(v, dtype=np.float64)
+        link_ang_vel={k: Rz @ np.asarray(v, dtype=np.float64)
                       for k, v in ref.link_ang_vel.items()},
     )
 

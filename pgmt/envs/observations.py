@@ -42,7 +42,7 @@ from typing import Dict, Iterator, List, Sequence, Tuple
 
 import numpy as np
 
-from pgmt.contracts import HISTORY_LEN, OBS_DIM
+from pgmt.contracts import ACT_DIM, HISTORY_LEN, OBS_DIM
 from pgmt.policy.rotation import relative_anchor_6d
 
 __all__ = [
@@ -72,9 +72,9 @@ __all__ = [
 OBS_SEGMENTS: Tuple[Tuple[str, int, str], ...] = (
     ("e_t", 6, "参考相对 anchor 朝向（6D 旋转）"),
     ("omega_t", 3, "基座角速度（基座系，rad/s）"),
-    ("q_t", 29, "关节位置（rad）"),
-    ("qd_t", 29, "关节速度（rad/s）"),
-    ("a_prev", 29, "上一时刻动作（关节位置目标）"),
+    ("q_t", ACT_DIM, "关节位置（rad）"),
+    ("qd_t", ACT_DIM, "关节速度（rad/s）"),
+    ("a_prev", ACT_DIM, "上一时刻动作（关节位置目标）"),
 )
 
 # 加载期一致性校验：分段维度之和必须等于 pgmt/contracts.py 的 OBS_DIM。
@@ -346,7 +346,7 @@ def privileged_segments(n_envs_dynamics: int = 1) -> Tuple[PrivSegment, ...]:
         PrivSegment("base_mass_perturbation", 1 * n, "基座质量扰动（相对缩放）"),
         PrivSegment("com_perturbation", 3 * n, "质心偏移"),
         PrivSegment("push_perturbation", 3, "当前外力扰动（基座系）"),
-        PrivSegment("motor_strength_scale", 29 * n, "关节电机强度缩放"),
+        PrivSegment("motor_strength_scale", ACT_DIM * n, "关节电机强度缩放"),
     )
 
 

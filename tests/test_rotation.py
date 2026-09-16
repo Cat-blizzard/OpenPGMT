@@ -349,3 +349,11 @@ def test_relative_anchor_6d_near_zero_quat_does_not_nan():
     """零四元数无定义，但不得产生 NaN（归一化有 eps 兜底）。"""
     out = relative_anchor_6d(np.zeros(4), np.array([1.0, 0.0, 0.0, 0.0]))
     assert np.all(np.isfinite(out))
+
+
+def test_relative_anchor_6d_expresses_robot_heading_in_reference_frame():
+    # 参考 +90°、机器人 0°：机器人在参考系里朝向 -y。
+    ref = np.array([np.cos(np.pi / 4), 0.0, 0.0, np.sin(np.pi / 4)])
+    robot = np.array([1.0, 0.0, 0.0, 0.0])
+    R = rot6d_to_rotmat(relative_anchor_6d(robot, ref))
+    assert np.allclose(R @ np.array([1.0, 0.0, 0.0]), [0.0, -1.0, 0.0], atol=1e-6)

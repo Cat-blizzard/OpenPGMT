@@ -20,7 +20,9 @@
 #   降驱动（5880 Ada 最低约 535/545）或转 Isaac Lab（install_server.sh）。
 # ============================================================
 set -euo pipefail
-cd "$(dirname "$0")/.."
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=isaacgym_common.sh
+source "$SCRIPT_DIR/isaacgym_common.sh"
 
 ENV_NAME=pgmt
 ISAACGYM_TAR=""
@@ -29,8 +31,12 @@ SKIP_SMOKE=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --isaacgym) ISAACGYM_TAR="$2"; shift 2 ;;
-    --python) PYTHON_VER="$2"; shift 2 ;;
+    --isaacgym|--python)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "[!] $1 需要取值"; exit 1
+      fi
+      if [[ "$1" == "--isaacgym" ]]; then ISAACGYM_TAR="$2"; else PYTHON_VER="$2"; fi
+      shift 2 ;;
     --skip-smoke) SKIP_SMOKE=1; shift ;;
     *) echo "未知参数: $1"; exit 1 ;;
   esac
@@ -40,6 +46,13 @@ if [[ -z "$ISAACGYM_TAR" ]]; then
   echo "[!] 需要 --isaacgym /path/IsaacGym_Preview_4_Package.tar.gz"
   exit 1
 fi
+if [[ ! -f "$ISAACGYM_TAR" ]]; then
+  echo "[!] Isaac Gym 包不存在: $ISAACGYM_TAR"; exit 1
+fi
+# Resolve relative paths before changing to the repository directory.
+ISAACGYM_TAR="$(cd "$(dirname "$ISAACGYM_TAR")" && pwd)/$(basename "$ISAACGYM_TAR")"
+PYTHON_VER=$(isaacgym_select_python "$ISAACGYM_TAR" "$PYTHON_VER")
+cd "$SCRIPT_DIR/.."
 
 echo "===== 0. 硬件/驱动检查 ====="
 if ! command -v nvidia-smi >/dev/null; then
@@ -47,24 +60,10 @@ if ! command -v nvidia-smi >/dev/null; then
 fi
 nvidia-smi --query-gpu=name,driver_version,compute_cap --format=csv,noheader
 
-echo "===== 1. 自动确定 Python 版本（按官方绑定） ====="
-if [[ -z "$PYTHON_VER" ]]; then
-  # 从 gym_XX.so 提取次版本号。注意：gym_39.so 中 "39" 的 3 已是主版本，
-  # 不能再拼 "3." 前缀（旧版写法 grep -oE "3[0-9]" + "3.$X" 会得到 3.39）。
-  # `|| true` 保护：set -e 下管道无匹配会中止脚本，走不到兜底分支。
-  BINDING_VER=$(tar -tzf "$ISAACGYM_TAR" 2>/dev/null \
-    | grep -oE "gym_3[0-9]\.so" | grep -oE "[0-9]+" | sort -n | tail -1 || true)
-  if [[ -n "$BINDING_VER" ]]; then
-    PYTHON_VER="3.${BINDING_VER}"
-    echo "[i] 官方绑定最高支持 Python $PYTHON_VER"
-  else
-    PYTHON_VER="3.9"
-    echo "[!] 包内未找到 gym_3X.so 绑定，按 3.9 兜底（如需指定请用 --python）"
-  fi
-fi
+echo "===== 1. Python 版本（已核对包内绑定） ====="
 echo "[i] 将创建 conda 环境 python=$PYTHON_VER"
 
-if conda env list | grep -qE "^${ENV_NAME}[[:space:]]"; then
+if conda env list | grep -E "^${ENV_NAME}[[:space:]]" >/dev/null; then
   echo "[i] conda 环境 ${ENV_NAME} 已存在，复用"
 else
   conda create -n ${ENV_NAME} python=${PYTHON_VER} -y
@@ -72,36 +71,47 @@ fi
 # shellcheck disable=SC1091
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate ${ENV_NAME}
+ACTIVE_PYTHON=$(python -c 'import sys; print("%d.%d" % sys.version_info[:2])')
+if [[ "$ACTIVE_PYTHON" != "$PYTHON_VER" ]]; then
+  echo "[!] 已有环境 $ENV_NAME 使用 Python $ACTIVE_PYTHON，但包要求 $PYTHON_VER。请先修正环境。"
+  exit 1
+fi
 
 echo "===== 2. torch 2.1.2 (cu121) ====="
 # 官方 PP4 绑定按旧 torch ABI 编译，必须用 2.1 时代版本；cu121 驱动 580 兼容
-if python -c "import torch" 2>/dev/null; then
-  echo "[i] torch 已安装，跳过"
+if python -c 'import torch; assert torch.__version__.split("+")[0] == "2.1.2" and torch.version.cuda == "12.1"' 2>/dev/null; then
+  echo "[i] torch 2.1.2 cu121 已安装，跳过"
 else
-  pip install torch==2.1.2 --index-url https://download.pytorch.org/whl/cu121
+  python -m pip install torch==2.1.2 --index-url https://download.pytorch.org/whl/cu121
 fi
 python -c "import torch; print(f'[i] torch {torch.__version__}, cuda {torch.version.cuda}')"
 
 echo "===== 3. 其余依赖 ====="
-pip install -r setup/requirements.txt
+python -m pip install -r setup/requirements.txt "torch==2.1.2"
+python -c 'import torch; assert torch.__version__.split("+")[0] == "2.1.2" and torch.version.cuda == "12.1", "依赖安装改变了 torch/CUDA 版本"'
 
 echo "===== 4. Isaac Gym ====="
 if python -c "import isaacgym" 2>/dev/null; then
   echo "[i] isaacgym 已可用，跳过安装"
 else
   TMPD=$(mktemp -d)
-  tar -xzf "$ISAACGYM_TAR" -C "$TMPD"
+  trap 'rm -rf "$TMPD"' EXIT
+  tar --force-local -xf "$ISAACGYM_TAR" -C "$TMPD"
   # 注意：-e（editable）会在 site-packages 留一个指向上面的临时目录的
   # egg-link，/tmp 被清理后 import 失效。因此解压到持久位置再 -e 安装。
   DEST="${ISAACGYM_DIR:-$HOME/isaacgym}"
-  if [[ "$DEST" != "$TMPD" ]]; then
+  if [[ -e "$DEST" ]]; then
+    if [[ ! -f "$DEST/python/setup.py" ]]; then
+      echo "[!] 已有目录不是 Isaac Gym 源码目录: $DEST。请通过 ISAACGYM_DIR 指定新位置。"
+      exit 1
+    fi
+    echo "[i] 复用现有源码目录: $DEST"
+  else
     mkdir -p "$(dirname "$DEST")"
-    rm -rf "$DEST"
     cp -r "$TMPD/isaacgym" "$DEST"
     echo "[i] 包已解压到持久路径: $DEST（避免 /tmp 清理后 egg-link 失效）"
   fi
-  pip install -e "$DEST/python" || pip install "$DEST/python"
-  rm -rf "$TMPD"
+  python -m pip install -e "$DEST/python"
 fi
 
 echo "===== 5. 冒烟测试 ====="

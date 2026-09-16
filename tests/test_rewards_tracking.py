@@ -266,20 +266,38 @@ def test_joint_residual_subsets_select_the_right_entries():
     assert joint_pos_residual(s, r, (0, 3)) == pytest.approx(0.25)  # 均值
 
 
-def test_residuals_skip_bodies_missing_from_either_side():
-    """缺 body 时应**跳过**（不参与均值），而不是报错或当 0 处理。"""
-    s, r = _state_and_ref(bodies=("pelvis", "torso_link"))
-    r = ReferenceFrame(joint_pos=r.joint_pos, joint_vel=r.joint_vel,
-                       anchor_pos=r.anchor_pos, anchor_quat=r.anchor_quat,
-                       link_pos={"pelvis": r.link_pos["pelvis"] + np.array([0.4, 0, 0])})
-    # 只有 pelvis 两侧都有 → 均值 = 0.4（torso_link 被跳过）
-    assert link_pos_residual(s, r, ("pelvis", "torso_link")) == pytest.approx(0.4)
-
-
-def test_residuals_zero_when_no_bodies_tracked():
-    """没有任何可跟踪 body 时返回 0（并集为空 → 均值为 0，不抛异常）。"""
+@pytest.mark.parametrize("fn,field", [
+    (link_pos_residual, "link_pos"),
+    (link_ori_residual, "link_quat"),
+    (link_lin_vel_residual, "link_lin_vel"),
+    (link_ang_vel_residual, "link_ang_vel"),
+])
+@pytest.mark.parametrize("side", ["state", "ref"])
+def test_residuals_require_every_requested_body(fn, field, side):
     s, r = _state_and_ref()
-    assert link_pos_residual(s, r, ()) == 0.0
+    target = s if side == "state" else r
+    getattr(target, field).pop("torso_link")
+    with pytest.raises(KeyError, match="torso_link"):
+        fn(s, r, BODIES)
+    # 调用者可以明确选择其余目标，缺失的 body 不会被暗中忽略。
+    assert fn(s, r, ("pelvis",)) == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize("fn", [link_pos_residual, link_ori_residual,
+                               link_lin_vel_residual, link_ang_vel_residual])
+def test_residuals_reject_empty_or_duplicate_body_selection(fn):
+    s, r = _state_and_ref()
+    with pytest.raises(ValueError, match="不能为空"):
+        fn(s, r, ())
+    with pytest.raises(ValueError, match="不得重复"):
+        fn(s, r, ("pelvis", "pelvis"))
+
+
+@pytest.mark.parametrize("fn", [joint_pos_residual, joint_vel_residual])
+def test_joint_residuals_reject_empty_selection(fn):
+    s, r = _state_and_ref()
+    with pytest.raises(ValueError, match="不能为空"):
+        fn(s, r, ())
 
 
 def test_joint_residual_rejects_length_mismatch():
@@ -371,86 +389,36 @@ def test_yaw_of_rejects_zero_quaternion():
 # root-centric 对齐
 # ---------------------------------------------------------------------------
 
-def test_align_reference_makes_matching_state_zero_residual():
-    """**root-centric 的核心**：机器人与参考是**同一物理配置**时（只是所在
-    世界位姿不同），对齐后所有残差应为 0。
-
-    这正是论文 "tracking errors are computed relative to the reference root
-    anchor" 的可验证含义 —— 策略从不同初始位姿/朝向都能复现同一运动意图。
-
-    ## 我在这里错了两次，都是构造问题（实现一直是对的）
-
-    正确构造只有一种：**机器人的所有量直接取自世界版参考**。即令
-    `robot.base_pos = ref_world.anchor_pos`、`robot.link_pos = ref_world.link_pos`
-    —— 这就是"同一物理配置"的定义。
-
-    两次错误构造：
-      1. 把 `anchor_pos` 设成基座位置、`link_pos["pelvis"]` 另设一值 → 锚点与
-         pelvis 不是同一点，残差恰为那个差值；
-      2. 只把参考做了 `Rz(ψ)p + δ`，却把机器人留在**原局部位姿** —— 于是两者的
-         "相对锚点位姿"本就不同，对齐后当然不归零。
-
-    第 2 次是靠 `tests/diag_align.py` 打印中间量定位的：手算契约值
-    `Rz(-ψ)p_ref + (base_pos - anchor_pos)` 与实现输出**逐位相同**，
-    证明实现无误、错在构造。**教训：连续两次手算猜错根因时，停止猜、直接测量。**
-    """
-    _, r = _state_and_ref(bodies=("pelvis", "torso_link"))
-    psi = 0.6
-    delta = np.array([1.5, -0.7, 0.0])
-    c, sn = math.cos(psi), math.sin(psi)
-    Rz = np.array([[c, -sn, 0.0], [sn, c, 0.0], [0.0, 0.0, 1.0]])
-
-    def rot_q(q, ang):
-        """绕 z 旋转 ang 后与 q 复合（左乘 Rz 的四元数）。"""
-        hq = np.array([math.cos(ang / 2), 0.0, 0.0, math.sin(ang / 2)])
-        w1, x1, y1, z1 = hq
-        w2, x2, y2, z2 = np.asarray(q, dtype=np.float64)
-        return np.array([
-            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
-        ])
-
-    # 世界版参考：把局部参考整体做刚体变换
-    r_world = ReferenceFrame(
+def test_align_reference_makes_rotated_state_zero_residual():
+    """参考朝 +x，机器人朝 +y：相同身体配置在世界系中相差正 90°。"""
+    s, r = _state_and_ref(bodies=("pelvis", "torso_link"))
+    r = ReferenceFrame(
         joint_pos=r.joint_pos, joint_vel=r.joint_vel,
-        anchor_pos=Rz @ r.anchor_pos + delta,
-        anchor_quat=rot_q(r.anchor_quat, psi),
-        link_pos={k: Rz @ v + delta for k, v in r.link_pos.items()},
-        link_quat={k: rot_q(v, psi) for k, v in r.link_quat.items()},
-        link_lin_vel={k: Rz @ v for k, v in r.link_lin_vel.items()},
-        link_ang_vel={k: Rz @ v for k, v in r.link_ang_vel.items()},
+        anchor_pos=np.array([2.0, 3.0, 0.8]),
+        anchor_quat=np.array([1.0, 0.0, 0.0, 0.0]),
+        link_pos={"pelvis": np.array([2.0, 3.0, 0.8]),
+                  "torso_link": np.array([3.0, 3.0, 0.8])},
+        link_quat={b: np.array([1.0, 0.0, 0.0, 0.0]) for b in ("pelvis", "torso_link")},
+        link_lin_vel={b: np.array([1.0, 0.0, 0.0]) for b in ("pelvis", "torso_link")},
+        link_ang_vel={b: np.array([0.0, 1.0, 0.0]) for b in ("pelvis", "torso_link")},
     )
-    assert np.allclose(r_world.anchor_pos, r_world.link_pos["pelvis"]), \
-        "构造不自洽：锚点应与 pelvis 重合"
-
-    # ★ 机器人 = 世界版参考的同一物理配置（所有量直接取自它）
-    s = RobotState(
-        base_pos=r_world.anchor_pos.copy(),
-        base_quat=r_world.anchor_quat.copy(),
-        base_lin_vel=np.zeros(3), base_ang_vel=np.zeros(3), gravity_z=-1.0,
-        joint_pos=np.asarray(r_world.joint_pos).copy(),
-        joint_vel=np.asarray(r_world.joint_vel).copy(),
-        joint_acc=np.zeros_like(np.asarray(r_world.joint_pos)),
-        link_pos={k: v.copy() for k, v in r_world.link_pos.items()},
-        link_quat={k: v.copy() for k, v in r_world.link_quat.items()},
-        link_lin_vel={k: v.copy() for k, v in r_world.link_lin_vel.items()},
-        link_ang_vel={k: v.copy() for k, v in r_world.link_ang_vel.items()},
-    )
-
-    r_aligned = align_reference(s, r_world, yaw_only=True)
-    res = compute_residuals(s, r_aligned, ("pelvis", "torso_link"))
-    for key, val in res.items():
-        assert val == pytest.approx(0.0, abs=1e-9), (
-            f"{key} 未对齐：{val}；"
-            f"aligned_pelvis={r_aligned.link_pos['pelvis']} "
-            f"robot_pelvis={s.link_pos['pelvis']}"
-        )
+    q90 = np.array([2**-0.5, 0.0, 0.0, 2**-0.5])
+    s = RobotState(**{**s.__dict__,
+        "base_pos": np.array([-1.0, 4.0, 0.9]), "base_quat": q90,
+        "link_pos": {"pelvis": np.array([-1.0, 4.0, 0.9]),
+                     "torso_link": np.array([-1.0, 5.0, 0.9])},
+        "link_quat": {b: q90.copy() for b in ("pelvis", "torso_link")},
+        "link_lin_vel": {b: np.array([0.0, 1.0, 0.0]) for b in ("pelvis", "torso_link")},
+        "link_ang_vel": {b: np.array([-1.0, 0.0, 0.0]) for b in ("pelvis", "torso_link")},
+    })
+    aligned = align_reference(s, r)
+    assert np.allclose(aligned.anchor_quat, q90)
+    for value in compute_residuals(s, aligned, ("pelvis", "torso_link")).values():
+        assert value == pytest.approx(0.0, abs=1e-7)
 
 
 def test_align_reference_is_exactly_a_change_of_frame():
-    """**对齐就是一次换系**：`p̃ = R(−Δyaw)·(p − anchor) + base`。
+    """**对齐就是一次换系**：`p̃ = R(Δyaw)·(p − anchor) + base`。
 
     可验证的不变量：**换系是刚体变换，故每个 link 到锚点的距离必须保持**：
 
@@ -498,9 +466,9 @@ def test_align_reference_equals_manual_frame_change():
 
     dyaw = _yaw_of(s.base_quat) - _yaw_of(r.anchor_quat)
     c, sn = math.cos(dyaw), math.sin(dyaw)
-    Rz_inv = np.array([[c, sn, 0.0], [-sn, c, 0.0], [0.0, 0.0, 1.0]])
+    Rz = np.array([[c, -sn, 0.0], [sn, c, 0.0], [0.0, 0.0, 1.0]])
     for body in r.link_pos:
-        manual = Rz_inv @ (np.asarray(r.link_pos[body]) - np.asarray(r.anchor_pos)) \
+        manual = Rz @ (np.asarray(r.link_pos[body]) - np.asarray(r.anchor_pos)) \
             + np.asarray(s.base_pos)
         assert np.allclose(r_aligned.link_pos[body], manual, atol=1e-9), (
             f"{body}：实现={r_aligned.link_pos[body]} 手算={manual}"
@@ -727,7 +695,7 @@ def test_residuals_by_partition_uses_joint_names_not_positions():
 
     parts = default_partitions()
     nq = len(G1_JOINT_NAMES)
-    s, r = _state_and_ref(nq=nq)
+    s, r = _state_and_ref(nq=nq, bodies=parts.upper_bodies + parts.lower_bodies)
     up, lo = residuals_by_partition(s, r, parts, G1_JOINT_NAMES)
     assert set(up) == set(lo) == {"link_pos", "link_ori", "link_lin_vel",
                                   "link_ang_vel", "joint_pos", "joint_vel"}
@@ -748,7 +716,7 @@ def test_residuals_by_partition_only_wrong_joint_shows_up():
 
     parts = default_partitions()
     nq = len(G1_JOINT_NAMES)
-    s, r = _state_and_ref(nq=nq)
+    s, r = _state_and_ref(nq=nq, bodies=parts.upper_bodies + parts.lower_bodies)
     idx = G1_JOINT_NAMES.index("left_knee")
     jp = np.asarray(s.joint_pos).copy()
     jp[idx] += 0.2
@@ -757,3 +725,19 @@ def test_residuals_by_partition_only_wrong_joint_shows_up():
     n_lo = len(parts.lower_joints)
     assert lo["joint_pos"] == pytest.approx(0.2 / n_lo), "lower 应只有 1/n 的均值"
     assert up["joint_pos"] == pytest.approx(0.0), "upper 不应受影响"
+
+
+@pytest.mark.parametrize("angle", [1e-9, 0.3, 1.9, math.pi - 1e-9, math.pi])
+def test_rotation_angle_is_stable_at_zero_and_pi(angle):
+    q = _quat_z(angle)
+    assert relative_rotation_angle(q, q) == 0.0
+    assert relative_rotation_angle(q, -q) == 0.0
+    assert relative_rotation_angle(np.array([1.0, 0.0, 0.0, 0.0]), q) == pytest.approx(angle, abs=1e-12)
+
+
+def test_rotation_angle_normalizes_and_rejects_invalid_quaternions():
+    q = _quat_z(0.7)
+    assert relative_rotation_angle(q, 2.0 * q) == pytest.approx(0.0, abs=1e-12)
+    for invalid in (np.zeros(4), np.full(4, np.nan), np.ones(3)):
+        with pytest.raises(ValueError, match="四元数"):
+            relative_rotation_angle(q, invalid)

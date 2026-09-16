@@ -101,6 +101,7 @@ def phase2(steps: int) -> bool:
                 size=(0.5, 0.5, 0.5),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(),
                 mass_props=sim_utils.MassPropertiesCfg(mass=10.0),
+                collision_props=sim_utils.CollisionPropertiesCfg(),
             ),
             init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 1.0)),
         )

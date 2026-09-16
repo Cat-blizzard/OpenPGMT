@@ -67,9 +67,10 @@ def test_future_refs_offsets_and_layout(db):
     cfg = get("A2").value
     C = db.future_refs(0, 50.0)
     assert C.shape == (cfg.K, 61)
-    # τ=0 → 当前帧 q = 0.5；τ=1 → 0.51
+    # τ=0 → 当前源帧 q=0.5；一个50Hz控制步=0.6个30fps源帧。
     assert C[0, 0] == pytest.approx(0.50)
-    assert C[1, 0] == pytest.approx(0.51)
+    assert C[1, 0] == pytest.approx(0.506)
+    assert C[-1, 0] == pytest.approx(0.686)  # 31步=0.62s=18.6源帧
     # 布局：q(29) + q̇(29) + ṽ(3)；q̇[0]=0.3，ṽ = 根速度 (3, 0, 0)
     assert C[0, 29] == pytest.approx(0.3)
     assert C[0, 58] == pytest.approx(3.0, rel=1e-5)
@@ -395,3 +396,121 @@ def test_sampler_falls_back_to_uniform_on_bad_weights():
     seen = {s.sample(rng) for _ in range(200)}
     assert seen <= cands
     assert len(seen) > 1, "退回均匀采样后不应总取同一个段"
+
+
+# Reference velocities and position correction share the current reference frame.
+def _moving_db(yaw=0.0, n_frames=40):
+    """世界 +x 匀速 1m/s，给定参考朝向。"""
+    db = _db_with_rotation([_quat_z(yaw)] * n_frames, frame_time=0.1)
+    db.seqs[0]["root_pos"][:, 0] = np.arange(n_frames) * 0.1
+    return db
+
+
+def test_anchor_velocity_rotates_world_displacement_into_reference_frame():
+    db = _moving_db(yaw=np.pi / 2)
+    # 世界 +x 在朝向 +y 的参考系里为 -y，而非仍然 +x。
+    assert np.allclose(db.anchor_velocity(0, 2.5), [0.0, -1.0, 0.0], atol=1e-6)
+    refs = db.future_refs(0, 2.5, e_p=np.array([0.25, 0.0]), lambda_pos=1.0)
+    assert np.allclose(refs[:, -3:], [0.25, -1.0, 0.0], atol=1e-5)
+
+
+def test_anchor_velocity_uses_full_reference_rotation_before_planar_projection():
+    # 参考绕 y 轴转 +90°：世界 +z 对应参考 -x。
+    quat = np.array([np.cos(np.pi / 4), 0.0, np.sin(np.pi / 4), 0.0])
+    db = _db_with_rotation([quat] * 3, frame_time=0.1)
+    db.seqs[0]["root_pos"][:, 2] = [0.0, 0.1, 0.2]
+    assert np.allclose(db.anchor_velocity(0, 0.5), [-1.0, 0.0, 0.0], atol=1e-6)
+
+
+def test_future_velocities_share_current_anchor_when_reference_turns():
+    db = _moving_db()
+    db.seqs[0]["root_rot"][1:] = _quat_z(np.pi / 2)
+    # 当前 t=0 朝向 +x；即使未来朝向 +y，全部 token 仍表达在当前系。
+    assert np.allclose(db.future_refs(0, 0.0)[:, -3:], [1.0, 0.0, 0.0], atol=1e-5)
+    assert np.allclose(db.anchor_velocity(0, 1.0), [0.0, -1.0, 0.0], atol=1e-6)
+    assert np.allclose(db.anchor_velocity(0, 1.0, anchor_t=0.0), [1.0, 0.0, 0.0], atol=1e-6)
+
+
+def test_corrected_future_refs_are_invariant_to_global_yaw_and_translation():
+    from pgmt.policy.rotation import quat_to_mat
+
+    db = _moving_db(yaw=0.3)
+    moved = _moving_db(yaw=0.3 + 1.2)
+    rotation = quat_to_mat(_quat_z(1.2))
+    shift = np.array([3.0, -2.0, 1.0])
+    moved.seqs[0]["root_pos"] = db.seqs[0]["root_pos"] @ rotation.T + shift
+    ref_pos = db.seqs[0]["root_pos"][3]
+    robot_pos = ref_pos - np.array([0.2, 0.1, 0.0])
+    error = (quat_to_mat(db.ref_rot(0, 3.0)).T @ (ref_pos - robot_pos))[:2]
+    moved_ref, moved_robot = rotation @ ref_pos + shift, rotation @ robot_pos + shift
+    moved_error = (quat_to_mat(moved.ref_rot(0, 3.0)).T @ (moved_ref - moved_robot))[:2]
+    assert np.allclose(error, moved_error, atol=1e-6)
+    assert np.allclose(db.future_refs(0, 3.0, e_p=error),
+                       moved.future_refs(0, 3.0, e_p=moved_error), atol=1e-5)
+
+
+def test_single_frame_reference_has_zero_velocity():
+    db = _moving_db(yaw=1.0, n_frames=1)
+    assert np.array_equal(db.anchor_velocity(0, 10.0), np.zeros(3))
+    assert np.array_equal(db.future_refs(0, 0.0)[:, -3:], np.zeros((6, 3)))
+
+
+@pytest.mark.parametrize("key,value", [
+    ("qpos", np.zeros((0, 29))),
+    ("qvel", np.zeros((2, 29))),
+    ("root_pos", np.zeros((3, 2))),
+    ("root_rot", np.zeros((3, 4))),
+    ("frame_time", 0.0),
+    ("frame_time", np.nan),
+])
+def test_database_rejects_invalid_sampling_inputs_from_both_load_paths(tmp_path, key, value):
+    seq = dict(_db_with_rotation([_quat_z(0.0)] * 3).seqs[0])
+    seq[key] = value
+    with pytest.raises(ValueError):
+        MotionDatabase.from_sequences([seq])
+    np.savez(tmp_path / "bad.npz", **seq)
+    with pytest.raises(ValueError):
+        MotionDatabase(str(tmp_path))
+
+
+@pytest.mark.parametrize("seg_len", [0, -1, 1.5])
+def test_samplers_reject_invalid_segment_length(seg_len):
+    db = _moving_db()
+    with pytest.raises(ValueError, match="seg_len"):
+        db.sample_segment(np.random.default_rng(0), seg_len)
+    with pytest.raises(ValueError, match="seg_len"):
+        AdaptiveSampler(db, seg_len)
+
+
+@pytest.mark.parametrize("boost", [-1.0, np.inf, np.nan])
+def test_adaptive_sampler_rejects_invalid_failure_boost(boost):
+    with pytest.raises(ValueError, match="fail_boost"):
+        AdaptiveSampler(_moving_db(), seg_len=10, fail_boost=boost)
+
+
+def test_velocity_correction_rejects_broadcasting_between_coordinate_shapes():
+    with pytest.raises(ValueError, match="形状"):
+        correct_anchor_velocity(np.zeros(3), np.zeros(2))
+
+
+def test_future_refs_represent_same_physical_times_at_30_and_50_fps():
+    """独立物理轨迹 q0(t)=t；50Hz控制下最远token应是当前+0.62秒。"""
+    references = []
+    for fps in (30, 50):
+        times = np.arange(2 * fps + 1, dtype=np.float64) / fps
+        qpos = np.zeros((len(times), 29))
+        qpos[:, 0] = times
+        qvel = np.zeros_like(qpos)
+        qvel[:, 0] = 1.0
+        root_pos = np.zeros((len(times), 3))
+        root_pos[:, 0] = 2.0 * times
+        db = MotionDatabase.from_sequences([{
+            "qpos": qpos, "qvel": qvel, "root_pos": root_pos,
+            "root_rot": np.tile([1.0, 0.0, 0.0, 0.0], (len(times), 1)),
+            "frame_time": 1.0 / fps,
+        }])
+        C = db.future_refs(0, t=0.4 * fps)
+        np.testing.assert_allclose(C[:, 0], [0.4, 0.42, 0.46, 0.54, 0.70, 1.02])
+        np.testing.assert_allclose(C[:, -3:], np.tile([2.0, 0.0, 0.0], (6, 1)))
+        references.append(C)
+    np.testing.assert_allclose(references[0], references[1], atol=1e-12)

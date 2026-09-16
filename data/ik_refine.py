@@ -7,8 +7,8 @@
   - 腿链先行（M1.5a）：12 个腿关节，目标 = 膝/踝位置（趾因 G1 无脚趾
     关节存在几何下限，不参与优化，仅评估报告）
   - 批量向量化：全部帧同时迭代（FK/雅可比/求解均按 (T,·) 批处理）；
-    时间平滑 = 向**原始轨迹**（旋转映射输出，本身平滑）的正则，
-    替代逐帧热启动（热启动版 378s/文件，批量版约一个量级快）
+    平滑先验 = 向**原始轨迹**（旋转映射输出）的正则，
+    不直接约束相邻帧差分；替代逐帧热启动以保持批量求解
   - LM 自适应阻尼按帧独立（接受/拒绝的向量化掩码）+ 关节限位硬投影
   - 接触标签与 qvel 在精修后重算（脚位置贴合源 → 接触一致率上升）
 
@@ -38,6 +38,7 @@ from data.retarget_lafan1 import (
     _G1_REST,
     _G1_REST_LEFT,
     g1_forward_kinematics,
+    bounded_joint_trajectory,
 )
 
 # 腿链关节（G1_JOINT_NAMES 顺序）
@@ -119,14 +120,15 @@ def _refine(data: Dict[str, np.ndarray], targets: np.ndarray,
 
     targets: (T, K, 3)（已对齐）；返回精修后的完整 qpos。
     """
-    qpos = data["qpos"].copy()
+    qpos = np.asarray(data["qpos"], dtype=np.float64).copy()
     T = qpos.shape[0]
     root_pos, root_rot = data["root_pos"], data["root_rot"]
     n_j = len(joint_idx)
     lo = np.array([G1_JOINT_LIMITS[G1_JOINT_NAMES[i]][0] for i in joint_idx])
     hi = np.array([G1_JOINT_LIMITS[G1_JOINT_NAMES[i]][1] for i in joint_idx])
     theta0 = qpos[:, joint_idx].copy()
-    theta = theta0.copy()
+    # Start from a feasible point even when no LM step is accepted.
+    theta = np.clip(theta0, lo, hi)
     lam = np.full(T, damp_init)
 
     joint_names = [G1_JOINT_NAMES[i] for i in joint_idx]
@@ -148,17 +150,20 @@ def _refine(data: Dict[str, np.ndarray], targets: np.ndarray,
         Jw = J * np.repeat(weights, 3)[None, :, None]
         A = np.einsum("tij,tik->tjk", Jw, Jw) \
             + (lam + lambda_smooth)[:, None, None] * np.eye(n_j)
-        b = np.einsum("tij,ti->tj", Jw, r) + lambda_smooth * (theta0 - theta)
+        b = np.einsum("tij,ti->tj", Jw, r) + lambda_smooth * (theta - theta0)
         dtheta = np.linalg.solve(A, b)
         trial = np.clip(theta - dtheta, lo, hi)
         trial_r = residuals(trial)
-        cur_cost = np.einsum("ti,ti->t", r, r)
-        trial_cost = np.einsum("ti,ti->t", trial_r, trial_r)
-        accept = trial_cost < cur_cost * 0.99
+        # The prior belongs to both the gradient and the acceptance objective.
+        cur_cost = (np.einsum("ti,ti->t", r, r)
+                    + lambda_smooth * np.square(theta - theta0).sum(axis=1))
+        trial_cost = (np.einsum("ti,ti->t", trial_r, trial_r)
+                      + lambda_smooth * np.square(trial - theta0).sum(axis=1))
+        accept = trial_cost < cur_cost
         theta[accept] = trial[accept]
         lam = np.where(accept, np.maximum(lam * 0.5, 1e-8), np.minimum(lam * 10.0, 1e2))
-        if not accept.any():
-            break
+        # Rejected steps increase damping; retry instead of stopping before
+        # the adaptive LM schedule can take effect.
     qpos[:, joint_idx] = theta
     return qpos
 
@@ -227,21 +232,17 @@ def refine_full(data: Dict[str, np.ndarray], bvh: BVH,
 
 
 def _finalize(data: Dict[str, np.ndarray], qpos: np.ndarray) -> Dict[str, np.ndarray]:
-    """重算 qvel 与接触标签。
+    """Project finite hinge coordinates and recompute velocity/contact labels.
 
-    注意导出约定：qpos 保持 wrap 后的规范值（(−π,π]）——环境的 PD
-    参考/关节位置奖励按规范角度比较，unwrap 的 2π 偏移会导致错误的
-    绝对参考值；qvel 才由 unwrap 后的连续序列差分。
+    qvel directly differentiates the exported bounded qpos. Unwrapping would
+    invent motion across a mechanical stop for differences larger than pi.
     """
     root_pos, root_rot = data["root_pos"], data["root_rot"]
-    qpos_w = (qpos + np.pi) % (2 * np.pi) - np.pi
-    qpos_u = np.unwrap(qpos_w, axis=0)
-    qvel = np.zeros_like(qpos_u)
-    qvel[1:] = (qpos_u[1:] - qpos_u[:-1]) / float(data["frame_time"])
+    qpos_bounded, qvel = bounded_joint_trajectory(qpos, float(data["frame_time"]))
     out = {k: v for k, v in data.items()}
-    out["qpos"] = qpos_w.astype(np.float32)
+    out["qpos"] = qpos_bounded
     out["qvel"] = qvel.astype(np.float32)
-    pos = g1_forward_kinematics(qpos_u, root_pos, root_rot)
+    pos = g1_forward_kinematics(qpos_bounded, root_pos, root_rot)
     feet = np.stack([pos["left_ankle_roll_link"], pos["right_ankle_roll_link"]], axis=1)
     from data.retarget_lafan1 import contact_labels
     from pgmt.cfg.assumptions import get

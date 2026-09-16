@@ -9,7 +9,7 @@ glimpse 位置；双线性采样使裁剪可微，无需落足点标注即可学
 高度值拼接后过 MLP_ψ 得到 256 维 token，注入 IFM 的 KV。
 
 坐标约定：高程图 M ∈ R^{21×21} 覆盖机器人系 2m×2m，单元格
-(i, j) 中心位于 x = −1 + i·0.1, y = −1 + j·0.1（米），
+(i, j) 中心位于 x = −1 + j·0.1, y = −1 + i·0.1（米），
 与 grid_sample(align_corners=True) 的角点对齐一致。
 """
 
@@ -20,6 +20,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from pgmt.cfg.assumptions import get
+from pgmt.contracts import REF_FRAME_DIM
 from pgmt.policy.mlp import MLP
 
 
@@ -66,7 +67,7 @@ class TerrainGlimpseEncoder(nn.Module):
 
     def __init__(self, map_size: int | None = None, num_glimpses: int | None = None,
                  patch_size: int | None = None, token_dim: int | None = None,
-                 history_dim: int | None = None, ref_dim: int = 61,
+                 history_dim: int | None = None, ref_dim: int = REF_FRAME_DIM,
                  selector_hidden: tuple | None = None, token_hidden: tuple | None = None,
                  loc_extent: float | None = None, activation: str | None = None):
         super().__init__()

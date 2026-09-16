@@ -1,7 +1,7 @@
 """假设注册表（Assumption Registry）——论文未公开超参的唯一出处。
 
 论文 arXiv:2609.08511v2 未给出全部实现细节。凡需自行拍定的取值，
-一律在此登记为编号假设（A1–A18），并附带理由。约定：
+一律在此登记为编号假设（A1–A22），并附带理由。约定：
   - 所有模块从这里 import 取值，禁止在别处硬编码；
   - 训练启动时调用 `dump()` 写入运行日志，使每个 checkpoint 可追溯到具体假设值；
   - 最终报告以本文件为基准，与实际取值逐项对照并说明偏差。
@@ -167,10 +167,10 @@ class Relaxation:
     alpha_default: float = 1.0  # α_{h,j}，作用于 lower-body 目标
     chi: Dict[str, float] = field(default_factory=lambda: {
         "flat": 0.0,  # 平地不松弛
-        "slopes": 0.6,
+        "slopes": 1.0,
         "stairs": 1.0,
         "boxes": 1.0,
-        "rough": 0.6,
+        "rough": 0.0,  # rough 保持严格跟踪
     })
     tau_saturation: float = 0.05  # τ(d) 线性增长，饱和于目标量级 5%
 
@@ -331,7 +331,7 @@ class AuxCfg:
         → 用与跟踪组相同的高斯核 `exp(−e²/σ)`
       - **6 个惩罚项**（权重 < 0）：`pelvis_vert_accel` / `ee_accel_mismatch` /
         `action_rate` / `joint_limit` / `undesired_contact` / `head_torso_impact`
-        → 用 `−‖·‖²` 或违反量的平方
+        → 返回非负平方代价，负号仅由 Table I 权重携带
 
     论文未说明各惩罚的**度量方式**与**阈值**，故集中于此：
       - `pelvis_vert_accel`：取加速度**平方**（0 处可导、量纲一致）

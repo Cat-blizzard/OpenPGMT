@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import subprocess
 import sys
 
@@ -84,6 +85,8 @@ def phase2(num_envs: int, steps: int) -> bool:
 
     import torch
 
+    gym = None
+    sim = None
     try:
         gym = gymapi.acquire_gym()
 
@@ -97,6 +100,8 @@ def phase2(num_envs: int, steps: int) -> bool:
         sim_params.physx.num_threads = 2
 
         sim = gym.create_sim(0, -1, gymapi.SIM_PHYSX, sim_params)  # 无渲染头
+        if sim is None:
+            raise RuntimeError("create_sim 返回 None")
 
         plane = gymapi.PlaneParams()
         plane.normal = gymapi.Vec3(0, 0, 1)
@@ -115,7 +120,7 @@ def phase2(num_envs: int, steps: int) -> bool:
             env = gym.create_env(sim, lower, upper, per_row)
             pose = gymapi.Transform()
             pose.p = gymapi.Vec3(0.0, 0.0, 1.0)  # 1 m 高处自由落体
-            gym.create_actor(env, box, pose, f"box_{i}", 1, 1)
+            gym.create_actor(env, box, pose, f"box_{i}", i, 1)
 
         gym.prepare_sim(sim)
         rb = gymtorch.wrap_tensor(gym.acquire_rigid_body_state_tensor(sim))
@@ -125,7 +130,6 @@ def phase2(num_envs: int, steps: int) -> bool:
             gym.simulate(sim)
             gym.fetch_results(sim, True)
             gym.refresh_rigid_body_state_tensor(sim)
-        gym.sync_frame_time(sim)
 
         z = rb[:, 2].clone()
         assert torch.isfinite(z).all(), "状态含 NaN/Inf"
@@ -134,7 +138,6 @@ def phase2(num_envs: int, steps: int) -> bool:
             f"箱体高度异常: z ∈ [{z.min():.3f}, {z.max():.3f}]（预期 ~0.25）"
         print(f"[i] {steps} 步物理仿真 OK，箱体静止高度 z ∈ [{z.min():.3f}, {z.max():.3f}]")
 
-        gym.destroy_sim(sim)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -142,6 +145,9 @@ def phase2(num_envs: int, steps: int) -> bool:
         print("      若为 CUDA/PhysX 初始化错误（no kernel image 等），多为 PhysX 缺本机 GPU")
         print("      架构内核 —— 用 setup/check_isaacgym.sh 判定；不可行则转 Isaac Lab。")
         return False
+    finally:
+        if gym is not None and sim is not None:
+            gym.destroy_sim(sim)
 
     print("[PASS] Phase 2")
     return True
@@ -152,9 +158,9 @@ def phase3(num_envs: int, iters: int) -> bool:
     print("Phase 3: rsl-rl PPO 训练闭环")
     print("=" * 60)
     try:
-        import torch
         import isaacgym  # noqa: F401
         from isaacgym import gymapi, gymtorch
+        import torch
         from rsl_rl.env import VecEnv
         from rsl_rl.runners import OnPolicyRunner
     except Exception as e:
@@ -175,6 +181,7 @@ def phase3(num_envs: int, iters: int) -> bool:
 
         def __init__(self, num_envs: int, device: str = "cuda:0"):
             self.num_envs = num_envs
+            self.num_obs = self.num_privileged_obs = 9
             self.num_actions = 3
             self.device = device
             self.cfg = {}
@@ -190,6 +197,8 @@ def phase3(num_envs: int, iters: int) -> bool:
             sim_params.physx.use_gpu = True
             sim_params.physx.num_subscenes = 0
             self.sim = self.gym.create_sim(0, -1, gymapi.SIM_PHYSX, sim_params)
+            if self.sim is None:
+                raise RuntimeError("create_sim 返回 None")
 
             plane = gymapi.PlaneParams()
             plane.normal = gymapi.Vec3(0, 0, 1)
@@ -203,16 +212,22 @@ def phase3(num_envs: int, iters: int) -> bool:
             lower = gymapi.Vec3(-spacing, 0.0, -spacing)
             upper = gymapi.Vec3(spacing, spacing, spacing)
             self.envs, self.actors = [], []
+            origins = []
             for i in range(num_envs):
                 env = self.gym.create_env(self.sim, lower, upper, int(num_envs ** 0.5))
                 pose = gymapi.Transform()
                 pose.p = gymapi.Vec3(0.0, 0.0, 0.25)
-                a = self.gym.create_actor(env, box, pose, f"box_{i}", 1, 1)
+                a = self.gym.create_actor(env, box, pose, f"box_{i}", i, 1)
                 self.envs.append(env)
                 self.actors.append(a)
+                origin = self.gym.get_env_origin(env)
+                origins.append([origin.x, origin.y, origin.z])
             self.gym.prepare_sim(self.sim)
 
             self.rb = gymtorch.wrap_tensor(self.gym.acquire_rigid_body_state_tensor(self.sim))
+            self.gym.refresh_rigid_body_state_tensor(self.sim)
+            self.origins = torch.tensor(origins, dtype=torch.float32, device=device)
+            self.forces = torch.zeros(num_envs, 3, device=device)
             self.targets = torch.zeros(num_envs, 3, device=device)
             self.obs_buf = torch.zeros(num_envs, 9, device=device)
             self._reset_targets()
@@ -223,25 +238,26 @@ def phase3(num_envs: int, iters: int) -> bool:
             self.targets[:, 2] = 0.25
 
         def _refresh_obs(self):
-            self.obs_buf[:, 0:3] = self.rb[:, 0:3]
+            self.obs_buf[:, 0:3] = self.rb[:, 0:3] - self.origins
             self.obs_buf[:, 3:6] = self.rb[:, 7:10]  # 线速度
             self.obs_buf[:, 6:9] = self.targets
 
-        # ---- rsl-rl 2.3.1 VecEnv 接口 ----
+        # ---- rsl-rl 2.1.2 VecEnv 接口 ----
         def get_observations(self):
             self._refresh_obs()
             extras = {"observations": {"critic": self.obs_buf.clone()}}
             return self.obs_buf.clone(), extras
 
         def step(self, actions):
-            for i in range(self.num_envs):
-                f = gymapi.Vec3(actions[i, 0].item(), actions[i, 1].item(), actions[i, 2].item())
-                self.gym.apply_rigid_body_force(
-                    self.envs[i], self.actors[i], f, gymapi.Vec3(0, 0, 0), gymapi.ENV_SPACE)
+            # GPU pipeline uses the tensor API; one rigid body per environment.
+            self.forces.copy_(actions)
+            self.gym.apply_rigid_body_force_tensors(
+                self.sim, gymtorch.unwrap_tensor(self.forces), None, gymapi.ENV_SPACE)
             self.gym.simulate(self.sim)
             self.gym.fetch_results(self.sim, True)
             self.gym.refresh_rigid_body_state_tensor(self.sim)
             self._refresh_obs()
+            self.episode_length_buf += 1
 
             dist = (self.obs_buf[:, 0:3] - self.targets).norm(dim=1)
             rewards = -dist
@@ -254,6 +270,11 @@ def phase3(num_envs: int, iters: int) -> bool:
             self._refresh_obs()
             extras = {"observations": {"critic": self.obs_buf.clone()}}
             return self.obs_buf.clone(), extras
+
+        def close(self):
+            if self.sim is not None:
+                self.gym.destroy_sim(self.sim)
+                self.sim = None
 
     train_cfg = {
         "algorithm": {
@@ -284,6 +305,7 @@ def phase3(num_envs: int, iters: int) -> bool:
         "logger": "tensorboard",
     }
 
+    env = None
     try:
         env = SmokeVecEnv(num_envs)
         runner = OnPolicyRunner(env, train_cfg, log_dir="runs/smoke", device="cuda:0")
@@ -293,16 +315,27 @@ def phase3(num_envs: int, iters: int) -> bool:
         traceback.print_exc()
         print(f"[FAIL] PPO 训练失败: {e}")
         return False
+    finally:
+        if env is not None:
+            env.close()
 
     print("[PASS] Phase 3")
     return True
 
 
+def positive_int(value):
+    value = int(value)
+    if value <= 0:
+        raise argparse.ArgumentTypeError("参数必须为正整数")
+    return value
+
+
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--num-envs", type=int, default=128)
-    p.add_argument("--steps", type=int, default=100)
-    p.add_argument("--iters", type=int, default=10)
+    p.add_argument("--num-envs", type=positive_int, default=128)
+    p.add_argument("--steps", type=positive_int, default=100)
+    p.add_argument("--iters", type=positive_int, default=10)
+    p.add_argument("--phase", type=int, choices=(1, 2, 3), help=argparse.SUPPRESS)
     args = p.parse_args()
 
     # 顺序执行并在首个失败处停止：后续阶段依赖前序阶段的可用性，
@@ -312,9 +345,18 @@ def main():
         ("Phase 2: Isaac Gym 物理", lambda: phase2(args.num_envs, args.steps)),
         ("Phase 3: rsl-rl PPO", lambda: phase3(args.num_envs, args.iters)),
     ]
+    if args.phase is not None:
+        sys.exit(0 if phases[args.phase - 1][1]() else args.phase)
+
+    # Each phase gets a fresh interpreter. Phase 1 may import torch without
+    # poisoning Isaac Gym's mandatory import-before-torch order in phases 2/3.
+    command = [sys.executable, str(Path(__file__).resolve()),
+               "--num-envs", str(args.num_envs), "--steps", str(args.steps),
+               "--iters", str(args.iters)]
     failed = 0
-    for i, (name, fn) in enumerate(phases, 1):
-        if fn():
+    for i, (name, _) in enumerate(phases, 1):
+        result = subprocess.run(command + ["--phase", str(i)], check=False)
+        if result.returncode == 0:
             continue
         failed = i
         break

@@ -135,9 +135,9 @@ def rot6d_to_rotmat(d6: np.ndarray) -> np.ndarray:
 def relative_anchor_6d(robot_quat: np.ndarray, ref_quat: np.ndarray) -> np.ndarray:
     """参考相对 anchor 朝向 `e_t ∈ R^6`（论文 §III 的 `o_t` 第一项）。
 
-    `e_t` = 参考锚点朝向相对机器人锚点朝向的偏差，表达在机器人锚点系：
+    `e_t` = 机器人锚点朝向相对参考锚点朝向的偏差，表达在参考锚点系：
 
-        R_rel = R_ref^T · R_robot      （列向量约定下的"机器人系下的参考朝向"）
+        R_rel = R_ref^T · R_robot      （列向量约定下的"参考系下的机器人朝向"）
 
     即 `R_robot = R_ref · R_rel`。取 6D 表示后作为观测，使策略在
     root-centric 表述下只关心相对朝向（与论文"减少对绝对全局朝向的依赖"
