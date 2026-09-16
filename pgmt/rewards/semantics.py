@@ -255,14 +255,18 @@ STAGE2_SEMANTICS: Tuple[TermSemantics, ...] = (
         "落足质量：用局部高度变化评价落点是否平坦/合适",
         False, None,
         Corr.PGMT_SPECIFIC,
-        "论文 §IV-B 明写'Local height variation is used to evaluate touchdown quality'",
+        "论文 §IV-B 明写 'Local height variation is used to evaluate touchdown "
+        "quality'；本实现取落点附近高度采样的**标准差**作为 variation（A22）",
     ),
     TermSemantics(
         "reference_contact_match", "terrain",
         "参考接触标签与仿真接触的一致性（标签来自离线地形网格查询）",
         False, None,
         Corr.PGMT_SPECIFIC,
-        "论文明写接触标签由 offline terrain-mesh queries 得到",
+        "论文明写接触标签由 offline terrain-mesh queries 得到；本仓库的 "
+        "`contacts` 字段改由 LAFAN1 足部位置的速度阈值生成"
+        "（data/retarget_lafan1.py 的 contact_labels），与论文口径**不同源** —— "
+        "该项数值因此有系统性偏差，报告须说明",
     ),
     TermSemantics(
         "slip", "terrain",

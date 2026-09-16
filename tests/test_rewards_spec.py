@@ -161,6 +161,45 @@ def test_sum_rejects_unknown_terms():
         UPPER.sum({"link_position": 1.0})  # 应为 link_pos
 
 
+def test_sum_rejects_negative_and_nan_values():
+    """**值域守卫**：负值与 NaN 必须被拒绝。
+
+    本仓库的约定是"所有项的值 ≥ 0，符号全部由权重携带"。若某项返回负值
+    （如惩罚项返回 `−‖Δa‖²`），它与 Table I 的负权重相乘
+    （`−0.05 × −0.03 = +0.0015`）会变成**正贡献** —— 惩罚反转成奖励。
+    这类错误在训练曲线上表现为"学出怪行为"，极难定位，故在求和处直接拒绝。
+
+    NaN 也必须拦：`nan < 0` 为假，朴素的 `v < 0` 检查会漏过它，
+    故实现用 `not (v >= 0)`。
+    """
+    with pytest.raises(ValueError, match="负值或 NaN"):
+        AUX.sum({"action_rate": -0.03})
+    with pytest.raises(ValueError, match="负值或 NaN"):
+        AUX.sum({"action_rate": float("nan")})
+    # 0 是合法的 —— 惩罚项"无违规"恰为 0
+    assert AUX.sum({"action_rate": 0.0}) == pytest.approx(0.0)
+
+
+def test_negative_weight_terms_contribute_negatively():
+    """**负权重项在"有代价"时必须产生负贡献** —— 惩罚就得是惩罚。
+
+    这正是 `auxiliary.py` 第一版违反的契约：那里惩罚项返回 `−代价`，
+    与本表的负权重相乘变成**正贡献**（违规越大奖励越高）。
+    这里绕开具体实现，直接用权重表验证代数结果：只给该项代价 1.0，
+    组和应当恰等于它的权重（其余项按 0 计），因而恒为负。
+    """
+    for group in (AUX, TERRAIN):
+        for name, w in group.terms:
+            if w >= 0.0:
+                continue
+            contribution = group.sum({name: 1.0})
+            assert contribution == pytest.approx(w), (
+                f"{group.name}.{name} 代价为 1.0 时组和应等于权重 {w}，"
+                f"得到 {contribution}")
+            assert contribution < 0.0, \
+                f"{group.name}.{name} 权重为负，代价应产生负贡献"
+
+
 def test_total_reward_stage1_excludes_terrain():
     vals = {"upper": {"link_pos": 1.0}, "lower": {"ta_link_pos": 1.0},
             "terrain": {"touchdown_quality": 100.0}, "aux": {"root_ori": 1.0}}

@@ -85,6 +85,31 @@ class TerrainDifficulty:
 
 
 @dataclass(frozen=True)
+class TerrainTiling:
+    """A19：地形 tile 几何（论文只说"five families × ten levels"，未给 tile 规格）。
+
+    论文未写出的部分：
+      - **tile 边长** → 必须 > 高程图覆盖范围（2m×2m，论文 §III），否则一张
+        高程图会跨越多个 tile，"机器人位于哪个地形族"（Stage 2 松弛的 χ(κ_t)、
+        地形课程都依赖它）就没有定义。取 4.0m（约 2 倍余量）。
+      - **四周留白** → 相邻 tile 在接缝处高度必须一致，否则机器人会撞上"看不见
+        的墙"（高程图看不出异常，物理上跨不过去）。做法是四周留 1.0m 的 z=0 平台，
+        几何特征只在内部出现。这是 legged_gym 系 terrain 的通行做法。
+      - **stair 级数** → 取固定 4 级，使**总上升量正比于难度**（L9 最大
+        ≈ 4×24cm ≈ 0.96m）。若改用"阶距固定"，L9 会在 1m 内爬升 ≈1.4m
+        （约 55° 的阶梯），几何上不自洽。
+      - **rough 噪声形式** → 取"整数波数正弦叠加"，在 x、y 上以 `tile_size` 为
+        周期，从而**跨 tile 无缝**。任意随机场（如逐 tile 独立采样的 Perlin）
+        在边界处不连续。
+    """
+
+    tile_size: float = 4.0
+    border: float = 1.0
+    stair_steps: int = 4
+    rough_harmonics: int = 4
+
+
+@dataclass(frozen=True)
 class ElevationNoise:
     """A8：高程图观测扰动。sigma 随难度线性增长；独立网格 dropout。"""
 
@@ -259,6 +284,138 @@ class RewardImpl:
     })
 
 
+@dataclass(frozen=True)
+class TerminationCfg:
+    """A20：终止阈值与容忍区（论文提到 "terrain aware ... terminations" 但未列条件）。
+
+    论文**明确的**：
+      - completion 定义（Table II 脚注）：跑满 30s 上限且**未提前终止** = 成功
+      - Fig.2 图例把 "terrain aware rewards **& terminations**" 并列，并画出
+        "Tolerance zone" 与 "Drift-tolerant tracking" → 终止与奖励一样是
+        **地形感知**的：误差落在容忍区内不算失败
+      - §V-C：level "jointly controls ... selected termination delays" →
+        高难度地形上终止被**延迟**
+
+    论文**未写的**（本假设负责拍定）：
+      - 具体有哪些触发条件 → 取三类：参考偏差超容忍区 / 基座过低 / 姿态倾斜过度
+      - 容忍区的大小 → 取基准值 + **复用 A12 松弛预算 τ**（使"奖励不罚"与
+        "不终止"口径一致，这正是 Fig.2 把两者并列的缘由）
+      - 各阈值取值 → 见字段默认值；`root_height_min` 与 `tilt_max_deg` 属
+        "可从服务器失败模式校准"的参数，训练启动后应据实际分布复核
+      - 延迟随难度增长的系数 → `terrain_delay_scale`（秒/米）
+    """
+
+    #: 非地形感知的基准容忍区（米）；χ=0 的族（flat / rough）用它
+    ref_deviation_base: float = 0.5
+    #: 基座最低高度（米）
+    root_height_min: float = 0.35
+    #: 基座相对竖直的最大倾角（度）
+    tilt_max_deg: float = 70.0
+    #: 各原因的基础延迟（秒）
+    delay_s: Dict[str, float] = field(default_factory=lambda: {
+        "ref_deviation": 0.5,
+        "root_low": 0.0,
+        "tilted": 0.0,
+    })
+    #: 地形松弛预算对延迟的放大（秒/米）
+    terrain_delay_scale: float = 2.0
+
+
+@dataclass(frozen=True)
+class AuxCfg:
+    """A21：辅助项的尺度与阈值（论文 Table I 只给项名与权重）。
+
+    Table I 的 auxiliary 组含两类项，**权重符号已指明区分**：
+      - **4 个正向项**（权重 > 0）：`root_ori` 0.5 / `corrected_root_vel` 2.0 /
+        `floating_anchor_pos` 1.0 / `recovery_upward_vel` 12.5
+        → 用与跟踪组相同的高斯核 `exp(−e²/σ)`
+      - **6 个惩罚项**（权重 < 0）：`pelvis_vert_accel` / `ee_accel_mismatch` /
+        `action_rate` / `joint_limit` / `undesired_contact` / `head_torso_impact`
+        → 用 `−‖·‖²` 或违反量的平方
+
+    论文未说明各惩罚的**度量方式**与**阈值**，故集中于此：
+      - `pelvis_vert_accel`：取加速度**平方**（0 处可导、量纲一致）
+      - `ee_accel_mismatch`：取与**参考**比（而非与上一帧比）—— 属 A18 体系里
+        标为 UNRESOLVED 的一项，依据不足
+      - `joint_limit`：取**越界量的平方**（界内为 0）—— 软约束而非"偏好中位"
+      - `undesired_contact`：除允许部位外的接触力超过死区的平方和
+      - `head_torso_impact`：⚠️ **论文完全未说"撞击"如何度量**，取"接触力超过
+        阈值的部分"仅为连通组合项；`semantics.py` 中该项标为 UNRESOLVED，
+        **不得据此声称已复现**
+      - `recovery_upward_vel`：**非对称**残差 `max(0, target − 实际上行速度)`,
+        只惩罚不足（不该惩罚"起得更快"）
+    """
+
+    #: 正向项的 σ（误差**平方**量纲，与跟踪组一致）
+    sigma_root_ori: float = 0.5            # rad²
+    sigma_corrected_root_vel: float = 1.0  # (m/s)²
+    sigma_floating_anchor: float = 0.25    # m²
+    sigma_recovery_upward: float = 0.25    # (m/s)²
+    #: recovery 项的目标上行速度（m/s）
+    recovery_target_upward_vel: float = 0.5
+    #: 非期望接触的力死区（N）与允许接触的部位
+    contact_force_threshold: float = 1.0
+    allowed_contact_bodies: tuple = (
+        "left_ankle_roll_link", "right_ankle_roll_link")
+    #: 头/躯干撞击阈值（N）—— 依据不足，见 docstring
+    head_torso_impact_threshold: float = 50.0
+
+
+@dataclass(frozen=True)
+class TerrainContactCfg:
+    """A22：terrain-contact 组的度量与阈值（仅 Stage 2，论文 Eq.9 的第四个值头）。
+
+    论文 §IV-B "Multi-Head Critic Extension" 的**全部**描述只有一段话：
+
+        "To encourage stable contacts, we introduce a new terrain-contact reward
+         group r^terrain_t (summarized in Table I). **Local height variation** is
+         used to evaluate **touchdown quality**, while **contact labels obtained
+         from offline terrain-mesh queries** supervise the consistency between
+         reference and simulated contacts. Additional penalties discourage **foot
+         slippage, stumbling, rapid contact switching, and excessive contact
+         forces**."
+
+    即：6 项的**意图**都点明了，但**一个公式、一个阈值都没给**。本假设负责拍定
+    度量方式与尺度，逐项依据强度如下：
+
+    **依据较强的**（有参照实现或论文措辞直接支撑）：
+      - `stumble` / `contact_force`：legged_gym 系有同名项，分别取"水平接触力
+        超过竖直分量的倍数"与"接触力超过 max_contact_force 的部分"
+      - `touchdown_quality`：论文明说用 **local height variation**，故取落点
+        附近高度采样的**标准差**
+      - `reference_contact_match`：论文明说是参考与仿真接触的**一致性**，
+        故取一致率 ∈ [0,1]（**不需要 σ** —— 一致性本身就是归一化奖励）
+
+    **依据较弱的**（论文只有动词，没有度量方式）：
+      - `slip`：取接触足的水平速度**平方**和（与仓库其它 `‖·‖²` 代价同族）
+      - `contact_switching`：论文只说惩罚"rapid"切换，**未定义 rapid** ——
+        取"接触状态未持续满 `contact_switching_min_dwell` 步就再次翻转"，
+        代价随已持续步数线性衰减。注意：**不能**直接惩罚"接触状态发生变化"，
+        因为正常步态每步都在切换
+
+    ⚠️ **数据源差异（不是参数问题，是管线差异）**：论文的接触标签来自
+    "offline terrain-mesh queries"（把参考动作放到地形上查网格），而本仓库的
+    `contacts` 字段来自 LAFAN1 足部位置的**速度阈值**（`data/retarget_lafan1.py`）。
+    两者不同源，且前者才是论文口径。`reference_contact_match` 的结论因此有
+    系统性偏差，需在报告中说明（见 `semantics.py` 该项的 note）。
+    """
+
+    #: `touchdown_quality` 的 σ（**m²**，误差平方量纲，与 A18 的核一致）。
+    #: √σ = 0.1 m 是"1/e 落足高度变化"：台阶/箱面边缘的落点标准差约 0.1–0.2 m，
+    #: 平地约 0 —— 该量级使该项在"平稳落地"与"踩在棱上"之间有区分度
+    sigma_touchdown_quality: float = 0.01
+    #: 落足质量采样的局部半径（m）。取 0.1 m 约等于 A8 高程图的一格分辨率
+    #: （map_res = 0.1 m），使采样点至少覆盖 3×3 格
+    touchdown_patch_radius: float = 0.1
+    #: `stumble` 判据：水平接触力超过竖直分量的倍数（legged_gym 传统取 5.0）
+    stumble_force_ratio: float = 5.0
+    #: `contact_switching` 判据：接触状态至少持续多少步才算"稳定"（步）。
+    #: 50 Hz 下 5 步 = 0.1 s
+    contact_switching_min_dwell: int = 5
+    #: `contact_force` 阈值（N）。legged_gym 的 `max_contact_force` 取 500
+    contact_force_max: float = 500.0
+
+
 # ---------------------------------------------------------------------------
 # 注册表
 # ---------------------------------------------------------------------------
@@ -312,6 +469,26 @@ ASSUMPTIONS: Dict[str, Assumption] = {
                       "（依据 OmniH2O 奖励表 exp(−0.5‖p−p̂‖²) 与其配置注释"
                       "exp(-error^2/sigma)）；σ 取值与 τ 斜率/饱和值见 spec.SIGMAS 与"
                       " data/probe_reward_scales.py 实测"),
+    "A19": Assumption("A19", "terrain_tiling", TerrainTiling(),
+                      "论文只给'5 族 × L0–L9'未给 tile 规格；边长须 > 2m 高程图覆盖"
+                      "（否则族/难度无定义），四周留白保证跨 tile 高度连续，"
+                      "stair 取固定级数使总上升量正比于难度，rough 取周期正弦保证无缝"),
+    "A20": Assumption("A20", "termination", TerminationCfg(),
+                      "论文只说 completion = 跑满上限且未提前终止，并提到 terrain aware "
+                      "terminations / tolerance zone / selected termination delays，"
+                      "但未列触发条件与阈值；取三类触发 + 容忍区复用 A12 松弛预算"),
+    "A21": Assumption("A21", "aux_rewards", AuxCfg(),
+                      "Table I 的 auxiliary 组含 4 个正向项与 6 个惩罚项（权重符号"
+                      "已指明区分）；论文未给度量方式与阈值，集中于此。其中 "
+                      "head_torso_impact 的度量完全无依据，semantics.py 标为 UNRESOLVED"),
+    "A22": Assumption("A22", "terrain_contact_rewards", TerrainContactCfg(),
+                      "Table I 的 terrain-contact 组只有项名与权重；论文 §IV-B 给了"
+                      "6 项的定性意图（local height variation → touchdown quality、"
+                      "offline terrain-mesh queries → contact consistency、"
+                      "slippage/stumbling/rapid contact switching/excessive contact "
+                      "forces），但未给任何公式与阈值。度量与尺度集中于此；"
+                      "其中 stumble/contact_force 沿用 legged_gym 同名项的传统取值。"
+                      "**注意**参考接触标签的数据源与论文不同（速度阈值 vs terrain-mesh 查询）"),
 }
 
 

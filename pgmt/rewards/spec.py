@@ -23,6 +23,22 @@
 | Auxiliary | root ori 0.5 · corrected root vel 2.0 · floating-anchor pos 1.0 · recovery upward vel 12.5 · pelvis vert accel −1e−3 · EE accel mismatch −1e−3 · action rate −0.05 · joint limit −15.0 · undesired contact −0.1 · head/torso impact −1e−5 |
 | Terrain-contact（仅 Stage 2） | touchdown quality 10.0 · reference contact match 1.5 · slip −1.0 · stumble −20.0 · contact switching −30.0 · contact force −1e−6 |
 
+### 值的符号约定（不变量）
+
+**所有项的值恒 ≥ 0，正负完全由上表的权重携带。**
+
+这条看似显然，但很容易写反：若惩罚项自己也返回负数（如 `−‖Δa‖²`），
+它与表里的负权重相乘（`−0.05 × −0.03 = +0.0015`）就变成**正贡献** ——
+"惩罚动作变化率"实际在**奖励**动作变化。`auxiliary.py` 第一版 6 个惩罚项
+全部踩了这个坑。因此：
+
+  - 惩罚项返回**代价量**（`‖·‖²`、越界量平方），无违规恰为 0
+  - 正向项返回 `exp(−e²/σ) ∈ (0,1]`
+  - `RewardGroup.sum` 在运行时**拒绝负值与 NaN**（见该方法），
+    使这类符号错误立刻暴露，而不是表现为"训练不动/学出怪行为"
+
+NaN 同样被拒绝：`NaN < 0` 为假会漏过朴素检查，故用 `not (v >= 0)`。
+
 **TA = "Terrain-Adaptive"**：论文 Table I 用 TA 标记的就是 §IV-B 中受
 **地形感知松弛**（Eq.10）作用的那三项 —— lower body 的 link position、
 link orientation、joint position。upper body 与其余约束保持严格
@@ -122,9 +138,10 @@ NUM_LEVELS = 10
 class RewardGroup:
     """一个奖励分组：名称 + 权重表 + 求和。
 
-    `sum()` 对**缺失项按 0 处理、未知项直接报错** —— 环境层若漏实现了某项，
-    会立刻在第一次前向暴露，而不是静默少算一项奖励（后者表现为"训练不动"，
-    极难定位）。
+    `sum()` 的三条约定（都是"让错误立刻炸"而非静默降级）：
+      - **缺失项按 0 处理** —— 便于分阶段补齐；`missing()` 供自检
+      - **未知项直接报错** —— 环境层若拼错项名会立刻暴露，而不是少算一项
+      - **负值/NaN 直接报错** —— 见模块头"值的符号约定"，防止惩罚反转成奖励
     """
 
     name: str
@@ -143,6 +160,17 @@ class RewardGroup:
         if unknown:
             raise KeyError(f"{self.name} 组收到未知奖励项 {sorted(unknown)}；"
                            f"已知项为 {list(self.names)}")
+        # 值域守卫：见模块头"值的符号约定"。负值/NaN 与负权重相乘会变成正贡献，
+        # 即惩罚反转成奖励 —— 这类错误在训练曲线上极难辨认，故在此直接拒绝。
+        # 用 `not (v >= 0)` 而非 `v < 0`：前者同时拦住 NaN。
+        bad = {n: float(values[n]) for n in self.names
+               if n in values and not (float(values[n]) >= 0.0)}
+        if bad:
+            raise ValueError(
+                f"{self.name} 组的奖励项出现负值或 NaN: {bad}。"
+                f"本仓库约定**所有项的值 ≥ 0、符号全部由权重携带**；"
+                f"某项若返回负值，与负权重相乘会变成正贡献（惩罚被反转成奖励）。"
+                f"惩罚项应返回非负代价量（‖·‖² 等），无违规时为 0。")
         return sum(w * float(values.get(n, 0.0)) for n, w in self.terms)
 
     def missing(self, values: Mapping[str, float]) -> Tuple[str, ...]:

@@ -11,7 +11,7 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态: **M1 / M1.5 完成并验证**（317 passed）；M0 待服务器冒烟；M2–M6 未开始
+- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 完成并验证**（623 passed）；M0 待服务器冒烟；M2 的环境层与训练入口未开始
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
 
@@ -20,20 +20,22 @@
 ```
 setup/            安装与冒烟脚本（本机 + 服务器两条路线）
 pgmt/contracts.py 跨层维度常量唯一出处（OBS_DIM/ACT_DIM/HISTORY_LEN/REF_FRAME_DIM）
-pgmt/cfg/         assumptions.py —— 假设清单 A1–A18 的唯一出处
+pgmt/cfg/         assumptions.py —— 假设清单 A1–A22 的唯一出处
 pgmt/policy/      ✅ 全部实现并有单测: RoPE / MHCA / History Encoder / IFM /
                      Glimpse Encoder / Actor / Multi-Head Critic / rotation(6D)
 pgmt/envs/        observations.py（观测契约）✅
                   reference_sampler.py（C^K 采样/修正速度/自适应采样）✅
-                  g1_env.py 与 terrain/（M2–M3，未实现）
-pgmt/rewards/     spec.py（Table I 权重 + Eq.10 松弛）✅
+                  terrain/（5 族 × L0–L9 高度场 + 高程图 + 课程 + 兼容规则）✅
+                  termination.py（终止条件 + 容忍区，A20）✅
+                  g1_env.py（M2，未实现）
+pgmt/rewards/     spec.py（Table I 权重 + Eq.10 松弛 + 值域守卫）✅
                   semantics.py（28 项语义对照表）✅
-                  tracking/auxiliary/terrain_contact（残差实现，M2/M4 未开始）
-pgmt/train/       训练入口（M2/M4，未实现）
+                  tracking / auxiliary / terrain_contact（Table I 的 28 项残差）✅
+pgmt/train/       训练入口与多头 PPO（M2，未实现；critic 网络已在 pgmt/policy/）
 data/             ✅ LAFAN1 下载 + BVH 解析 + 重定向 + IK 精修 + 质量评估 + 奖励尺度探针
 eval/             基准评估与消融（M5，未实现）；eval/viz/ 为 M1.5 可视化
 baselines/        RGMT-Reimpl（M6，尽力而为）
-tests/            317 个测试（约 55 个需真实数据，缺失时自动 skip）
+tests/            623 个测试（约 55 个需真实数据，缺失时自动 skip）
 ```
 
 **不纳入版本控制**（体积大 / 许可约束，需自行生成）：`data/raw/lafan1/`（LAFAN1 原始 BVH）、
@@ -45,7 +47,7 @@ tests/            317 个测试（约 55 个需真实数据，缺失时自动 sk
 setup\install_local.bat          REM 创建 conda 环境 pgmt-dev、装依赖、跑测试
 conda activate pgmt-dev
 cd /d D:\PGMT
-python -m pytest tests -q        REM 317 passed（约 55 个需真实数据，缺失时 skip）
+python -m pytest tests -q        REM 623 passed（约 55 个需真实数据，缺失时 skip）
 ```
 
 本机只做纯逻辑开发与单测（torch 2.1.2 **CPU**，版本与服务器对齐以避免数值漂移）；训练在服务器进行。
@@ -71,6 +73,11 @@ REM 3)（可选）质量评估与可视化
 python -m data.eval_retarget                     REM → data/processed/quality_report.csv
 python -m data.viz_retarget data/raw/lafan1/walk1_subject1.bvh --frames 100 600 1200 1800
 python -m data.probe_reward_scales               REM 奖励尺度探针（A18 依据）
+
+REM 4)（可选）地形检查图（需 matplotlib）
+python -m data.viz_terrain                       REM 五族 × 十级总览 → eval/viz/terrain_overview.png
+python -m data.viz_terrain --maps-family stairs --levels 0 5 9
+python -m data.viz_terrain --dump stairs 9       REM 无 matplotlib 时打印高程图数值
 ```
 
 第 1 步之前请先读 [`NOTICE.md`](NOTICE.md)：LAFAN1 与研究用途许可相关，
@@ -131,12 +138,15 @@ python -m data.probe_reward_scales               REM 奖励尺度探针（A18 �
 
 ## 假设清单
 
-论文未公开的超参集中在 [`pgmt/cfg/assumptions.py`](pgmt/cfg/assumptions.py)（A1–**A18**），训练启动时 `dump()` 写入运行日志，最终报告逐项对照说明偏差。
+论文未公开的超参集中在 [`pgmt/cfg/assumptions.py`](pgmt/cfg/assumptions.py)（A1–**A22**），训练启动时 `dump()` 写入运行日志，最终报告逐项对照说明偏差。
 
 - **A17（数据过滤）待复核**：其"ground 类重定向退化（38–116cm）"的依据来自旧版数据，当前质量报告显示 ground 五个序列为 14.45–15.92cm（最差但无病态）。需用独立指标重测后决定是否恢复这 5 个躺地/翻滚序列进训练集——详见 `复现方案.md` §M1.5。
 - **A18（奖励实现）**：Table I 的逐项权重与 Eq.10 的松弛形式**照搬论文**（见 `pgmt/rewards/spec.py`，并有逐字对照的回归测试）。论文未写出的部分：核函数取 **`exp(−e²/σ)`（高斯式，误差平方）**，依据是 PGMT 明示继承的 tracking 实现（OmniH2O 奖励表 `exp(−0.5‖p−p̂‖²)` 与其配置注释 `exp(-error^2/sigma)`）；σ 取值见 `spec.SIGMAS`。
   - `python -m data.probe_reward_scales` 用真实参考运动暴露量纲错误、给出各 σ 的响应区；**但它量的是参考运动幅度而非跟踪误差，不能用来验证 σ 已标定正确** —— 最终标定须等训练时读到实际误差分布，详见 `复现方案.md` §M2.0b。
-  - `pgmt/rewards/semantics.py` 是 Table I 逐项语义对照表（28 条，标注与参照实现的对应关系：identical 11 / approx 7 / PGMT-specific 6 / **待定 4**）。待定项为 `head_torso_impact`、`ee_accel_mismatch`、`floating_anchor_pos`、`ta_link_ori` —— 论文或参照实现未给出足够依据，实现前需拍定。标注纪律由测试强制：note 里出现"未确认/未见/未验证"等措辞时只能标待定。
+  - `pgmt/rewards/semantics.py` 是 Table I 逐项语义对照表（28 条，标注与参照实现的对应关系：identical 11 / approx 8 / PGMT-specific 5 / **待定 4**）。待定项为 `head_torso_impact`、`ee_accel_mismatch`、`floating_anchor_pos`、`ta_link_ori` —— 论文或参照实现未给出足够依据，实现前需拍定。标注纪律由测试强制：note 里出现"未确认/未见/未验证"等措辞时只能标待定。
+- **A19–A22（M3 / M2 新增）**：`A19` tile 规格（边长 / 留白 / 级数）、`A20` 终止条件与容忍区、`A21` auxiliary 组 10 项的度量与阈值、`A22` terrain-contact 组 6 项的度量与阈值（仅 Stage 2）。后两者论文**只给项名与权重**（Table I 里 terrain-contact 那一段连公式都没有），度量方式全部属本仓库拍定，各项依据强度分级写在对应 dataclass 的 docstring 里。
+- **奖励项的符号约定**：Table I 中所有项的值**恒 ≥ 0**，正负完全由权重携带（负权重即惩罚项）。`RewardGroup.sum` 在运行时拒绝负值与 NaN —— 惩罚项若自身返回负值，与负权重相乘会变成**正贡献**（惩罚反转成奖励），这类错误在训练曲线上只表现为"学出怪行为"，极难定位。
+- **一处已知的数据源差异**：`reference_contact_match` 的参考接触标签，论文取自 offline terrain-mesh queries，本仓库取 LAFAN1 足部位置的**速度阈值**（`data/retarget_lafan1.py`）。两者不同源，该项数值有系统性偏差。
 
 ## 数据管线产物
 
@@ -170,11 +180,12 @@ python -m data.probe_reward_scales               REM 奖励尺度探针（A18 �
 | M0 | 环境与骨架（本机单测 + 服务器冒烟） | 本机部分完成（工具链问题已修）；待下载 PP4 tar + 服务器冒烟 |
 | M1 | LAFAN1 数据管线 + 重定向 | ✅ 完成 |
 | M1.5 | IK 精修 + 接触标签统一协议 | ✅ 完成（A17 待复核） |
-| M2 | Stage 1 平地 tracking 预训练 | 未开始 |
-| M3 | 地形系统（5 族 × L0–L9） | 未开始 |
-| M4 | Stage 2 感知注入 | 未开始 |
-| M5 | 基准评估 + 消融 | 未开始 |
-| M6 | 基线与最终报告 | 未开始 |
+| M2.0 / M2.0b | 观测契约 / 奖励规格（不依赖仿真器） | ✅ 完成 |
+| M3 | 地形系统（5 族 × L0–L9，纯逻辑部分） | ✅ 完成（mesh 注入归 M2） |
+| M2 | Stage 1 平地 tracking 预训练 | 🟡 奖励/终止已就绪（待办 #1/#2 完成）；环境层与多头 PPO 未实现 |
+| M4 | Stage 2 感知注入 | ⬜ 未开始 |
+| M5 | 基准评估 + 消融 | ⬜ 未开始 |
+| M6 | 基线与最终报告 | ⬜ 未开始 |
 
 ## 参考
 

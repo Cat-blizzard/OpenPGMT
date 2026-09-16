@@ -175,7 +175,7 @@ def test_correspondence_distribution_is_summed_and_consistent():
     `test_unresolved_terms_are_listed_for_followup` 与各项的标注纪律去保证。
 
     当前实测分布（供报告引用，改动本表时需同步）：
-        identical 11 / approx 7 / pmgt_specific 7 / unresolved 3
+        identical 11 / approx 8 / pmgt_specific 5 / unresolved 4（和 = 28）
     """
     counts = correspondence_counts()
     assert sum(counts.values()) == 28, f"各类之和应等于 Table I 项数，得到 {counts}"
@@ -187,12 +187,21 @@ def test_correspondence_distribution_is_summed_and_consistent():
 def test_correspondence_counts_are_reported_in_docs():
     """分布一旦变化，README/方案里的数字要跟着改（此处给出权威口径）。
 
-    当前实测：identical 11 / approx 7 / pmgt_specific 6 / unresolved 4（和 = 28）。
+    当前实测：identical 11 / approx 8 / pmgt_specific 5 / unresolved 4（和 = 28）。
+
+    原先这里只断言 `pmgt + approx == 13`，把两类的**和**锁住了、却没锁各自的
+    数量 —— 结果 README 写"approx 7 / PGMT-specific 6"、本文件另一处 docstring
+    写"approx 7 / pmgt_specific 7 / unresolved 3"，三处互相矛盾且无人发现
+    （"和是 13/28"两边都满足）。现在逐类断言，并给出可复现的核对命令：
+
+        python -c "from pgmt.rewards.semantics import correspondence_counts as c; print(c())"
     """
     counts = correspondence_counts()
     assert counts[Corr.IDENTICAL.value] == 11
+    assert counts[Corr.APPROX.value] == 8
+    assert counts[Corr.PGMT_SPECIFIC.value] == 5
     assert counts[Corr.UNRESOLVED.value] == 4
-    assert counts[Corr.PGMT_SPECIFIC.value] + counts[Corr.APPROX.value] == 13
+    assert sum(counts.values()) == 28, "四类之和须等于 Table I 的项数"
 
 
 def test_terrain_group_is_entirely_second_stage():
