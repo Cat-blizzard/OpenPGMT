@@ -392,7 +392,7 @@ def bounded_joint_trajectory(qpos: np.ndarray, frame_time: float) -> Tuple[np.nd
     return positions, velocities
 
 
-def _repair_principal_angle_jumps(qpos: np.ndarray, branch_margin: float = 0.35) -> np.ndarray:
+def _repair_principal_angle_jumps(qpos: np.ndarray, branch_margin: float = 0.5) -> np.ndarray:
     """Remove Euler principal-value jumps before finite-hinge projection.
 
     ``_decompose_chain`` returns ``atan2`` principal values.  A wrist can pass
