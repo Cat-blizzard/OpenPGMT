@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 
@@ -88,7 +89,15 @@ def phase2(steps: int) -> bool:
         from isaaclab.assets import RigidObject, RigidObjectCfg
         from isaaclab.sim import SimulationContext
 
-        sim_cfg = sim_utils.SimulationCfg(dt=0.02, device="cuda:0")
+        # Isaac Lab defaults to ``/tmp/isaaclab/logs``.  That directory can
+        # be left owned by another user on shared servers, so keep smoke-test
+        # logs in this checkout unless the caller explicitly overrides it.
+        log_dir = os.environ.get(
+            "PGMT_ISAACLAB_LOG_DIR",
+            os.path.join(os.getcwd(), "data", "processed", "isaaclab_logs"),
+        )
+        os.makedirs(log_dir, exist_ok=True)
+        sim_cfg = sim_utils.SimulationCfg(dt=0.02, device="cuda:0", log_dir=log_dir)
         sim = SimulationContext(sim_cfg)
 
         # 地面
@@ -134,7 +143,15 @@ def phase2(steps: int) -> bool:
             pass
         try:
             if simulation_app is not None:
-                simulation_app.close()
+                # Isaac Sim 5.1 can block in the full stage-cleanup path when
+                # another Kit process owns the shared KVDB lock.  This smoke
+                # test has no replicator output to preserve, so use the
+                # immediate shutdown path and retain compatibility with the
+                # lightweight fake app used by the unit tests.
+                try:
+                    simulation_app.close(skip_cleanup=True)
+                except TypeError:
+                    simulation_app.close()
         except Exception:
             pass
 
