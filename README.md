@@ -11,7 +11,7 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 完成并验证**（728 passed, 2 skipped（CUDA））；M0 待服务器冒烟；M2 的环境层与训练入口未开始
+- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 完成并验证**；M0 待服务器冒烟；Stage 1 的策略包装、多头 PPO 与 rollout 存储已补齐，但 G1 仿真环境和物理训练闭环仍待接入
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
 
@@ -31,7 +31,7 @@ pgmt/envs/        observations.py（观测契约）✅
 pgmt/rewards/     spec.py（Table I 权重 + Eq.10 松弛 + 值域守卫）✅
                   semantics.py（28 项语义对照表）✅
                   tracking / auxiliary / terrain_contact（Table I 的 28 项残差）✅
-pgmt/train/       训练入口与多头 PPO（M2，未实现；critic 网络已在 pgmt/policy/）
+pgmt/train/       Stage 1 策略包装、多头 PPO 与 rollout 存储（仿真环境适配仍待实现）
 data/             ✅ LAFAN1 下载 + BVH 解析 + 重定向 + IK 精修 + 质量评估 + 奖励尺度探针
 eval/             基准评估与消融（M5，未实现）；eval/viz/ 为 M1.5 可视化
 baselines/        RGMT-Reimpl（M6，尽力而为）
@@ -155,6 +155,22 @@ python -m data.viz_terrain --dump stairs 9       REM 无 matplotlib 时打印高
   **不纳入版本控制**（数十 MB 二进制 + LAFAN1 衍生数据许可约束），用 `python -m data.retarget_lafan1` 生成
 - `data/processed/quality_report.csv` — 质量报告，**含在仓库内**
 
+建议在正式训练前把重定向产物放到独立目录，并运行只读验收：
+
+```bash
+python -m data.retarget_lafan1 --bvh-dir data/raw/lafan1 --out-dir data/processed/lafan1_g1_fixed
+python -m data.eval_retarget --npz-dir data/processed/lafan1_g1_fixed \
+  --out data/processed/quality_report_fixed.csv
+python -m data.validate_retarget --npz-dir data/processed/lafan1_g1_fixed \
+  --bvh-dir data/raw/lafan1 --quality-report data/processed/quality_report_fixed.csv \
+  --out data/processed/acceptance_fixed.json \
+  --provenance-out data/processed/provenance_fixed.json
+```
+
+`data/validate_retarget.py` 只检查产物完整性、限位、速度差分、四元数和接触标签一致性；
+它不等价于物理可执行性证明。旧产物若要盘点而不阻止命令，可加
+`--allow-violations`，违规会保留在 JSON 的逐序列诊断中。
+
 现有 CSV 已包含拟合点与留出点的分离指标，但保存的是修复前 IK 的评估结果。
 `python -m data.eval_retarget` 现在默认评价磁盘上的实际 NPZ，不再静默从 BVH
 重新生成参考。`--regenerate` 用当前算法重算候选，默认写独立的
@@ -230,7 +246,7 @@ python -m data.eval_retarget --npz-dir data/processed/lafan1_g1_fixed --out data
 | M1.5 | IK 精修 + 接触标签统一协议 | ✅ 完成（A17 待复核） |
 | M2.0 / M2.0b | 观测契约 / 奖励规格（不依赖仿真器） | ✅ 完成 |
 | M3 | 地形系统（5 族 × L0–L9，纯逻辑部分） | ✅ 完成（mesh 注入归 M2） |
-| M2 | Stage 1 平地 tracking 预训练 | 🟡 奖励/终止已就绪（待办 #1/#2 完成）；环境层与多头 PPO 未实现 |
+| M2 | Stage 1 平地 tracking 预训练 | 🟡 策略/多头 PPO/奖励/终止已就绪；G1 环境、PD 和批量奖励仍未接入 |
 | M4 | Stage 2 感知注入 | ⬜ 未开始 |
 | M5 | 基准评估 + 消融 | ⬜ 未开始 |
 | M6 | 基线与最终报告 | ⬜ 未开始 |

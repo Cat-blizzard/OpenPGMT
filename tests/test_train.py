@@ -1,0 +1,118 @@
+"""Regression tests for the simulator-independent Stage 1 training pieces."""
+
+from dataclasses import replace
+
+import torch
+
+from pgmt.cfg.assumptions import get
+from pgmt.train.ppo import PPO
+from pgmt.train.storage import RolloutStorage
+from pgmt.train.policy import Stage1Policy
+
+
+def _small_observations(batch=1):
+    return {
+        "obs": torch.zeros(batch, 1),
+        "history": torch.zeros(batch, 1),
+        "future": torch.zeros(batch, 1),
+        "privileged": torch.zeros(batch, 1),
+    }
+
+
+def test_rollout_timeout_bootstraps_but_does_not_carry_gae():
+    storage = RolloutStorage(
+        num_steps=2,
+        num_envs=1,
+        observation_shapes={key: tuple(value.shape[1:])
+                            for key, value in _small_observations().items()},
+        action_dim=1,
+        num_heads=3,
+    )
+    observations = _small_observations()
+    zeros = torch.zeros(1, 3)
+    storage.add(observations, torch.zeros(1, 1), torch.zeros(1), zeros,
+                zeros, torch.zeros(1, dtype=torch.bool),
+                torch.ones(1, dtype=torch.bool), torch.full((1, 3), 2.0))
+    storage.add(observations, torch.zeros(1, 1), torch.zeros(1), zeros,
+                torch.ones(1, 3), torch.zeros(1, dtype=torch.bool),
+                torch.zeros(1, dtype=torch.bool), zeros)
+    storage.compute_returns(gamma=1.0, lam=1.0)
+
+    # The first transition uses its reset-before timeout value (2), while the
+    # following episode's reward (1) cannot leak backward through the timeout.
+    assert torch.equal(storage.advantages[:, 0], torch.tensor([[2., 2., 2.], [1., 1., 1.]]))
+    assert torch.equal(storage.returns[:, 0], storage.advantages[:, 0])
+
+
+def test_stage1_policy_wrapper_preserves_contract_shapes():
+    policy = Stage1Policy()
+    observations = {
+        "obs": torch.zeros(1, 96),
+        "history": torch.zeros(1, 10, 96),
+        "future": torch.zeros(1, 6, 61),
+        "privileged": torch.zeros(1, 48),
+    }
+    output = policy.act(observations, deterministic=True)
+    assert output.actions.shape == (1, 29)
+    assert output.log_probs.shape == output.entropy.shape == (1,)
+    assert output.values.shape == (1, 3)
+    assert torch.isfinite(torch.cat((output.actions, output.values), dim=-1)).all()
+
+
+class _TinyPolicy(torch.nn.Module):
+    """Small policy used to exercise PPO's environment protocol."""
+
+    head_names = ("upper", "lower", "aux")
+
+    def __init__(self):
+        super().__init__()
+        self.bias = torch.nn.Parameter(torch.tensor(0.1))
+
+    def _output(self, observations, actions=None):
+        n = observations["obs"].shape[0]
+        if actions is None:
+            actions = self.bias.expand(n, 29)
+        values = self.bias.expand(n, 3)
+        return type("Output", (), {
+            "actions": actions,
+            "log_probs": torch.zeros(n),
+            "values": values,
+            "entropy": torch.ones(n),
+        })()
+
+    def act(self, observations, deterministic=False):
+        return self._output(observations)
+
+    def value(self, observations):
+        return self.bias.expand(observations["obs"].shape[0], 3)
+
+    def evaluate_actions(self, observations, actions):
+        return self._output(observations, actions)
+
+
+class _TinyEnv:
+    def __init__(self, observations):
+        self.observations = observations
+
+    def step(self, actions):
+        n = actions.shape[0]
+        # Deliberately return CPU rewards; PPO must normalize them to its
+        # policy device before accumulating the rollout metrics.
+        rewards = torch.ones(n, 3)
+        terminated = torch.zeros(n, dtype=torch.bool)
+        truncated = torch.zeros(n, dtype=torch.bool)
+        return self.observations, rewards, terminated, truncated, {}
+
+
+def test_ppo_collect_and_update_with_environment_protocol():
+    observations = _small_observations(batch=2)
+    config = replace(get("A6").value, num_steps_per_env=2,
+                     num_learning_epochs=1, num_mini_batches=1)
+    ppo = PPO(_TinyPolicy(), config=config)
+    next_observations, collected = ppo.collect_rollout(
+        _TinyEnv(observations), observations)
+    assert next_observations is observations
+    assert collected["steps"] == 4
+    updated = ppo.update()
+    assert updated["num_updates"] == 1
+    assert torch.isfinite(torch.tensor(list(updated.values()), dtype=torch.float32)).all()
