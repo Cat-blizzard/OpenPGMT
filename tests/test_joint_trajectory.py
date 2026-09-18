@@ -58,3 +58,32 @@ def test_out_of_range_positions_are_clipped_not_wrapped(entry, monkeypatch):
     np.testing.assert_allclose(out["qpos"][0], lo, atol=1e-6)
     np.testing.assert_allclose(out["qpos"][1], hi, atol=1e-6)
     np.testing.assert_array_equal(candidate[0], np.full(29, -7.0))
+
+
+def test_principal_wrist_roll_seam_is_repaired_before_projection():
+    """A wrist Euler seam must not turn two stop contacts into a full jump."""
+    qpos = np.zeros((3, 29), dtype=np.float64)
+    idx = retargeting.G1_JOINT_NAMES.index("right_wrist_roll")
+    qpos[:, idx] = (-3.0845368, 2.9441084, 2.7193684)
+
+    repaired = retargeting._repair_principal_angle_jumps(qpos)
+    # The second and third samples are on the same (negative) branch as the
+    # first.  The helper is intentionally run before finite-range clipping.
+    assert repaired[1, idx] == pytest.approx(2.9441084 - 2 * np.pi)
+    assert repaired[2, idx] == pytest.approx(2.7193684 - 2 * np.pi)
+    positions, velocities = retargeting.bounded_joint_trajectory(repaired, 1 / 30)
+    lo, hi = retargeting.G1_JOINT_LIMITS["right_wrist_roll"]
+    assert positions[0, idx] == pytest.approx(lo)
+    assert positions[1, idx] == pytest.approx(lo)
+    assert positions[2, idx] == pytest.approx(lo)
+    assert velocities[:, idx].max() < 1e-5
+
+
+def test_principal_jump_repair_leaves_finite_limit_traversal_literal():
+    """The finite-hinge helper must not unwrap an in-range lo→hi traversal."""
+    qpos = np.zeros((2, 29), dtype=np.float64)
+    idx = retargeting.G1_JOINT_NAMES.index("left_hip_pitch")
+    lo, hi = retargeting.G1_JOINT_LIMITS["left_hip_pitch"]
+    qpos[:, idx] = (lo, hi)
+    repaired = retargeting._repair_principal_angle_jumps(qpos)
+    np.testing.assert_allclose(repaired[:, idx], qpos[:, idx])

@@ -392,6 +392,57 @@ def bounded_joint_trajectory(qpos: np.ndarray, frame_time: float) -> Tuple[np.nd
     return positions, velocities
 
 
+def _repair_principal_angle_jumps(qpos: np.ndarray, branch_margin: float = 0.35) -> np.ndarray:
+    """Remove Euler principal-value jumps before finite-hinge projection.
+
+    ``_decompose_chain`` returns ``atan2`` principal values.  A wrist can pass
+    the ``-pi/pi`` representation seam while its mechanical coordinate is
+    already outside the G1 wrist-roll range; clipping the two principal values
+    independently then turns one smooth stop contact into a ``+limit ->
+    -limit`` jump.  Keep :func:`bounded_joint_trajectory` deliberately literal
+    (finite hinges must use exported-coordinate differences), and repair only
+    this identifiable representation seam in the retarget path.
+
+    A transition is shifted by one full turn when all of the following hold:
+
+    * the principal values are inside ``[-pi, pi]`` (so synthetic/unbounded
+      inputs are left untouched);
+    * the frame-to-frame change exceeds ``pi`` and one endpoint is close to the
+      principal seam; and
+    * at least one endpoint is outside that joint's finite mechanical range.
+
+    The cumulative shift follows the local branch, just like angle unwrapping,
+    but is gated by the finite-limit and seam checks above.  Thus a legitimate
+    traversal from the lower to upper mechanical limit remains a direct
+    coordinate difference, while a wrist-roll ``-3.08 -> +2.94`` seam crossing
+    is represented on one branch and clips to the same stop.
+    """
+    values = np.asarray(qpos, dtype=np.float64).copy()
+    if values.ndim != 2 or values.shape[1] != len(G1_JOINT_NAMES):
+        raise ValueError("qpos must have shape (frames, 29)")
+    if values.shape[0] < 2:
+        return values
+    seam = np.pi - float(branch_margin)
+    for j, name in enumerate(G1_JOINT_NAMES):
+        lo, hi = G1_JOINT_LIMITS[name]
+        raw = values[:, j].copy()
+        offset = 0.0
+        for t in range(1, raw.shape[0]):
+            prev, cur = raw[t - 1], raw[t]
+            # Decomposition is principal-valued.  Leave values outside that
+            # domain alone: bounded_joint_trajectory's clipping contract also
+            # covers arbitrary caller input and test sentinels.
+            principal = max(abs(prev), abs(cur)) <= np.pi + 1e-6
+            seam_hit = max(abs(prev), abs(cur)) >= seam
+            outside = (prev < lo - 1e-6 or prev > hi + 1e-6 or
+                       cur < lo - 1e-6 or cur > hi + 1e-6)
+            jump = cur - prev
+            if principal and seam_hit and outside and abs(jump) > np.pi:
+                offset += -2.0 * np.pi if jump > 0 else 2.0 * np.pi
+            values[t, j] = cur + offset
+    return values
+
+
 def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
     """LAFAN1 BVH → G1 29-DoF（固定 rig 对齐与数据均值去偏移）。"""
     for name in ("Hips", "LeftUpLeg", "LeftLeg", "LeftFoot", "LeftToe",
@@ -475,6 +526,11 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
     # 0/0 噪声放大（实测一帧跳 58°）。用邻域好帧在 (sin,cos) 空间线性
     # 插值替换奇异区的外角，消除速度尖峰。 ----
     qpos = _gimbal_protect(qpos)
+
+    # ``atan2`` uses principal values.  Repair only finite-hinge seam jumps
+    # before clipping; bounded_joint_trajectory itself remains a literal
+    # projection plus coordinate difference (no generic unwrap).
+    qpos = _repair_principal_angle_jumps(qpos)
 
     # Finite G1 hinges: project into limits, then directly differentiate.
     qpos, qvel = bounded_joint_trajectory(qpos, float(np.float32(bvh.frame_time)))
