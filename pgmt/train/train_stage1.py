@@ -165,7 +165,7 @@ def run(args: argparse.Namespace) -> dict:
             if not args.asset or not args.urdf or not args.reference_data:
                 raise ValueError("--backend isaaclab requires --asset, --urdf, and --reference-data")
             from isaaclab.app import AppLauncher
-            app = AppLauncher(headless=True).app
+            app = AppLauncher(headless=True, device=str(device)).app
         backend = "mock" if args.mock or args.dry_run else args.backend
         pool = _load_fall_pool(args.fall_pool) if args.fall_pool else None
         env = build_env(args.num_envs, device, mock=False, backend=backend,
@@ -177,12 +177,32 @@ def run(args: argparse.Namespace) -> dict:
                          num_mini_batches=min(args.mini_batches, args.steps_per_env * args.num_envs))
         policy = Stage1Policy().to(device)
         ppo = PPO(policy, config=config, total_updates=args.updates)
+        restored_env = False
         if args.resume:
             state = torch.load(args.resume, map_location=device, weights_only=False)
             ppo.load_state_dict(state["ppo"] if "ppo" in state else state)
+            if ppo.update_count > args.updates:
+                raise ValueError(
+                    f"checkpoint has {ppo.update_count} updates, but --updates={args.updates} "
+                    "is a lower total target"
+                )
             if "env" in state and hasattr(env, "load_state_dict"):
                 env.load_state_dict(state["env"])
-        observations = env.reset()
+                restored_env = True
+        if restored_env:
+            # A stateful environment must continue from the checkpointed
+            # observation.  ``get_observations`` is side-effect free when
+            # provided; the legacy private fallback is kept for older envs.
+            if hasattr(env, "get_observations"):
+                observations = env.get_observations()
+            elif hasattr(env, "_build_observations"):
+                observations = env._build_observations()
+            elif hasattr(env, "observations"):
+                observations = env.observations
+            else:
+                observations = env.reset()
+        else:
+            observations = env.reset()
         all_metrics = []
         for _ in range(args.updates - ppo.update_count):
             observations, collected = ppo.collect_rollout(env, observations)

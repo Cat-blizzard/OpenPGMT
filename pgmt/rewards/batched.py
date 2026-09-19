@@ -209,7 +209,7 @@ class BatchedRewardComputer:
         prevf=None if previous_state is None else previous_state.get("contact_forces"); prev= torch.zeros_like(sim) if prevf is None else _t(prevf,self.device)[:,fi].norm(dim=-1)>0
         h=terrain.get("foot_height_samples");
         if h is None: raise KeyError("terrain.foot_height_samples is required")
-        h=_t(h,self.device); q=torch.exp(-h.std(-1).square()/float(get("A22").value.sigma_touchdown_quality)); td=sim & ~prev; touchdown=torch.where(td,q,torch.zeros_like(q)).sum(-1)/td.sum(-1).clamp_min(1)
+        h=_t(h,self.device); q=torch.exp(-h.std(-1, unbiased=False).square()/float(get("A22").value.sigma_touchdown_quality)); td=sim & ~prev; touchdown=torch.where(td,q,torch.zeros_like(q)).sum(-1)/td.sum(-1).clamp_min(1)
         match=(sim==_t(refc,self.device,torch.bool)).float().mean(-1); vel=state["body_lin_vel"][:,fi,:2]; slip=(vel.square().sum(-1)*sim).sum(-1)
         ff=f; horiz=ff[:,:,:2].norm(dim=-1); vert=ff[:,:,2].clamp_min(0); stumble=(horiz.square()*(horiz>float(get("A22").value.stumble_force_ratio)*vert)).sum(-1)
         age=_t(terrain.get("contact_age",torch.zeros_like(sim,dtype=torch.long)),self.device,torch.float32); switching=((sim!=prev).float()*(1-age.clamp_max(get("A22").value.contact_switching_min_dwell)/get("A22").value.contact_switching_min_dwell)).sum(-1)

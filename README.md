@@ -181,6 +181,15 @@ CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage2 --backend torch --devic
   --num-envs 4 --steps-per-env 24 --updates 1
 ```
 
+`--updates` 表示本次训练的**总迭代目标**；从 checkpoint 恢复时只运行剩余迭代，
+不会重新 reset 环境或重复已完成的 PPO 更新。checkpoint 同时保存 Torch 环境的
+参考帧、观测历史、接触历史、恢复池和自适应采样状态。
+
+最近一次代码审计已修复 Isaac Lab 接触力字段、base-frame 速度观测、末帧参考速度、
+fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`python -m pytest -q`
+当前为 764 个测试全通过；这仍不替代 USD 运行时探针、真实地形 mesh 和 headless
+物理冒烟，后者必须在 Isaac Lab 进程中单独验收。
+
 ## 接下来做什么
 
 按以下顺序推进，避免把协议测试误当成物理训练结果：

@@ -125,7 +125,7 @@ def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
             if not asset or not urdf or not reference_data:
                 raise ValueError("--backend isaaclab requires --asset, --urdf, and --reference-data")
             from isaaclab.app import AppLauncher
-            app = AppLauncher(headless=True).app
+            app = AppLauncher(headless=True, device=str(dev)).app
             import importlib
             import pgmt.envs.g1_env as g1_module
             g1_module = importlib.reload(g1_module)
@@ -142,17 +142,37 @@ def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
         cfg = replace(cfg, num_steps_per_env=steps_per_env,
                       num_learning_epochs=learning_epochs,
                       num_mini_batches=min(mini_batches, steps_per_env * num_envs))
+        # ``updates`` is the absolute target count, matching Stage 1 and PPO's
+        # linear learning-rate schedule.  A resumed checkpoint therefore only
+        # runs the remaining updates.
         ppo = PPO(policy, config=cfg, total_updates=updates)
-        obs = env.reset()
-        if backend != "mock" and "elevation" not in obs:
-            raise RuntimeError("Stage 2 environment must provide an 'elevation' observation; terrain provider was not connected")
+        restored_env = False
         if resume is not None:
             payload = torch.load(resume, map_location=dev, weights_only=False)
             ppo.load_state_dict(payload["ppo"] if "ppo" in payload else payload)
+            if ppo.update_count > updates:
+                raise ValueError(
+                    f"checkpoint has {ppo.update_count} updates, but --updates={updates} "
+                    "is a lower total target"
+                )
             if "env" in payload and hasattr(env, "load_state_dict"):
                 env.load_state_dict(payload["env"])
+                restored_env = True
+        if restored_env:
+            if hasattr(env, "get_observations"):
+                obs = env.get_observations()
+            elif hasattr(env, "_build_observations"):
+                obs = env._build_observations()
+            elif hasattr(env, "observations"):
+                obs = env.observations
+            else:
+                obs = env.reset()
+        else:
+            obs = env.reset()
+        if backend != "mock" and "elevation" not in obs:
+            raise RuntimeError("Stage 2 environment must provide an 'elevation' observation; terrain provider was not connected")
         metrics = []
-        for _ in range(updates):
+        for _ in range(updates - ppo.update_count):
             obs, collected = ppo.collect_rollout(env, obs)
             update = ppo.update()
             update.update({"reward_mean": collected["reward_mean"], "timeouts": collected["timeouts"]})

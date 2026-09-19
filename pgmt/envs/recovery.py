@@ -81,3 +81,31 @@ class FallRecoveryPool:
         out["seq_idx"] = torch.tensor([self._states[int(i)].seq_idx for i in idx], device=device, dtype=torch.long)
         out["frame"] = torch.tensor([self._states[int(i)].frame for i in idx], device=device)
         return out
+
+    def state_dict(self) -> dict:
+        """Return the bounded curriculum state for checkpointed training."""
+        return {
+            "capacity": self.capacity,
+            "init_prob": self.init_prob,
+            "prob_max": self.prob_max,
+            "survival_window": self.outcomes.maxlen,
+            "outcomes": list(self.outcomes),
+            "states": [
+                {
+                    key: getattr(item, key).clone() if isinstance(getattr(item, key), torch.Tensor)
+                    else getattr(item, key)
+                    for key in ("qpos", "qvel", "root_pos", "root_quat", "root_lin_vel", "root_ang_vel", "seq_idx", "frame")
+                }
+                for item in self._states
+            ],
+        }
+
+    def load_state_dict(self, state: Mapping) -> None:
+        """Restore a state previously returned by :meth:`state_dict`."""
+        if int(state.get("capacity", self.capacity)) != self.capacity:
+            raise ValueError("recovery checkpoint capacity does not match the configured pool")
+        self.outcomes = deque((bool(x) for x in state.get("outcomes", ())),
+                              maxlen=self.outcomes.maxlen)
+        self._states = []
+        for item in state.get("states", ()):
+            self.add(item, seq_idx=int(item["seq_idx"]), frame=float(item["frame"]))

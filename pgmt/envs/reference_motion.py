@@ -70,14 +70,17 @@ def _quat_delta(a: torch.Tensor, b: torch.Tensor, dt: float) -> torch.Tensor:
     aw, ax, ay, az = a.unbind(-1)
     bw, bx, by, bz = b.unbind(-1)
     q = torch.stack((bw*aw + bx*ax + by*ay + bz*az,
-                     bw*(-ax) + bx*aw + by*az - bz*ay,
-                     bw*(-ay) - bx*az + by*aw + bz*ax,
+                     bw*(-ax) + bx*aw - by*az + bz*ay,
+                     bw*(-ay) + bx*az + by*aw - bz*ax,
                      bw*(-az) + bx*ay - by*ax + bz*aw), -1)
     q = q / q.norm(dim=-1, keepdim=True).clamp_min(1e-8)
     q = torch.where(q[..., :1] < 0, -q, q)
     v = q[..., 1:]
     angle = 2 * torch.atan2(v.norm(dim=-1), q[..., :1].squeeze(-1).clamp_min(1e-8))
-    return v / v.norm(dim=-1, keepdim=True).clamp_min(1e-8) * (angle / dt).unsqueeze(-1)
+    dt_t = torch.as_tensor(dt, device=a.device, dtype=a.dtype)
+    while dt_t.ndim < angle.ndim:
+        dt_t = dt_t.unsqueeze(-1)
+    return v / v.norm(dim=-1, keepdim=True).clamp_min(1e-8) * (angle / dt_t).unsqueeze(-1)
 
 
 class ReferenceMotion:
@@ -184,10 +187,25 @@ class ReferenceMotion:
         p0, q0 = self._fk(q); eps = 1e-4
         p1, q1 = self._fk(q + qd * eps)
         R = _qmat(rr)
+        root_step = torch.cat((torch.zeros_like(rw[:, :1]), rw * eps), -1)
+        root_step_norm = root_step.norm(dim=-1, keepdim=True)
+        root_delta = torch.cat((torch.cos(root_step_norm / 2),
+                                torch.sin(root_step_norm / 2) *
+                                root_step / root_step_norm.clamp_min(1e-8)), -1)
+        root_delta = torch.where(root_step_norm < 1e-8,
+                                 torch.cat((torch.ones_like(root_step_norm),
+                                            torch.zeros_like(root_step)), -1),
+                                 root_delta)
+        rr1 = torch.stack((
+            root_delta[:, 0] * rr[:, 0] - root_delta[:, 1] * rr[:, 1] - root_delta[:, 2] * rr[:, 2] - root_delta[:, 3] * rr[:, 3],
+            root_delta[:, 0] * rr[:, 1] + root_delta[:, 1] * rr[:, 0] + root_delta[:, 2] * rr[:, 3] - root_delta[:, 3] * rr[:, 2],
+            root_delta[:, 0] * rr[:, 2] - root_delta[:, 1] * rr[:, 3] + root_delta[:, 2] * rr[:, 0] + root_delta[:, 3] * rr[:, 1],
+            root_delta[:, 0] * rr[:, 3] + root_delta[:, 1] * rr[:, 2] - root_delta[:, 2] * rr[:, 1] + root_delta[:, 3] * rr[:, 0]), -1)
+        R1 = _qmat(rr1)
         body_pos = rp[:, None] + torch.einsum("bij,bnj->bni", R, p0)
-        body_pos_1 = rp[:, None] + rv[:, None] * eps + torch.einsum("bij,bnj->bni", _qmat(rr + 0.5 * eps * torch.cat((torch.zeros_like(rw[:, :1]), rw), -1)), p1)
+        body_pos_1 = rp[:, None] + rv[:, None] * eps + torch.einsum("bij,bnj->bni", R1, p1)
         body_quat = _matq(R[:, None] @ _qmat(q0))
-        body_quat_1 = _matq(R[:, None] @ _qmat(q1))
+        body_quat_1 = _matq(R1[:, None] @ _qmat(q1))
         body_lin = (body_pos_1 - body_pos) / eps
         body_ang = _quat_delta(body_quat, body_quat_1, eps)
         return dict(body_pos=body_pos, body_quat=body_quat,
@@ -197,32 +215,41 @@ class ReferenceMotion:
 
     def sample(self, seq_ids: torch.Tensor, frames: torch.Tensor, *, placement_pos=None, placement_quat=None, robot_root_pos=None):
         seq_ids, frames = seq_ids.to(self.device).long().reshape(-1), frames.to(self.device).float().reshape(-1)
+        max_frame = (self.db.lengths[seq_ids] - 1).float()
+        frames = frames.clamp_min(0).minimum(max_frame)
         q, qd, rp, rr = self.db.ref_at(seq_ids, frames)
         body_local_p, body_local_q = self._fk(q)
         step = self.control_dt / self.db.frame_time[seq_ids]
-        max_frame = (self.db.lengths[seq_ids] - 1).float()
         # At the final frame use the preceding interval, preserving the last
-        # physical velocity instead of silently returning zero.
-        forward = (frames < max_frame)
-        nxt = torch.where(forward, frames + step, frames - step).clamp_min(0)
+        # physical velocity instead of silently returning zero.  Keep the
+        # signed frame interval so a backward probe still yields a forward
+        # velocity, and divide by the actual clipped interval near boundaries.
+        forward = frames < max_frame
+        nxt = torch.where(forward, frames + step, frames - step).clamp_min(0).minimum(max_frame)
+        next_dt = (nxt - frames) * self.db.frame_time[seq_ids]
+        next_dt_safe = torch.where(next_dt.abs() < 1e-8,
+                                   torch.full_like(next_dt, self.control_dt), next_dt)
         qn, _, rpn, rrn = self.db.ref_at(seq_ids, nxt)
         body_local_p_n, body_local_q_n = self._fk(qn)
-        prev = (frames - step).clamp_min(0)
+        prev = (frames - step).clamp_min(0).minimum(max_frame)
+        prev_dt = (frames - prev) * self.db.frame_time[seq_ids]
+        prev_dt_safe = prev_dt.clamp_min(1e-8)
         qp, _, rpp, rrp = self.db.ref_at(seq_ids, prev)
         body_local_p_p, _ = self._fk(qp)
-        dt = self.control_dt
         root_R, root_Rn = _qmat(rr), _qmat(rrn)
         body_p = rp[:,None] + torch.einsum("bij,bnj->bni", root_R, body_local_p)
         bp_n = rpn[:,None] + torch.einsum("bij,bnj->bni", root_Rn, body_local_p_n)
         body_q = _matq(root_R[:,None] @ _qmat(body_local_q))
         bq_n = _matq(root_Rn[:,None] @ _qmat(body_local_q_n))
-        root_lin = (rpn-rp)/dt; root_ang = _quat_delta(rr, rrn, dt)
-        body_lin=(bp_n-body_p)/dt; body_ang=_quat_delta(body_q,bq_n,dt)
+        root_lin = (rpn-rp) / next_dt_safe[:, None]
+        root_ang = _quat_delta(rr, rrn, next_dt_safe)
+        body_lin = (bp_n-body_p) / next_dt_safe[:, None, None]
+        body_ang = _quat_delta(body_q, bq_n, next_dt_safe)
         body_p_p = rpp[:, None] + torch.einsum("bij,bnj->bni", _qmat(rrp), body_local_p_p)
-        body_lin_p = (body_p - body_p_p) / dt
-        body_accel = (body_lin - body_lin_p) / dt
-        root_lin_p = (rp - rpp) / dt
-        root_accel = (root_lin - root_lin_p) / dt
+        body_lin_p = (body_p - body_p_p) / prev_dt_safe[:, None, None]
+        body_accel = (body_lin - body_lin_p) / self.control_dt
+        root_lin_p = (rp - rpp) / prev_dt_safe[:, None]
+        root_accel = (root_lin - root_lin_p) / self.control_dt
         position_error = None
         if robot_root_pos is not None:
             # This is the global-position-correction signal, not a reset-time
