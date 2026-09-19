@@ -29,6 +29,8 @@ wandb/
 data/raw/*
 !data/raw/g1/
 !data/raw/g1/**
+# Locally staged third-party G1 USD/URDF/mesh (see setup/prepare_g1_asset.py).
+data/raw/g1/external/
 !data/raw/.external/
 !data/raw/.external/human2humanoid/
 !data/raw/.external/human2humanoid/README.md

@@ -9,5 +9,9 @@ adapter before the simulator is available.
 from pgmt.train.policy import PolicyOutput, Stage1Policy
 from pgmt.train.ppo import PPO
 from pgmt.train.storage import RolloutStorage
+from pgmt.train.stage1 import BatchRewardAdapter, PDConfig, PDBatchController, TorchMotionDatabase
 
-__all__ = ["PPO", "PolicyOutput", "RolloutStorage", "Stage1Policy"]
+__all__ = [
+    "PPO", "PolicyOutput", "RolloutStorage", "Stage1Policy",
+    "BatchRewardAdapter", "PDConfig", "PDBatchController", "TorchMotionDatabase",
+]

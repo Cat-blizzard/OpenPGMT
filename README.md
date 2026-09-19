@@ -11,7 +11,7 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 完成并验证**；M0 待服务器冒烟；Stage 1 的策略包装、多头 PPO 与 rollout 存储已补齐，但 G1 仿真环境和物理训练闭环仍待接入
+- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 完成并验证**；G1 资产静态验收、29-DoF 映射、PD/参考动作/批量奖励适配器和 Stage 1 PPO 入口已接入；Isaac Lab USD 运行时探针与物理训练仍需在 GPU 空闲后完成
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
 
@@ -27,11 +27,11 @@ pgmt/envs/        observations.py（观测契约）✅
                   reference_sampler.py（C^K 采样/修正速度/自适应采样）✅
                   terrain/（5 族 × L0–L9 高度场 + 高程图 + 课程 + 兼容规则）✅
                   termination.py（终止条件 + 容忍区，A20）✅
-                  g1_env.py（M2，未实现）
+                  g1_env.py（M2，torch 批量适配器 + Isaac Lab shell）
 pgmt/rewards/     spec.py（Table I 权重 + Eq.10 松弛 + 值域守卫）✅
                   semantics.py（28 项语义对照表）✅
                   tracking / auxiliary / terrain_contact（Table I 的 28 项残差）✅
-pgmt/train/       Stage 1 策略包装、多头 PPO 与 rollout 存储（仿真环境适配仍待实现）
+pgmt/train/       Stage 1 策略包装、多头 PPO、rollout 存储与批量 PD/参考/奖励适配器
 data/             ✅ LAFAN1 下载 + BVH 解析 + 重定向 + IK 精修 + 质量评估 + 奖励尺度探针
 eval/             基准评估与消融（M5，未实现）；eval/viz/ 为 M1.5 可视化
 baselines/        RGMT-Reimpl（M6，尽力而为）
@@ -135,6 +135,52 @@ python -m data.viz_terrain --dump stairs 9       REM 无 matplotlib 时打印高
 - 主路线: `smoke_test.py` 三阶段全 PASS（128 env 物理 + 10 iter PPO 闭环）
 - 兜底: `smoke_test_isaaclab.py` 两阶段全 PASS（torch + headless 物理仿真）
 - 本机: `python -m pytest tests -q` 全绿
+
+### G1 资产与 Stage 1 入口
+
+仓库不重新分发第三方 G1 网格或 USD。服务器上已有授权的 ProtoMotions
+资产时，先做只读验收并保存 manifest：
+
+```bash
+python setup/check_g1_asset.py \
+  --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
+  --mjcf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/mjcf/g1.xml \
+  --usd /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
+  --json data/processed/g1_asset_manifest.json
+```
+
+如果希望在仓库工作区形成一个带授权文件的本地入口，可生成不进入 git 的
+符号链接目录（也可把 `--mode` 改为 `copy`）：
+
+```bash
+python setup/prepare_g1_asset.py \
+  --source-root /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets \
+  --destination data/raw/g1/external/protomotions
+```
+
+URDF/MJCF 的 29 个关节、29 个执行器、body 名称和网格路径会被静态核验；
+USD 的关节顺序必须在 Isaac Sim 进程中核验：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python setup/probe_g1_isaaclab.py \
+  --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
+  --json data/processed/g1_usd_runtime_probe.json
+```
+
+启动一次不依赖 Isaac Sim 的 Stage 1 PPO 训练（使用本仓库已有重定向 NPZ，
+PD、参考动作和三头批量奖励均走 `G1Env`）：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage1 \
+  --device cuda:0 --num-envs 256 --steps-per-env 24 --updates 1000 \
+  --reference-data data/processed/lafan1_g1_continuous \
+  --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
+  --checkpoint runs/stage1_g1.pt
+```
+
+该入口的默认集成是 torch 批量 PD 适配器；物理训练前必须先让 USD 运行时探针
+通过，再把 `IsaacLabG1Env` 接到同一 PPO 协议。`--dry-run` 可在无 GPU/无 Isaac
+Sim 时验证策略、超时 bootstrap 和 checkpoint 保存。
 
 ## 假设清单
 
@@ -246,7 +292,7 @@ python -m data.eval_retarget --npz-dir data/processed/lafan1_g1_fixed --out data
 | M1.5 | IK 精修 + 接触标签统一协议 | ✅ 完成（A17 待复核） |
 | M2.0 / M2.0b | 观测契约 / 奖励规格（不依赖仿真器） | ✅ 完成 |
 | M3 | 地形系统（5 族 × L0–L9，纯逻辑部分） | ✅ 完成（mesh 注入归 M2） |
-| M2 | Stage 1 平地 tracking 预训练 | 🟡 策略/多头 PPO/奖励/终止已就绪；G1 环境、PD 和批量奖励仍未接入 |
+| M2 | Stage 1 平地 tracking 预训练 | 🟡 G1 torch 批量环境、PD、参考动作、三头奖励和 PPO 入口已接入；USD 运行时映射与 Isaac Lab 物理闭环待空闲 GPU 验收 |
 | M4 | Stage 2 感知注入 | ⬜ 未开始 |
 | M5 | 基准评估 + 消融 | ⬜ 未开始 |
 | M6 | 基线与最终报告 | ⬜ 未开始 |
