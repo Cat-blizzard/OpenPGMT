@@ -15,7 +15,7 @@
 #   torch 2.1.2 cu121（官方绑定按旧 torch ABI 编译，勿用 2.7+cu128）
 #   rsl-rl-lib 2.1.2（legged_gym 标准搭配）
 #
-# 驱动注意: 本机驱动 580 超出社区验证范围（黄金线 525/535，但 headless
+# 驱动注意: 服务器驱动 580 超出社区验证范围（黄金线 525/535，但 headless
 #   训练在 555+ 有先例）。冒烟测试一跑便知；若 create_sim 崩溃再考虑
 #   降驱动（5880 Ada 最低约 535/545）或转 Isaac Lab（install_server.sh）。
 # ============================================================
@@ -123,5 +123,5 @@ fi
 
 echo "===== 完成 ====="
 echo "conda activate ${ENV_NAME} && python setup/smoke_test.py   # 随时重跑冒烟"
-echo "跑本机单测: pip install pytest matplotlib && python -m pytest tests -q"
-echo "多卡并行: 每个训练 run 一个进程, CUDA_VISIBLE_DEVICES=k python -m pgmt.train.train_stage1（M2 交付后可用）"
+echo "服务器回归: python -m pytest tests -q"
+echo "多卡并行: 每个训练 run 一个进程, CUDA_VISIBLE_DEVICES=k python -m pgmt.train.train_stage1"

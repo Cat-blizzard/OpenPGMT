@@ -18,7 +18,7 @@
 ## 仓库结构
 
 ```
-setup/            安装与冒烟脚本（本机 + 服务器两条路线）
+setup/            Linux/GPU 服务器安装与冒烟脚本
 pgmt/contracts.py 跨层维度常量唯一出处（OBS_DIM/ACT_DIM/HISTORY_LEN/REF_FRAME_DIM）
 pgmt/cfg/         assumptions.py —— 假设清单 A1–A22 的唯一出处
 pgmt/policy/      ✅ 全部实现并有单测: RoPE / MHCA / History Encoder / IFM /
@@ -35,74 +35,62 @@ pgmt/train/       Stage 1 策略包装、多头 PPO、rollout 存储与批量 PD
 data/             ✅ LAFAN1 下载 + BVH 解析 + 重定向 + IK 精修 + 质量评估 + 奖励尺度探针
 eval/             基准评估与消融（M5，未实现）；eval/viz/ 为 M1.5 可视化
 baselines/        RGMT-Reimpl（M6，尽力而为）
-tests/            730 个测试（约 55 个需真实数据，缺失时自动 skip）
+tests/            764 个测试（约 55 个需真实数据，缺失时自动 skip）
 ```
 
 **不纳入版本控制**（体积大 / 许可约束，需自行生成）：`data/raw/lafan1/`（LAFAN1 原始 BVH）、
 `data/processed/lafan1_g1/`（77 个重定向 npz）。见下方「数据准备」。
 
-## 本机开发（Windows，无需 GPU）
+## 运行环境（Linux/GPU 服务器）
 
-```bat
-setup\install_local.bat          REM 创建 conda 环境 pgmt-dev、装依赖、跑测试
-conda activate pgmt-dev
-cd /d D:\PGMT
-python -m pytest tests -q        REM 728 passed, 2 skipped（CUDA）（约 55 个需真实数据，缺失时 skip）
+当前项目以 Linux GPU 服务器作为唯一受支持的开发、验证和训练环境。服务器上
+先完成 Isaac Gym/Isaac Lab 安装，再运行
+同一套回归测试和训练命令：
+
+```bash
+# 在目标服务器的项目目录中
+python -m pytest tests -q
+
+# 纯 Torch 路径只用于协议和奖励链路检查，不包含刚体动力学
+python -m pgmt.train.train_stage1 --backend torch --device cpu --dry-run
 ```
 
-本机只做纯逻辑开发与单测（torch 2.1.2 **CPU**，版本与服务器对齐以避免数值漂移）；训练在服务器进行。
-依赖清单见 `setup/requirements-dev.txt`。
-
-> `setup\install_local.bat` 需要 conda 已对 cmd.exe 初始化（`conda init cmd.exe`），
-> 否则 `conda activate` 会失败 —— 脚本会检测并中止，不会污染 base 环境。
+`setup/requirements.txt` 是服务器依赖清单。正式训练必须使用下方的 Isaac Gym
+或 Isaac Lab 路径，并在有 GPU 的环境中运行；CPU Torch 结果不能替代物理仿真验收。
 
 ## 数据准备
 
 仓库**不含**原始数据与重定向结果，需自行生成两步：
 
-```bat
-REM 1) 下载 LAFAN1（约 144MB，研究用途免费；GitHub LFS 需用 media 地址）
+```bash
+# 1) 下载 LAFAN1（约 144MB，研究用途免费；GitHub LFS 需用 media 地址）
 bash data/download_lafan1.sh
-REM    产物: data/raw/lafan1/*.bvh（77 个序列）
+#    产物: data/raw/lafan1/*.bvh（77 个序列）
 
-REM 2) Mixamo → G1 重定向（含 IK 精修，CPU、耗时数分钟至一小时）
+# 2) Mixamo → G1 重定向（含 IK 精修，CPU、耗时数分钟至一小时）
 python -m data.retarget_lafan1 --bvh-dir data/raw/lafan1 --out-dir data/processed/lafan1_g1
-REM    产物: data/processed/lafan1_g1/*.npz（77 个）
+#    产物: data/processed/lafan1_g1/*.npz（77 个）
 
-REM 3)（可选）质量评估与可视化
-python -m data.eval_retarget                     REM → data/processed/quality_report.csv
+# 3)（可选）质量评估与可视化
+python -m data.eval_retarget                     # → data/processed/quality_report.csv
 python -m data.viz_retarget data/raw/lafan1/walk1_subject1.bvh --frames 100 600 1200 1800
-python -m data.probe_reward_scales               REM 奖励尺度探针（A18 依据）
+python -m data.probe_reward_scales               # 奖励尺度探针（A18 依据）
 
-REM 4)（可选）地形检查图（需 matplotlib）
-python -m data.viz_terrain                       REM 五族 × 十级总览 → eval/viz/terrain_overview.png
+# 4)（可选）地形检查图（需 matplotlib）
+python -m data.viz_terrain                       # 五族 × 十级总览 → eval/viz/terrain_overview.png
 python -m data.viz_terrain --maps-family stairs --levels 0 5 9
-python -m data.viz_terrain --dump stairs 9       REM 无 matplotlib 时打印高程图数值
+python -m data.viz_terrain --dump stairs 9       # 无 matplotlib 时打印高程图数值
 ```
 
 第 1 步之前请先读 [`NOTICE.md`](NOTICE.md)：LAFAN1 与研究用途许可相关，
 `data/raw/.external/human2humanoid/` 为上游 **CC-BY-NC-4.0** 内容。
-
-## 本机工具链注意
-
-本仓库开发机曾出现 **PowerShell (`pwsh`) 完全无法启动** —— 进程起步即报
-`Fatal error. Your Windows doesn't fully support CET`（exit code `2148734214`，
-即 `STATUS_FAIL_FAST_EXCEPTION`），所有 `pwsh` 调用均失败。已确认：
-
-- 与命令无关（连 `echo hello` 也崩），是进程初始化阶段失败
-- 系统里 `.NET` 仅 6.0.32，而该版本**没有**这条 CET 检查 → 说明是 harness 自带
-  的 pwsh + 自带新版 .NET 与系统 Windows 版本不匹配
-- 报错建议的"安装 Windows 更新"具误导性；单独安装 PowerShell 7 也无效
-- **cmd.exe 与 Windows PowerShell 5.1 可用**，本项目的全部测试与脚本都在 cmd 下运行
-
-若你也遇到，直接用 cmd / Git Bash 即可，不影响本项目。
 
 ## 服务器安装与冒烟（M0 验收）
 
 **训练硬件**: 单机 10× RTX 5880 Ada（sm_89，48GB/卡），驱动 580 / CUDA 13.0。
 每卡独立跑一个训练 run（`CUDA_VISIBLE_DEVICES=k`），不做 run 内多卡。
 
-**背景**: Isaac Gym Preview 4 是 cu11.8 时代产物：官方 Python 绑定仅到 py3.8/3.9 且按旧 torch ABI 编译，torch 必须用 2.1 时代版本（cu121）。但 **sm_89（Ada）正是 PP4 的社区黄金架构**（RTX 4090 同代），整个 legged_gym/OmniH2O/PHC 生态都在此架构上验证过。唯一未验证项是本机驱动 580（社区黄金线 525/535，但 headless 训练在 555+ 有先例）——冒烟测试一跑便知。
+**背景**: Isaac Gym Preview 4 是 cu11.8 时代产物：官方 Python 绑定仅到 py3.8/3.9 且按旧 torch ABI 编译，torch 必须用 2.1 时代版本（cu121）。但 **sm_89（Ada）正是 PP4 的社区黄金架构**（RTX 4090 同代），整个 legged_gym/OmniH2O/PHC 生态都在此架构上验证过。目标服务器驱动 580（社区黄金线 525/535，但 headless 训练在 555+ 有先例）仍需通过冒烟测试确认。
 
 ### 决策树
 
@@ -113,7 +101,7 @@ python -m data.viz_terrain --dump stairs 9       REM 无 matplotlib 时打印高
 第 1 步（检查包，1 分钟）:
   bash setup/check_isaacgym.sh <tar 路径>
       ├─ 报告官方绑定支持的 Python 版本（gym_38.so → 3.8；gym_39.so → 3.9）
-      └─ 报告 PhysX 是否含本机架构（sm_89）内核/PTX
+      └─ 报告 PhysX 是否含目标架构（sm_89）内核/PTX
 
 第 2 步（主路线: 官方 PP4 + Ada 黄金配置）:
   bash setup/install_server_isaacgym.sh --isaacgym <tar 路径> [--python 3.9]
@@ -134,7 +122,7 @@ python -m data.viz_terrain --dump stairs 9       REM 无 matplotlib 时打印高
 
 - 主路线: `smoke_test.py` 三阶段全 PASS（128 env 物理 + 10 iter PPO 闭环）
 - 兜底: `smoke_test_isaaclab.py` 两阶段全 PASS（torch + headless 物理仿真）
-- 本机: `python -m pytest tests -q` 全绿
+- 服务器回归: `python -m pytest tests -q` 全绿
 
 ### G1 资产与 Stage 1 入口
 
@@ -149,7 +137,7 @@ python setup/check_g1_asset.py \
   --json data/processed/g1_asset_manifest.json
 ```
 
-如果希望在仓库工作区形成一个带授权文件的本地入口，可生成不进入 git 的
+如果希望在服务器工作区形成一个带授权文件的入口，可生成不进入 git 的
 符号链接目录（也可把 `--mode` 改为 `copy`）：
 
 ```bash
@@ -175,7 +163,6 @@ CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage1 \
   --backend torch --device cuda:0 --num-envs 256 --steps-per-env 24 --updates 1000 \
   --reference-data data/processed/lafan1_g1_continuous \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
-  --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
   --checkpoint runs/stage1_g1.pt
 ```
 
@@ -184,15 +171,31 @@ CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage1 \
 `--asset`、`--urdf` 和 `--reference-data`，不会静默退回 torch。`--dry-run` 或
 `--backend mock` 可在无 GPU/无 Isaac Sim 时验证协议、超时 bootstrap 和 checkpoint。
 
-Stage 2 的 CPU 代码路径也已接通（21×21 elevation、Terrain Glimpse、terrain-contact
+Stage 2 的协议路径也已接通（21×21 elevation、Terrain Glimpse、terrain-contact
 奖励和四头 critic）：
 
 ```bash
-python -m pgmt.train.train_stage2 --backend torch \
+CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage2 --backend torch --device cuda:0 \
   --reference-data data/processed/lafan1_g1_continuous \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
   --num-envs 4 --steps-per-env 24 --updates 1
 ```
+
+## 接下来做什么
+
+按以下顺序推进，避免把协议测试误当成物理训练结果：
+
+1. **M0 运行时验收**：从仓库根目录执行 `setup/check_g1_asset.py`，再用
+   `setup/probe_g1_isaaclab.py` 读取 USD，确认运行时的 29 个关节、29 个执行器和 body 顺序。
+2. **物理冒烟**：在目标 GPU 上运行 `setup/smoke_test_isaaclab.py --steps 20`；如果采用
+   Isaac Gym PP4，则按上面的决策树先检查包和 PhysX 架构。
+3. **Stage 1 物理训练**：探针通过后使用 `--backend isaaclab`，记录首个 checkpoint、奖励分组、
+   终止原因和 GPU/吞吐；同时保留同配置的 `--backend torch` 结果作为接口回归基线。
+4. **Stage 2 物理接入**：把同一批 terrain atlas 高度场注入 Isaac Lab 碰撞场景，验证接触传感器、
+   21×21 elevation、terrain-contact 六项奖励和四头 critic。
+5. **M5 评估**：Stage 1/2 稳定后再跑 5 个地形族 × 10 个难度的 matched episodes 和消融，最后补 Table II、Fig. 3/4 与 RGMT 对比。
+
+当前 `pytest`、Torch FK/PD/reward 和最小 PPO 更新只证明代码接口闭环；它们不证明 Isaac Lab 刚体动力学或论文指标已经复现。
 
 ## 假设清单
 
@@ -270,7 +273,7 @@ python -m data.validate_retarget --npz-dir data/processed/lafan1_g1_fixed \
 > 快速复核命令：`python -m data.eval_retarget --only ground`
 > （写 `quality_report_ground.csv`，**不会**动完整报告）
 
-## 代码复核（2026-09-16）
+## 代码复核（2026-09-19）
 
 本轮修复覆盖以下已确认问题，并增加对应回归测试：
 
@@ -281,12 +284,11 @@ python -m data.validate_retarget --npz-dir data/processed/lafan1_g1_fixed \
 - **环境脚本**：包内绑定正确解析为 Python 3.8/3.9 等，支持 `.tar`/`.tar.gz`；检查已有环境版本；冒烟各阶段独立进程，Isaac Gym 先于 PyTorch 导入；GPU 施力使用张量 API；Isaac Lab 箱体启用碰撞。
 - **评估来源与保存**：默认读取实际 NPZ，显式 `--regenerate` 才重算；候选报告另存，失败或中断不覆盖已有正式报告。
 
-最终回归：`python -m pytest tests -q -ra -p no:cacheprovider`，**728 passed / 2 skipped**，耗时 147.39 s。另通过全部 Bash 安装脚本语法检查及 Python 3.8 语法解析。
-
-本机验证使用 Python 3.10 / PyTorch 2.7.1 CPU，服务器安装脚本目标仍为
-PyTorch 2.1.2 cu121；两者不能视为同环境验证。CUDA 迁移测试在本机跳过，
-真实 Isaac Gym / Isaac Lab 仿真仍需服务器冒烟。恢复/倒立动作的终止门控、
-未公开奖励定义及 A17 数据过滤仍需通过训练与物理诊断确定。
+当前 Linux 回归：`python -m pytest tests -q`，**764 passed**。纯 Torch PPO
+路径也已完成 Stage 1/Stage 2 的最小闭环，用于检查环境、奖励、采样器和 checkpoint
+接口；这些结果不包含刚体动力学。真实 Isaac Gym / Isaac Lab 仿真仍需在目标 GPU
+服务器上完成冒烟和训练验证。恢复/倒立动作的终止门控、未公开奖励定义及 A17
+数据过滤仍需通过训练与物理诊断确定。
 
 旧 NPZ/CSV 原样保留。建议以独立目录复核新产物：
 
@@ -299,13 +301,13 @@ python -m data.eval_retarget --npz-dir data/processed/lafan1_g1_fixed --out data
 
 | 里程碑 | 内容 | 状态 |
 |---|---|---|
-| M0 | 环境与骨架（本机单测 + 服务器冒烟） | 本机部分完成（工具链问题已修）；待下载 PP4 tar + 服务器冒烟 |
+| M0 | 环境与骨架（服务器回归 + 物理冒烟） | 代码回归完成；待下载 PP4 tar + 服务器冒烟 |
 | M1 | LAFAN1 数据管线 + 重定向 | ✅ 完成 |
 | M1.5 | IK 精修 + 接触标签统一协议 | ✅ 完成（A17 待复核） |
 | M2.0 / M2.0b | 观测契约 / 奖励规格（不依赖仿真器） | ✅ 完成 |
 | M3 | 地形系统（5 族 × L0–L9，纯逻辑部分） | ✅ 完成（mesh 注入归 M2） |
 | M2 | Stage 1 平地 tracking 预训练 | 🟡 URDF-FK torch body reward、PD、A13、recovery/adaptive sampling 和 PPO 已接入；USD 运行时映射与 Isaac Lab 物理闭环待空闲 GPU 验收 |
-| M4 | Stage 2 感知注入 | 🟡 CPU Torch 路径、elevation、terrain-contact reward 和四头 PPO 已接入；真实 terrain physics 待验收 |
+| M4 | Stage 2 感知注入 | 🟡 Torch 协议路径、elevation、terrain-contact reward 和四头 PPO 已接入；真实 terrain physics 待验收 |
 | M5 | 基准评估 + 消融 | ⬜ 未开始 |
 | M6 | 基线与最终报告 | ⬜ 未开始 |
 

@@ -1040,7 +1040,9 @@ if _ISAACLAB_IMPORTABLE:
             self.core = G1Env(self._pgmt_cfg, articulation=self.robot)
             self._sync_contact_forces()
             self.last_adapter_obs = None
-            self.last_split_reward = torch.zeros((self.num_envs, 3), device=self.device)
+            reward_heads = 4 if self._pgmt_cfg.stage == 2 else 3
+            self.last_split_reward = torch.zeros(
+                (self.num_envs, reward_heads), device=self.device)
             self.last_terminal_obs = None
 
         def _setup_scene(self):

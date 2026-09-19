@@ -2,7 +2,7 @@
 
 用于 IFM 中未来参考帧 C^K 的位置编码：控制步偏移 τ_k = 2^k − 1 直接作为
 旋转角度下标，使 MHCA 注意力天然感知参考帧间的相对时间距离。
-纯 torch 实现，Windows CPU 可测（tests/test_rope.py）。
+纯 torch 实现，可在服务器回归环境中直接测试（tests/test_rope.py）。
 """
 
 from __future__ import annotations

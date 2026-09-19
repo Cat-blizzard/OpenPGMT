@@ -142,7 +142,7 @@ def phase2(num_envs: int, steps: int) -> bool:
         import traceback
         traceback.print_exc()
         print(f"[FAIL] 物理仿真失败: {e}")
-        print("      若为 CUDA/PhysX 初始化错误（no kernel image 等），多为 PhysX 缺本机 GPU")
+        print("      若为 CUDA/PhysX 初始化错误（no kernel image 等），多为 PhysX 缺目标 GPU")
         print("      架构内核 —— 用 setup/check_isaacgym.sh 判定；不可行则转 Isaac Lab。")
         return False
     finally:

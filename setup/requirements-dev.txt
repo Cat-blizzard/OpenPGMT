@@ -1,7 +1,0 @@
-# PGMT 本机 Windows 开发依赖（纯逻辑单测，无 GPU / 无 Isaac Gym）
-# 说明：torch 由 install_local.bat 单独安装（仅 CPU 轮子），此处不重复声明。
-
-numpy==1.26.4       # 与服务器一致（<2 是 isaacgym 绑定的要求）
-pytest              # 测试运行器
-matplotlib          # tests/test_viz.py 与 data/viz_retarget.py 需要（缺失时该模块自动 skip）
-pyyaml              # 配置解析（pgmt/cfg 后续用到）

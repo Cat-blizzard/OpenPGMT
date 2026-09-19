@@ -2,7 +2,7 @@
 
 这是 M2 环境的**前置验证**：在完全不需要 Isaac Gym 的前提下，把
 "运动数据库 → C^K 参考帧 → H_t 历史 → o_t → HistoryEncoder/IFM/Actor"
-这条链路真跑一遍。它能在本机（或服务器 CPU）暴露接口错配，而不必等到
+这条链路真跑一遍。它能在服务器 CPU/GPU 环境暴露接口错配，而不必等到
 搭好 `g1_env.py` 才发现。
 
 与 `test_policy_integration.py` 的区别：后者用随机张量只验证**形状与梯度**；
