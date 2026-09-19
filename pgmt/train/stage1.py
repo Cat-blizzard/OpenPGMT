@@ -96,6 +96,13 @@ class TorchMotionDatabase:
         self.qvel = self._pad(seqs, "qvel", ACT_DIM)
         self.root_pos = self._pad(seqs, "root_pos", 3)
         self.root_rot = _quat_normalize(self._pad(seqs, "root_rot", 4))
+        # Retargeted LAFAN1 files carry offline left/right foot contact labels.
+        # Keep them on device when every sequence provides them; mixed legacy
+        # datasets remain valid and let the reference layer use its explicit
+        # geometric fallback.
+        self.contacts = None
+        if all("contacts" in s for s in seqs):
+            self.contacts = self._pad(seqs, "contacts", 2)
         self.offsets = torch.tensor(get("A2").value.offsets, device=self.device, dtype=torch.float32)
 
     def _pad(self, seqs, key: str, dim: int) -> torch.Tensor:

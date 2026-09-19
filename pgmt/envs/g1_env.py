@@ -24,9 +24,13 @@ import numpy as np
 import torch
 
 from pgmt.contracts import ACT_DIM, HISTORY_LEN, OBS_DIM, REF_FRAME_DIM
-from pgmt.envs.observations import PRIV_DIM
+from pgmt.envs.observations import PRIV_DIM, PRIV_LAYOUT
 from pgmt.train.stage1 import BatchRewardAdapter, TorchMotionDatabase
 from pgmt.rewards.spec import SIGMAS
+from pgmt.rewards.batched import BatchedRewardComputer
+from pgmt.envs.recovery import FallRecoveryPool
+from pgmt.cfg.assumptions import get
+from pgmt.envs.terrain.batched import TerrainAtlas
 
 try:  # importing this file must stay possible without Isaac Sim
     from data.retarget_lafan1 import G1_JOINT_LIMITS, G1_JOINT_NAMES
@@ -180,6 +184,16 @@ class G1EnvConfig:
     default_root_quat: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
     default_joint_pos: Sequence[float] | None = None
     reference_data_dir: str | None = None
+    # A URDF is required for the reference FK/body-level reward path.  The
+    # simulator asset may be USD; keeping this path separate makes the
+    # kinematic reference auditable and avoids parsing USD in the rollout.
+    reference_urdf_path: str | None = None
+    stage: int = 1
+    enable_global_position_correction: bool = True
+    enable_body_tracking: bool = True
+    terrain_family: str = "flat"
+    terrain_level: int = 0
+    enable_adaptive_sampling: bool = True
     max_joint_velocity: float = 30.0
     auto_reset: bool = True
 
@@ -193,6 +207,12 @@ class G1EnvConfig:
             raise ValueError(f"control_dt ({self.control_dt}) must equal sim_dt*decimation ({expected_dt})")
         if self.action_scale <= 0 or self.max_joint_velocity <= 0:
             raise ValueError("action_scale and max_joint_velocity must be positive")
+        if self.stage not in (1, 2):
+            raise ValueError("stage must be 1 or 2")
+        if self.terrain_level < 0 or self.terrain_level > 9:
+            raise ValueError("terrain_level must be in [0,9]")
+        if self.terrain_family not in {"flat", "slopes", "stairs", "boxes", "rough"}:
+            raise ValueError(f"unknown terrain_family: {self.terrain_family}")
         self.stiffness = _tuple_floats(self.stiffness, ACT_DIM, "stiffness")
         self.damping = _tuple_floats(self.damping, ACT_DIM, "damping")
         self.torque_limit = _tuple_floats(self.torque_limit, ACT_DIM, "torque_limit")
@@ -256,6 +276,35 @@ def _relative_rot6d(robot_quat: torch.Tensor, reference_quat: torch.Tensor) -> t
     return _quat_to_rot6d(torch.stack((qw, qx, qy, qz), dim=-1))
 
 
+def _yaw(q: torch.Tensor) -> torch.Tensor:
+    q = q / q.norm(dim=-1, keepdim=True).clamp_min(1e-8)
+    w, x, y, z = q.unbind(-1)
+    return torch.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+
+
+def _yaw_quat(angle: torch.Tensor) -> torch.Tensor:
+    half = angle * 0.5
+    return torch.stack((torch.cos(half), torch.zeros_like(half),
+                        torch.zeros_like(half), torch.sin(half)), dim=-1)
+
+
+def _quat_to_mat(q: torch.Tensor) -> torch.Tensor:
+    q = q / q.norm(dim=-1, keepdim=True).clamp_min(1e-8)
+    w, x, y, z = q.unbind(-1)
+    return torch.stack((1 - 2 * (y*y + z*z), 2 * (x*y - z*w), 2 * (x*z + y*w),
+                        2 * (x*y + z*w), 1 - 2 * (x*x + z*z), 2 * (y*z - x*w),
+                        2 * (x*z - y*w), 2 * (y*z + x*w), 1 - 2 * (x*x + y*y)), -1).reshape(q.shape[:-1] + (3, 3))
+
+
+def _quat_mul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    aw, ax, ay, az = a.unbind(-1)
+    bw, bx, by, bz = b.unbind(-1)
+    return torch.stack((aw*bw - ax*bx - ay*by - az*bz,
+                        aw*bx + ax*bw + ay*bz - az*by,
+                        aw*by - ax*bz + ay*bw + az*bx,
+                        aw*bz + ax*by - ay*bx + az*bw), dim=-1)
+
+
 class G1Env:
     """Batched Stage 1 contract, with a kinematic torch fallback.
 
@@ -266,10 +315,14 @@ class G1Env:
     """
 
     def __init__(self, config: G1EnvConfig | None = None, *, articulation: Any | None = None,
-                 reference_database: Any | None = None):
+                 reference_database: Any | None = None,
+                 recovery_pool: FallRecoveryPool | None = None):
         self.cfg = config or G1EnvConfig()
         self.articulation = articulation
         self.reference_database = reference_database
+        self.recovery_pool = recovery_pool
+        self._adaptive_sampler = None
+        self._rng = np.random.default_rng()
         if articulation is not None:
             actual_joint_names = list(getattr(articulation, "joint_names", getattr(getattr(articulation, "data", None), "joint_names", [])))
             actual_body_names = list(getattr(articulation, "body_names", getattr(getattr(articulation, "data", None), "body_names", [])))
@@ -287,12 +340,35 @@ class G1Env:
             self.body_ids = torch.arange(len(REQUIRED_BODY_NAMES), dtype=torch.long, device=self.device)
         self.joint_ids = self.joint_ids.to(self.device)
         self.body_ids = self.body_ids.to(self.device)
+        self._terrain = TerrainAtlas(self.device, stage=self.cfg.stage) if self.cfg.stage == 2 else None
+        self._terrain_family_id = {"flat": 0, "slopes": 1, "stairs": 2, "boxes": 3, "rough": 4}[self.cfg.terrain_family]
+        self._terrain_families = torch.full((self.num_envs,), self._terrain_family_id, dtype=torch.long, device=self.device)
+        self._terrain_levels = torch.full((self.num_envs,), self.cfg.terrain_level, dtype=torch.long, device=self.device)
         self.qpos = torch.zeros((self.num_envs, ACT_DIM), device=self.device)
         self.qvel = torch.zeros_like(self.qpos)
         self.root_pos = torch.zeros((self.num_envs, 3), device=self.device)
         self.root_quat = torch.zeros((self.num_envs, 4), device=self.device)
         self.root_lin_vel = torch.zeros((self.num_envs, 3), device=self.device)
         self.root_ang_vel = torch.zeros((self.num_envs, 3), device=self.device)
+        self.body_pos = torch.zeros((self.num_envs, len(REQUIRED_BODY_NAMES), 3), device=self.device)
+        self.body_quat = torch.zeros((self.num_envs, len(REQUIRED_BODY_NAMES), 4), device=self.device)
+        self.body_lin_vel = torch.zeros_like(self.body_pos)
+        self.body_ang_vel = torch.zeros_like(self.body_pos)
+        self.contact_forces = torch.zeros_like(self.body_pos)
+        self.foot_contact = torch.zeros((self.num_envs, 2), dtype=torch.bool, device=self.device)
+        # A9 privileged dynamics.  These tensors are intentionally public so
+        # an Isaac Lab randomization callback can write the actual values each
+        # reset; defaults are the neutral nominal robot, never fake noise.
+        self.priv_friction = torch.ones((self.num_envs, 2), device=self.device)
+        self.priv_terrain_height = torch.zeros((self.num_envs, 2), device=self.device)
+        self.priv_mass = torch.ones((self.num_envs, 1), device=self.device)
+        self.priv_com = torch.zeros((self.num_envs, 3), device=self.device)
+        self.priv_push = torch.zeros((self.num_envs, 3), device=self.device)
+        self.priv_motor_strength = torch.ones((self.num_envs, ACT_DIM), device=self.device)
+        self._previous_body_lin_vel = torch.zeros_like(self.body_lin_vel)
+        self._previous_root_lin_vel = torch.zeros_like(self.root_lin_vel)
+        self._body_state_available = False
+        self._contact_sensor_available = articulation is None
         self.action = torch.zeros_like(self.qpos)
         self.target = torch.zeros_like(self.qpos)
         self.reference_qpos = torch.zeros_like(self.qpos)
@@ -301,6 +377,11 @@ class G1Env:
         self.reference_root_quat = torch.zeros_like(self.root_quat)
         self.reference_root_lin_vel = torch.zeros_like(self.root_lin_vel)
         self.episode_length_buf = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+        self._termination_elapsed = {
+            "ref_deviation": torch.zeros(self.num_envs, device=self.device),
+            "root_low": torch.zeros(self.num_envs, device=self.device),
+            "tilted": torch.zeros(self.num_envs, device=self.device),
+        }
         self.pd = PDController(self.cfg.stiffness, self.cfg.damping, self.cfg.torque_limit, device=self.device)
         low, high = zip(*self.cfg.joint_limits)
         self.joint_low = torch.tensor(low, dtype=torch.float32, device=self.device)
@@ -313,7 +394,16 @@ class G1Env:
         self._prev_action = torch.zeros_like(self.action)
         self.reference_seq_idx = None
         self.reference_frame = None
+        self.reference_start_frame = None
+        self._recovery_active = torch.zeros(self.num_envs, dtype=torch.float32, device=self.device)
+        self.reference_body = None
         self._torch_reference = None
+        self._reference_motion = None
+        self._reference_placement_pos = torch.zeros_like(self.root_pos)
+        self._reference_placement_quat = self.default_root_quat.clone()
+        self._reference_raw_root_pos = torch.zeros_like(self.root_pos)
+        self._reference_raw_root_quat = self.default_root_quat.clone()
+        self._reference_raw_root_lin_vel = torch.zeros_like(self.root_lin_vel)
         if self.reference_database is None and self.cfg.reference_data_dir:
             from pgmt.envs.reference_sampler import MotionDatabase
             self.reference_database = MotionDatabase(self.cfg.reference_data_dir)
@@ -326,19 +416,78 @@ class G1Env:
                 self._torch_reference = self.reference_database
             else:
                 self._torch_reference = TorchMotionDatabase(self.reference_database, device=self.device)
+            if self.cfg.enable_adaptive_sampling and not isinstance(self.reference_database, TorchMotionDatabase):
+                from pgmt.envs.reference_sampler import AdaptiveSampler
+                self._adaptive_sampler = AdaptiveSampler(self.reference_database, seg_len=1)
+            urdf = self.cfg.reference_urdf_path
+            if urdf is None and self.cfg.asset_path and str(self.cfg.asset_path).lower().endswith(".urdf"):
+                urdf = self.cfg.asset_path
+            if urdf and self.cfg.enable_body_tracking:
+                from pgmt.envs.reference_motion import ReferenceMotion
+                self._reference_motion = ReferenceMotion(
+                    self._torch_reference, urdf, device=self.device,
+                    control_dt=self.cfg.control_dt)
+        if (self.articulation is not None and self.reference_database is not None
+                and self.cfg.enable_body_tracking and self._reference_motion is None):
+            raise ValueError(
+                "physics G1Env requires reference_urdf_path (or an URDF asset) "
+                "to compute body-level reference tracking")
+        self._reward_computer = BatchedRewardComputer(
+            REQUIRED_BODY_NAMES, G1_JOINT_NAMES, device=self.device,
+            dt=self.cfg.control_dt)
         self._last_obs = None
         self.reset()
 
     def _read_articulation(self):
         if self.articulation is None:
+            if self._reference_motion is not None:
+                kin = self._reference_motion.kinematics(
+                    self.qpos, self.qvel, self.root_pos, self.root_quat,
+                    self.root_lin_vel, self.root_ang_vel)
+                self.body_pos.copy_(kin["body_pos"])
+                self.body_quat.copy_(kin["body_quat"])
+                self.body_lin_vel.copy_(kin["body_lin_vel"])
+                self.body_ang_vel.copy_(kin["body_ang_vel"])
+                self._body_state_available = True
             return
         data = self.articulation.data
+        self._previous_root_lin_vel.copy_(self.root_lin_vel)
+        self._previous_body_lin_vel.copy_(self.body_lin_vel)
         self.qpos.copy_(data.joint_pos[:, self.joint_ids])
         self.qvel.copy_(data.joint_vel[:, self.joint_ids])
         self.root_pos.copy_(data.root_link_pos_w)
         self.root_quat.copy_(data.root_link_quat_w)
         self.root_lin_vel.copy_(data.root_link_lin_vel_w)
         self.root_ang_vel.copy_(data.root_link_ang_vel_w)
+        # Isaac Lab exposes body state tensors on ArticulationData.  Keep the
+        # access explicit and fail closed: the fallback reward remains a dry
+        # run, while a real articulation never silently trains on joint-error
+        # proxies when body data are unavailable.
+        body_pos = getattr(data, "body_link_pos_w", getattr(data, "body_pos_w", None))
+        body_quat = getattr(data, "body_link_quat_w", getattr(data, "body_quat_w", None))
+        body_lin = getattr(data, "body_link_lin_vel_w", getattr(data, "body_lin_vel_w", None))
+        body_ang = getattr(data, "body_link_ang_vel_w", getattr(data, "body_ang_vel_w", None))
+        if all(x is not None for x in (body_pos, body_quat, body_lin, body_ang)):
+            self.body_pos.copy_(body_pos[:, self.body_ids])
+            self.body_quat.copy_(body_quat[:, self.body_ids])
+            self.body_lin_vel.copy_(body_lin[:, self.body_ids])
+            self.body_ang_vel.copy_(body_ang[:, self.body_ids])
+            net_force = getattr(data, "net_contact_forces_w", None)
+            if net_force is None:
+                net_force = getattr(data, "net_forces_w", None)
+            if net_force is not None:
+                self.contact_forces.copy_(net_force[:, self.body_ids])
+            else:
+                self.contact_forces.zero_()
+            feet = torch.tensor([
+                REQUIRED_BODY_NAMES.index("left_ankle_roll_link"),
+                REQUIRED_BODY_NAMES.index("right_ankle_roll_link")], device=self.device)
+            # A contact sensor is preferred; the force threshold is only a
+            # compatibility fallback for articulations without one.
+            self.foot_contact.copy_(self.contact_forces[:, feet].norm(dim=-1) > 1.0)
+            self._body_state_available = True
+        else:
+            self._body_state_available = False
 
     def _obs(self) -> dict[str, torch.Tensor]:
         # The root/reference pose starts aligned in Stage 1.  Keeping the
@@ -362,10 +511,24 @@ class G1Env:
                                 self.reference_qvel.unsqueeze(1).expand(-1, 6, -1),
                                 self.reference_root_lin_vel[:, None, :].expand(-1, 6, -1)), dim=-1)
         privileged = torch.zeros((self.num_envs, PRIV_DIM), device=self.device)
-        # A9 base velocity and angular velocity occupy the first six slots.
-        privileged[:, :3] = self.root_lin_vel
-        privileged[:, 3:6] = self.root_ang_vel
-        return {"obs": current["obs"], "history": history, "future": future, "privileged": privileged}
+        # A9 layout is explicit; do not leave the critic's extra inputs as an
+        # indistinguishable block of zeros.  Nominal defaults above are neutral
+        # and can be overwritten by the simulator's randomization callback.
+        privileged[:, PRIV_LAYOUT.index("base_lin_vel")] = self.root_lin_vel
+        privileged[:, PRIV_LAYOUT.index("base_ang_vel")] = self.root_ang_vel
+        privileged[:, PRIV_LAYOUT.index("foot_contact_states")] = self.foot_contact.float()
+        privileged[:, PRIV_LAYOUT.index("friction_coefficients")] = self.priv_friction
+        privileged[:, PRIV_LAYOUT.index("terrain_height_at_feet")] = self.priv_terrain_height
+        privileged[:, PRIV_LAYOUT.index("base_mass_perturbation")] = self.priv_mass
+        privileged[:, PRIV_LAYOUT.index("com_perturbation")] = self.priv_com
+        privileged[:, PRIV_LAYOUT.index("push_perturbation")] = self.priv_push
+        privileged[:, PRIV_LAYOUT.index("motor_strength_scale")] = self.priv_motor_strength
+        out = {"obs": current["obs"], "history": history, "future": future, "privileged": privileged}
+        if self._terrain is not None:
+            out["elevation"] = self._terrain.elevation(
+                self.root_pos, self.root_quat,
+                families=self._terrain_families, levels=self._terrain_levels)
+        return out
 
     def _set_reference_defaults(self, env_ids: torch.Tensor):
         self.reference_qpos[env_ids] = self.default_q[env_ids]
@@ -373,6 +536,45 @@ class G1Env:
         self.reference_root_pos[env_ids] = self.default_root_pos[env_ids]
         self.reference_root_quat[env_ids] = self.default_root_quat[env_ids]
         self.reference_root_lin_vel[env_ids] = 0.0
+
+    def _reference_position_error(self) -> torch.Tensor:
+        """A13 ``e_p`` in the current reference-anchor frame."""
+        delta = self.reference_root_pos - self.root_pos
+        local = torch.bmm(_quat_to_mat(self.reference_root_quat).transpose(1, 2),
+                          delta.unsqueeze(-1)).squeeze(-1)
+        return local[:, :2]
+
+    def _reference_batch(self, seq: torch.Tensor, frame: torch.Tensor,
+                         *, e_p: torch.Tensor | None = None,
+                         placement_pos: torch.Tensor | None = None,
+                         placement_quat: torch.Tensor | None = None):
+        """Fetch a reference frame, optionally including body FK and A13."""
+        if placement_pos is None:
+            placement_pos = self._reference_placement_pos
+        if placement_quat is None:
+            placement_quat = self._reference_placement_quat
+        if self._reference_motion is not None:
+            out = self._reference_motion.sample(
+                seq, frame,
+                placement_pos=(self._reference_placement_pos if placement_pos is None else placement_pos),
+                placement_quat=(self._reference_placement_quat if placement_quat is None else placement_quat))
+            out["future"] = self._torch_reference.future_refs(
+                seq, frame,
+                e_p=e_p if self.cfg.enable_global_position_correction else None)
+            return out
+        batch = self._torch_reference.batch(
+            seq, frame,
+            e_p=e_p if self.cfg.enable_global_position_correction else None)
+        if placement_pos is not None or placement_quat is not None:
+            pp = torch.zeros_like(batch.root_pos) if placement_pos is None else placement_pos
+            pq = torch.zeros_like(batch.root_rot)
+            pq[:, 0] = 1.0
+            if placement_quat is not None:
+                pq = placement_quat
+            R = _quat_to_mat(pq)
+            batch.root_pos = torch.bmm(R, (batch.root_pos + pp).unsqueeze(-1)).squeeze(-1)
+            batch.root_rot = _quat_mul(pq, batch.root_rot)
+        return batch
 
     def _sample_reference(self, env_ids: torch.Tensor) -> None:
         """Sample/update reference motion for a subset of environments."""
@@ -384,37 +586,107 @@ class G1Env:
             self.reference_future[env_ids, :, ACT_DIM:2 * ACT_DIM] = self.reference_qvel[env_ids, None]
             self.reference_future[env_ids, :, 2 * ACT_DIM:] = self.reference_root_lin_vel[env_ids, None]
             return
-        seq, frame = self._torch_reference.sample_segments(int(env_ids.numel()), seg_len=1)
+        recovery_mask = np.zeros(int(env_ids.numel()), dtype=bool)
+        if self.recovery_pool is not None and len(self.recovery_pool):
+            recovery_mask = self._rng.random(int(env_ids.numel())) < self.recovery_pool.probability
+        recovery_count = int(recovery_mask.sum())
+        normal_count = int(env_ids.numel()) - recovery_count
+        if self._adaptive_sampler is None:
+            seq, frame = self._torch_reference.sample_segments(max(normal_count, 1), seg_len=1)
+        else:
+            pairs = [self._adaptive_sampler.sample(self._rng) for _ in range(max(normal_count, 1))]
+            seq = torch.tensor([p[0] for p in pairs], device=self.device, dtype=torch.long)
+            frame = torch.tensor([p[1] for p in pairs], device=self.device, dtype=torch.long)
+        if recovery_count:
+            rec = self.recovery_pool.sample(recovery_count, device=self.device)
+            seq = torch.cat((seq[:normal_count], rec["seq_idx"]), dim=0)
+            frame = torch.cat((frame[:normal_count], rec["frame"]), dim=0)
         if self.reference_seq_idx is None:
             self.reference_seq_idx = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
             self.reference_frame = torch.zeros(self.num_envs, dtype=torch.float32, device=self.device)
-        self.reference_seq_idx[env_ids] = seq
-        self.reference_frame[env_ids] = frame.to(torch.float32)
-        batch = self._torch_reference.batch(seq, self.reference_frame[env_ids])
-        self.reference_qpos[env_ids] = batch.qpos
-        self.reference_qvel[env_ids] = batch.qvel
-        self.reference_root_pos[env_ids] = batch.root_pos
-        self.reference_root_quat[env_ids] = batch.root_rot
-        self.reference_root_lin_vel[env_ids] = batch.future[:, 0, -3:]
+            self.reference_start_frame = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+        # Recovery samples are appended after ordinary samples; reorder them
+        # back to the caller's env-id order before writing state tensors.
+        if recovery_count:
+            normal_ids = env_ids[torch.as_tensor(~recovery_mask, device=self.device)]
+            recovery_ids = env_ids[torch.as_tensor(recovery_mask, device=self.device)]
+            ordered_ids = torch.cat((normal_ids, recovery_ids))
+            self._recovery_active[normal_ids] = 0.0
+            self._recovery_active[recovery_ids] = 1.0
+        else:
+            ordered_ids = env_ids
+            self._recovery_active[ordered_ids] = 0.0
+        self.reference_seq_idx[ordered_ids] = seq
+        self.reference_frame[ordered_ids] = frame.to(torch.float32)
+        self.reference_start_frame[ordered_ids] = frame
+        if recovery_count:
+            self.qpos[recovery_ids] = rec["qpos"]
+            self.qvel[recovery_ids] = rec["qvel"]
+            self.root_pos[recovery_ids] = rec["root_pos"]
+            self.root_quat[recovery_ids] = rec["root_quat"]
+            self.root_lin_vel[recovery_ids] = rec["root_lin_vel"]
+            self.root_ang_vel[recovery_ids] = rec["root_ang_vel"]
+        env_ids = ordered_ids
+        # Place each sampled sequence at the simulator reset pose.  This keeps
+        # the raw dataset's arbitrary world translation/heading out of the
+        # root-centric tracking problem while preserving its motion.
+        _, _, raw_pos, raw_quat = self._torch_reference.ref_at(seq, self.reference_frame[env_ids])
+        self._reference_raw_root_pos[env_ids] = raw_pos
+        self._reference_raw_root_quat[env_ids] = raw_quat
+        yaw_delta = _yaw(self.root_quat[env_ids]) - _yaw(raw_quat)
+        self._reference_placement_quat[env_ids] = _yaw_quat(yaw_delta)
+        inv_place = _quat_to_mat(self._reference_placement_quat[env_ids]).transpose(1, 2)
+        desired = torch.bmm(inv_place, self.root_pos[env_ids].unsqueeze(-1)).squeeze(-1)
+        self._reference_placement_pos[env_ids] = desired - raw_pos
+        batch = self._reference_batch(
+            seq, self.reference_frame[env_ids],
+            placement_pos=self._reference_placement_pos[env_ids],
+            placement_quat=self._reference_placement_quat[env_ids])
+        self.reference_qpos[env_ids] = batch["joint_pos"] if isinstance(batch, dict) else batch.qpos
+        self.reference_qvel[env_ids] = batch["joint_vel"] if isinstance(batch, dict) else batch.qvel
+        self.reference_root_pos[env_ids] = batch["root_pos"] if isinstance(batch, dict) else batch.root_pos
+        self.reference_root_quat[env_ids] = batch["root_quat"] if isinstance(batch, dict) else batch.root_rot
+        local_vel = (batch["future"] if isinstance(batch, dict) else batch.future)[:, 0, -3:]
+        self.reference_root_lin_vel[env_ids] = torch.bmm(
+            _quat_to_mat(self.reference_root_quat[env_ids]), local_vel.unsqueeze(-1)).squeeze(-1)
         if not hasattr(self, "reference_future"):
             self.reference_future = torch.zeros((self.num_envs, 6, REF_FRAME_DIM), device=self.device)
-        self.reference_future[env_ids] = batch.future
+        self.reference_future[env_ids] = batch["future"] if isinstance(batch, dict) else batch.future
+        if isinstance(batch, dict):
+            # Store a full body reference for the reward boundary.  The dict is
+            # batch-sized; subsequent reference advances replace it in full.
+            if self.reference_body is None:
+                self.reference_body = {k: torch.zeros_like(v) for k, v in batch.items()
+                                       if isinstance(v, torch.Tensor)}
+            for key, value in batch.items():
+                if isinstance(value, torch.Tensor):
+                    self.reference_body[key][env_ids] = value
 
     def _advance_reference(self) -> None:
         if self._torch_reference is None:
             return
         self.reference_frame += self.cfg.control_dt / self._torch_reference.frame_time[self.reference_seq_idx]
-        batch = self._torch_reference.batch(self.reference_seq_idx, self.reference_frame)
-        self.reference_qpos.copy_(batch.qpos)
-        self.reference_qvel.copy_(batch.qvel)
-        self.reference_root_pos.copy_(batch.root_pos)
-        self.reference_root_quat.copy_(batch.root_rot)
-        self.reference_root_lin_vel.copy_(batch.future[:, 0, -3:])
-        self.reference_future.copy_(batch.future)
+        # A13 is evaluated using the placed current reference anchor.
+        raw = self._reference_batch(self.reference_seq_idx, self.reference_frame)
+        self.reference_root_pos.copy_(raw["root_pos"] if isinstance(raw, dict) else raw.root_pos)
+        self.reference_root_quat.copy_(raw["root_quat"] if isinstance(raw, dict) else raw.root_rot)
+        ep = self._reference_position_error()
+        batch = self._reference_batch(self.reference_seq_idx, self.reference_frame, e_p=ep)
+        self.reference_qpos.copy_(batch["joint_pos"] if isinstance(batch, dict) else batch.qpos)
+        self.reference_qvel.copy_(batch["joint_vel"] if isinstance(batch, dict) else batch.qvel)
+        self.reference_root_pos.copy_(batch["root_pos"] if isinstance(batch, dict) else batch.root_pos)
+        self.reference_root_quat.copy_(batch["root_quat"] if isinstance(batch, dict) else batch.root_rot)
+        future = batch["future"] if isinstance(batch, dict) else batch.future
+        self.reference_root_lin_vel.copy_(torch.bmm(
+            _quat_to_mat(self.reference_root_quat), future[:, 0, -3:].unsqueeze(-1)).squeeze(-1))
+        self.reference_future.copy_(future)
+        if isinstance(batch, dict):
+            self.reference_body = batch
 
     def reset(self, *, seed: int | None = None, options: Mapping[str, Any] | None = None):
         if seed is not None:
             torch.manual_seed(seed)
+            self._rng = np.random.default_rng(seed)
         ids = torch.arange(self.num_envs, device=self.device)
         self.qpos.copy_(self.default_q)
         self.qvel.zero_()
@@ -422,10 +694,19 @@ class G1Env:
         self.root_quat.copy_(self.default_root_quat)
         self.root_lin_vel.zero_()
         self.root_ang_vel.zero_()
+        self.body_pos.zero_()
+        self.body_quat.zero_()
+        self.body_lin_vel.zero_()
+        self.body_ang_vel.zero_()
+        self.contact_forces.zero_()
+        self.foot_contact.zero_()
+        self._body_state_available = False
         self.action.zero_()
         self._prev_action.zero_()
         self.target.copy_(self.default_q)
         self.episode_length_buf.zero_()
+        for value in self._termination_elapsed.values():
+            value.zero_()
         self.history.zero_()
         self._sample_reference(ids)
         if self.articulation is not None:
@@ -435,6 +716,45 @@ class G1Env:
             self.articulation.write_joint_state_to_sim(self.default_q, torch.zeros_like(self.default_q), joint_ids=self.joint_ids)
             self.articulation.set_joint_position_target(self.target[:, :], joint_ids=self.joint_ids)
         return self._build_observations()
+
+    def state_dict(self) -> dict[str, Any]:
+        """Serializable rollout state for deterministic PPO resume."""
+        state = {
+            "qpos": self.qpos.detach().cpu(), "qvel": self.qvel.detach().cpu(),
+            "root_pos": self.root_pos.detach().cpu(), "root_quat": self.root_quat.detach().cpu(),
+            "root_lin_vel": self.root_lin_vel.detach().cpu(), "root_ang_vel": self.root_ang_vel.detach().cpu(),
+            "action": self.action.detach().cpu(), "prev_action": self._prev_action.detach().cpu(),
+            "episode_length_buf": self.episode_length_buf.detach().cpu(),
+            "reference_seq_idx": None if self.reference_seq_idx is None else self.reference_seq_idx.detach().cpu(),
+            "reference_frame": None if self.reference_frame is None else self.reference_frame.detach().cpu(),
+            "reference_start_frame": None if self.reference_start_frame is None else self.reference_start_frame.detach().cpu(),
+            "history": self.history.detach().cpu(),
+        }
+        if self._adaptive_sampler is not None:
+            state["adaptive_fails"] = dict(self._adaptive_sampler.fails)
+        return state
+
+    def load_state_dict(self, state: Mapping[str, Any]) -> None:
+        """Restore :meth:`state_dict` after construction."""
+        for key, target in (("qpos", self.qpos), ("qvel", self.qvel),
+                            ("root_pos", self.root_pos), ("root_quat", self.root_quat),
+                            ("root_lin_vel", self.root_lin_vel), ("root_ang_vel", self.root_ang_vel),
+                            ("action", self.action), ("prev_action", self._prev_action),
+                            ("episode_length_buf", self.episode_length_buf), ("history", self.history)):
+            if key in state:
+                target.copy_(torch.as_tensor(state[key], device=self.device, dtype=target.dtype))
+        for key, attr in (("reference_seq_idx", "reference_seq_idx"),
+                          ("reference_frame", "reference_frame"),
+                          ("reference_start_frame", "reference_start_frame")):
+            value = state.get(key)
+            if value is not None and getattr(self, attr) is not None:
+                getattr(self, attr).copy_(torch.as_tensor(value, device=self.device,
+                                                          dtype=getattr(self, attr).dtype))
+        if self._adaptive_sampler is not None and "adaptive_fails" in state:
+            self._adaptive_sampler.fails = dict(state["adaptive_fails"])
+            self._adaptive_sampler._invalidate_weights()
+        if self.reference_seq_idx is not None:
+            self._advance_reference()
 
     def _apply_action(self, actions: torch.Tensor):
         actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)
@@ -459,6 +779,56 @@ class G1Env:
         self.qpos.clamp_(self.joint_low, self.joint_high)
 
     def _reward(self) -> torch.Tensor:
+        if (self.cfg.enable_body_tracking and self._body_state_available
+                and self.reference_body is not None):
+            if self.articulation is not None and not self._contact_sensor_available:
+                raise RuntimeError(
+                    "Isaac Lab G1 reward requires ContactSensor force data; "
+                    "refusing to train with zero contact placeholders")
+            state = {
+                "joint_pos": self.qpos,
+                "joint_vel": self.qvel,
+                "root_pos": self.root_pos,
+                "root_quat": self.root_quat,
+                "root_lin_vel": self.root_lin_vel,
+                "root_ang_vel": self.root_ang_vel,
+                "body_pos": self.body_pos,
+                "body_quat": self.body_quat,
+                "body_lin_vel": self.body_lin_vel,
+                "body_ang_vel": self.body_ang_vel,
+                "body_accel": (self.body_lin_vel - self._previous_body_lin_vel) / self.cfg.control_dt,
+                "contact_forces": self.contact_forces,
+                "joint_low": self.joint_low,
+                "joint_high": self.joint_high,
+            }
+            reference = {key: value for key, value in self.reference_body.items()
+                         if isinstance(value, torch.Tensor)}
+            terrain = None
+            if self.cfg.stage == 2:
+                feet = torch.tensor([
+                    REQUIRED_BODY_NAMES.index("left_ankle_roll_link"),
+                    REQUIRED_BODY_NAMES.index("right_ankle_roll_link")], device=self.device)
+                terrain = {
+                    "family_ids": self._terrain_families,
+                    "level": self._terrain_levels,
+                    "foot_height_samples": self._terrain.foot_samples(self.body_pos[:, feet]),
+                    "contact_age": torch.zeros_like(self.foot_contact, dtype=torch.float32),
+                }
+            rewards, _ = self._reward_computer.compute(
+                state, reference,
+                previous_state={
+                    "root_lin_vel": self._previous_root_lin_vel,
+                    "body_lin_vel": self._previous_body_lin_vel,
+                },
+                action=self.action, previous_action=self._prev_action,
+                corrected_velocity=self.reference_root_lin_vel,
+                recovery_mask=getattr(self, "_recovery_active", None),
+                terrain=terrain, stage2=self.cfg.stage == 2)
+            self._prev_action.copy_(self.action)
+            return rewards
+
+        # This branch is deliberately a protocol-only fallback.  It allows
+        # CPU tests without Isaac Sim, but is not a paper-equivalent reward.
         q_abs = (self.qpos - self.reference_qpos).abs()
         v_abs = (self.qvel - self.reference_qvel).abs()
         upper = torch.arange(12, ACT_DIM, device=self.device)
@@ -493,9 +863,32 @@ class G1Env:
 
     def _dones(self):
         timeout = self.episode_length_buf + 1 >= self.cfg.max_episode_steps
-        # Conservative physics termination.  The fallback never falls unless
-        # a caller writes an invalid root state; Isaac Lab gets real contacts.
-        terminated = (self.root_pos[:, 2] < 0.25) | (self.qvel.abs().amax(-1) > self.cfg.max_joint_velocity * 1.5)
+        term_cfg = get("A20").value
+        deviation = (self.root_pos - self.reference_root_pos).norm(dim=-1)
+        # z component of the robot's local up axis in world coordinates; this
+        # is the same projected-gravity tilt signal used by the simulator
+        # termination state machine, without requiring an Isaac-only tensor.
+        r = _quat_to_mat(self.root_quat)
+        gravity_z = r[:, 2, 2]
+        active = {
+            "ref_deviation": deviation > float(term_cfg.ref_deviation_base),
+            "root_low": self.root_pos[:, 2] < float(term_cfg.root_height_min),
+            "tilted": gravity_z < float(np.cos(np.deg2rad(term_cfg.tilt_max_deg))),
+        }
+        delays = {
+            "ref_deviation": float(term_cfg.delay_s["ref_deviation"]),
+            "root_low": float(term_cfg.delay_s["root_low"]),
+            "tilted": float(term_cfg.delay_s["tilted"]),
+        }
+        fired = []
+        for name, condition in active.items():
+            elapsed = self._termination_elapsed[name]
+            elapsed.add_(condition.to(elapsed.dtype) * self.cfg.control_dt)
+            elapsed.masked_fill_(~condition, 0.0)
+            fired.append(condition & (elapsed >= delays[name] - 1e-7))
+        # Retain a conservative high-speed guard from the fallback adapter.
+        fired.append(self.qvel.abs().amax(-1) > self.cfg.max_joint_velocity * 1.5)
+        terminated = torch.stack(fired, dim=-1).any(-1)
         return terminated, timeout & ~terminated
 
     def step(self, actions: torch.Tensor):
@@ -508,6 +901,23 @@ class G1Env:
         self._advance_reference()
         rewards = self._reward()
         terminated, truncated = self._dones()
+        if self._adaptive_sampler is not None and terminated.any():
+            for env_id in torch.nonzero(terminated, as_tuple=False).flatten().tolist():
+                self._adaptive_sampler.update(
+                    int(self.reference_seq_idx[env_id]),
+                    int(self.reference_start_frame[env_id]),
+                    failed=True)
+        if self.recovery_pool is not None and (terminated | truncated).any():
+            finished = torch.nonzero(terminated | truncated, as_tuple=False).flatten()
+            for env_id in finished.tolist():
+                self.recovery_pool.record_outcome(not bool(terminated[env_id]))
+                if bool(terminated[env_id]) and self.reference_seq_idx is not None:
+                    self.recovery_pool.add(
+                        {"qpos": self.qpos[env_id], "qvel": self.qvel[env_id],
+                         "root_pos": self.root_pos[env_id], "root_quat": self.root_quat[env_id],
+                         "root_lin_vel": self.root_lin_vel[env_id], "root_ang_vel": self.root_ang_vel[env_id]},
+                        seq_idx=int(self.reference_seq_idx[env_id]),
+                        frame=float(self.reference_frame[env_id]))
         terminal_observation = None
         if truncated.any():
             # Preserve the pre-reset state for PPO timeout bootstrapping.
@@ -527,6 +937,8 @@ class G1Env:
             self.target[ids] = self.default_q[ids]
             self.episode_length_buf[ids] = 0
             self.history[ids] = 0.0
+            for value in self._termination_elapsed.values():
+                value[ids] = 0.0
             self._sample_reference(ids)
         observations = self._build_observations()
         info: dict[str, Any] = {"episode_length": self.episode_length_buf.clone()}
@@ -544,6 +956,7 @@ try:  # do not import omni in normal unit-test / data-processing processes
     from isaaclab.scene import InteractiveSceneCfg
     from isaaclab.utils import configclass
     from isaaclab.assets import Articulation, ArticulationCfg
+    from isaaclab.sensors import ContactSensorCfg
     import isaaclab.sim as _sim_utils
     from isaaclab.actuators import ImplicitActuatorCfg
     _ISAACLAB_IMPORTABLE = True
@@ -585,6 +998,17 @@ if _ISAACLAB_IMPORTABLE:
 
 
     @configclass
+    class G1SceneCfg(InteractiveSceneCfg):
+        """G1 scene with per-body contact forces for auxiliary/terrain terms."""
+
+        contact_forces: Any = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/.*",
+            update_period=0.0,
+            track_air_time=True,
+        )
+
+
+    @configclass
     class G1DirectRLEnvCfg(DirectRLEnvCfg):
         """Isaac Lab 2.3 DirectRLEnv config for the G1 adapter."""
 
@@ -593,7 +1017,7 @@ if _ISAACLAB_IMPORTABLE:
         observation_space: int = OBS_DIM
         action_space: int = ACT_DIM
         state_space: int = PRIV_DIM
-        scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=2.5)
+        scene: G1SceneCfg = G1SceneCfg(num_envs=1, env_spacing=2.5)
         robot_cfg: Any = None
         pgmt_cfg: G1EnvConfig = field(default_factory=G1EnvConfig)
 
@@ -614,6 +1038,7 @@ if _ISAACLAB_IMPORTABLE:
             self._pgmt_cfg = cfg.pgmt_cfg
             super().__init__(cfg, **kwargs)
             self.core = G1Env(self._pgmt_cfg, articulation=self.robot)
+            self._sync_contact_forces()
             self.last_adapter_obs = None
             self.last_split_reward = torch.zeros((self.num_envs, 3), device=self.device)
             self.last_terminal_obs = None
@@ -624,6 +1049,28 @@ if _ISAACLAB_IMPORTABLE:
             _sim_utils.spawn_ground_plane("/World/ground", _sim_utils.GroundPlaneCfg())
             self.scene.clone_environments(copy_from_source=False)
             self.scene.filter_collisions(global_prim_paths=[])
+
+        def _sync_contact_forces(self):
+            sensor = self.scene.sensors.get("contact_forces")
+            if sensor is None or sensor.data.force_matrix_w is None:
+                self.core.contact_forces.zero_()
+                self.core._contact_sensor_available = False
+                return
+            # force_matrix_w: (N, sensor-bodies, filtered-bodies, 3).
+            forces = sensor.data.force_matrix_w.sum(dim=-2)
+            names = list(getattr(sensor, "body_names", []))
+            ids = {name: i for i, name in enumerate(names)}
+            self.core.contact_forces.zero_()
+            for out_i, body in enumerate(REQUIRED_BODY_NAMES):
+                candidates = (body, body + "_link")
+                src = next((ids[x] for x in candidates if x in ids), None)
+                if src is not None:
+                    self.core.contact_forces[:, out_i] = forces[:, src]
+            self.core.foot_contact.copy_(self.core.contact_forces[:, [
+                REQUIRED_BODY_NAMES.index("left_ankle_roll_link"),
+                REQUIRED_BODY_NAMES.index("right_ankle_roll_link")
+            ]].norm(dim=-1) > 1.0)
+            self.core._contact_sensor_available = True
 
         def _pre_physics_step(self, actions: torch.Tensor):
             self.core._apply_action(actions)
@@ -640,7 +1087,7 @@ if _ISAACLAB_IMPORTABLE:
             return {"policy": obs["obs"]}
 
         def _get_rewards(self):
-            self.core._read_articulation()
+            self._sync_contact_forces()
             self.core.episode_length_buf.copy_(self.episode_length_buf)
             self.core._advance_reference()
             self.last_terminal_obs = None
@@ -679,6 +1126,7 @@ if _ISAACLAB_IMPORTABLE:
 else:
     make_g1_articulation_cfg = None
     G1DirectRLEnvCfg = None
+    G1SceneCfg = None
     IsaacLabG1Env = None
 
 
@@ -703,7 +1151,7 @@ class IsaacLabPPOAdapter:
 
 
 __all__ = [
-    "AssetPreflight", "G1Env", "G1EnvConfig", "G1DirectRLEnvCfg", "IsaacLabG1Env",
+    "AssetPreflight", "G1Env", "G1EnvConfig", "G1SceneCfg", "G1DirectRLEnvCfg", "IsaacLabG1Env",
     "PDController", "REQUIRED_BODY_NAMES", "G1_JOINT_NAMES", "G1_JOINT_LIMITS",
     "make_g1_articulation_cfg", "preflight_asset", "resolve_name_indices", "validate_g1_mapping",
     "IsaacLabPPOAdapter",

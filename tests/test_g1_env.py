@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+from pathlib import Path
+import pytest
 
 from pgmt.contracts import ACT_DIM
 from pgmt.envs.g1_env import (
@@ -12,6 +14,9 @@ from pgmt.envs.g1_env import (
 )
 from pgmt.envs import g1_env as g1_env_module
 from pgmt.envs.reference_sampler import MotionDatabase
+
+
+_URDF = Path("/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf")
 
 
 def test_runtime_mapping_accepts_unitree_joint_suffix_without_permuting_order():
@@ -66,3 +71,42 @@ def test_g1_env_uses_batched_reference_motion():
     env.step(torch.zeros(2, ACT_DIM))
     assert torch.all(env.reference_frame > before)
     assert env.reference_future.shape == (2, 6, 61)
+
+
+@pytest.mark.skipif(not _URDF.is_file(), reason="licensed G1 URDF is not available")
+def test_torch_g1_env_uses_fk_body_reward_and_a13():
+    t = np.arange(5, dtype=np.float32)
+    sequence = {
+        "qpos": np.zeros((5, ACT_DIM), dtype=np.float32),
+        "qvel": np.zeros((5, ACT_DIM), dtype=np.float32),
+        "root_pos": np.stack((t * .02, np.zeros_like(t), np.zeros_like(t)), axis=1),
+        "root_rot": np.tile(np.array([1, 0, 0, 0], dtype=np.float32), (5, 1)),
+        "contacts": np.zeros((5, 2), dtype=np.float32),
+        "frame_time": .02,
+    }
+    env = G1Env(G1EnvConfig(num_envs=2, reference_urdf_path=str(_URDF)),
+                reference_database=MotionDatabase.from_sequences([sequence]))
+    obs, rewards, *_ = env.step(torch.zeros(2, ACT_DIM))
+    assert env._body_state_available
+    assert env.reference_body["body_pos"].shape == (2, len(REQUIRED_BODY_NAMES), 3)
+    assert rewards.shape == (2, 3)
+    assert torch.isfinite(rewards).all()
+
+
+@pytest.mark.skipif(not _URDF.is_file(), reason="licensed G1 URDF is not available")
+def test_torch_stage2_emits_elevation_and_four_rewards():
+    t = np.arange(5, dtype=np.float32)
+    sequence = {
+        "qpos": np.zeros((5, ACT_DIM), dtype=np.float32),
+        "qvel": np.zeros((5, ACT_DIM), dtype=np.float32),
+        "root_pos": np.stack((t * .02, np.zeros_like(t), np.ones_like(t) * .793), axis=1),
+        "root_rot": np.tile(np.array([1, 0, 0, 0], dtype=np.float32), (5, 1)),
+        "contacts": np.zeros((5, 2), dtype=np.float32),
+        "frame_time": .02,
+    }
+    env = G1Env(G1EnvConfig(num_envs=1, stage=2, reference_urdf_path=str(_URDF)),
+                reference_database=MotionDatabase.from_sequences([sequence]))
+    obs = env.reset()
+    assert obs["elevation"].shape == (1, 21, 21)
+    _, rewards, *_ = env.step(torch.zeros(1, ACT_DIM))
+    assert rewards.shape == (1, 4)

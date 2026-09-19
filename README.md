@@ -172,15 +172,27 @@ PD、参考动作和三头批量奖励均走 `G1Env`）：
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage1 \
-  --device cuda:0 --num-envs 256 --steps-per-env 24 --updates 1000 \
+  --backend torch --device cuda:0 --num-envs 256 --steps-per-env 24 --updates 1000 \
   --reference-data data/processed/lafan1_g1_continuous \
+  --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
   --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
   --checkpoint runs/stage1_g1.pt
 ```
 
-该入口的默认集成是 torch 批量 PD 适配器；物理训练前必须先让 USD 运行时探针
-通过，再把 `IsaacLabG1Env` 接到同一 PPO 协议。`--dry-run` 可在无 GPU/无 Isaac
-Sim 时验证策略、超时 bootstrap 和 checkpoint 保存。
+`--backend torch` 现在使用 URDF FK、真实 body-level tracking residual、PD、A13
+位置修正和批量 PPO；它不包含刚体动力学。`--backend isaaclab` 会强制要求
+`--asset`、`--urdf` 和 `--reference-data`，不会静默退回 torch。`--dry-run` 或
+`--backend mock` 可在无 GPU/无 Isaac Sim 时验证协议、超时 bootstrap 和 checkpoint。
+
+Stage 2 的 CPU 代码路径也已接通（21×21 elevation、Terrain Glimpse、terrain-contact
+奖励和四头 critic）：
+
+```bash
+python -m pgmt.train.train_stage2 --backend torch \
+  --reference-data data/processed/lafan1_g1_continuous \
+  --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
+  --num-envs 4 --steps-per-env 24 --updates 1
+```
 
 ## 假设清单
 
@@ -292,8 +304,8 @@ python -m data.eval_retarget --npz-dir data/processed/lafan1_g1_fixed --out data
 | M1.5 | IK 精修 + 接触标签统一协议 | ✅ 完成（A17 待复核） |
 | M2.0 / M2.0b | 观测契约 / 奖励规格（不依赖仿真器） | ✅ 完成 |
 | M3 | 地形系统（5 族 × L0–L9，纯逻辑部分） | ✅ 完成（mesh 注入归 M2） |
-| M2 | Stage 1 平地 tracking 预训练 | 🟡 G1 torch 批量环境、PD、参考动作、三头奖励和 PPO 入口已接入；USD 运行时映射与 Isaac Lab 物理闭环待空闲 GPU 验收 |
-| M4 | Stage 2 感知注入 | ⬜ 未开始 |
+| M2 | Stage 1 平地 tracking 预训练 | 🟡 URDF-FK torch body reward、PD、A13、recovery/adaptive sampling 和 PPO 已接入；USD 运行时映射与 Isaac Lab 物理闭环待空闲 GPU 验收 |
+| M4 | Stage 2 感知注入 | 🟡 CPU Torch 路径、elevation、terrain-contact reward 和四头 PPO 已接入；真实 terrain physics 待验收 |
 | M5 | 基准评估 + 消融 | ⬜ 未开始 |
 | M6 | 基线与最终报告 | ⬜ 未开始 |
 
