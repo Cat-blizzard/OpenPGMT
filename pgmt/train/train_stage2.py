@@ -188,14 +188,18 @@ def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
             torch.save(payload, checkpoint)
         return {"updates": metrics, "heads": list(policy.head_names), "device": str(dev),
                 "backend": backend, "checkpoint": None if checkpoint is None else str(checkpoint)}
+    except BaseException:
+        import traceback
+        traceback.print_exc()
+        raise
     finally:
         if env is not None and hasattr(env, "close"):
             env.close()
         if app is not None:
-            try:
-                app.close(skip_cleanup=True)
-            except TypeError:
-                app.close()
+            # Keep Kit failures and the final runner result observable; the
+            # immediate ``skip_cleanup`` path can exit Python before either is
+            # printed.
+            app.close()
 
 
 def main(argv=None):

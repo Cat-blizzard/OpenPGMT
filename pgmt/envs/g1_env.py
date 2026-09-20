@@ -1140,7 +1140,9 @@ if _ISAACLAB_IMPORTABLE:
             effort_limit_sim=_joint_values(c.torque_limit, "torque_limit"),
         )
         return ArticulationCfg(
-            prim_path="{ENV_REGEX_NS}/Robot", spawn=spawn,
+            # DirectRLEnv builds articulations in ``_setup_scene`` before the
+            # manager-based scene resolver expands ``{ENV_REGEX_NS}``.
+            prim_path="/World/envs/env_.*/Robot", spawn=spawn,
             init_state=ArticulationCfg.InitialStateCfg(
                 pos=c.default_root_pos, rot=c.default_root_quat,
                 joint_pos={f"{name}(_joint)?": value for name, value in zip(G1_JOINT_NAMES, c.default_joint_pos)},
@@ -1189,6 +1191,15 @@ if _ISAACLAB_IMPORTABLE:
             if cfg.robot_cfg is None:
                 raise ValueError("G1DirectRLEnvCfg.robot_cfg must be set to a licensed USD/URDF")
             self._pgmt_cfg = cfg.pgmt_cfg
+            # Isaac Lab otherwise writes to /tmp/isaaclab/logs, which is often
+            # owned by another user on shared servers.  Keep per-checkout Kit
+            # logs writable and colocated with the smoke-test logs.
+            log_dir = os.environ.get(
+                "PGMT_ISAACLAB_LOG_DIR",
+                os.path.join(os.getcwd(), "data", "processed", "isaaclab_logs"),
+            )
+            Path(log_dir).mkdir(parents=True, exist_ok=True)
+            cfg.sim.log_dir = log_dir
             # Keep Isaac's physics clock identical to the simulator-independent
             # contract.  Isaac Lab defaults to 1/60 s, which would otherwise
             # turn the declared 20 ms control step into 66.7 ms at decimation 4.

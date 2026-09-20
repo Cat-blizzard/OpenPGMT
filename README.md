@@ -11,7 +11,7 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 代码闭环完成**；G1 资产静态验收、29-DoF 映射、PD/参考动作/批量奖励适配器和 Stage 1 PPO 入口已接入。GPU 9 已通过 CUDA Torch、USD 运行时映射（29 个关节）和 Isaac Lab 箱体物理验证；真实 G1 物理训练还需先修复 Isaac Sim 5.1 与 Warp 版本不匹配（见下文）。
+- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 代码闭环完成**；G1 资产静态验收、29-DoF 映射、PD/参考动作/批量奖励适配器和 Stage 1 PPO 入口已接入。GPU 9 已通过 CUDA Torch、USD 运行时映射（29 个关节）、Isaac Lab 箱体物理和一次最小真实 G1 Stage 1 PPO 更新；长时间训练前仍需处理多卡服务器上的 CUDA P2P/IOMMU 警告，并完成 Stage 2 地形物理接入。
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
 
@@ -197,6 +197,20 @@ CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage2 --backend torch --devic
 不会重新 reset 环境或重复已完成的 PPO 更新。checkpoint 同时保存 Torch 环境的
 参考帧、观测历史、接触历史、恢复池和自适应采样状态。
 
+真实 Isaac Lab Stage 1 训练需要显式指定 USD、URDF、参考数据和物理卡：
+
+```bash
+python -m pgmt.train.train_stage1 --backend isaaclab --device cuda:9 \
+  --num-envs 256 --steps-per-env 24 --updates 1000 \
+  --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
+  --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
+  --reference-data data/processed/lafan1_g1_continuous \
+  --checkpoint runs/stage1_g1_isaaclab.pt
+```
+
+最小物理闭环已用 `--num-envs 2 --steps-per-env 2 --updates 1` 成功保存一个
+17 MiB checkpoint；它是启动和接口验收，不代表训练收敛或论文指标。
+
 最近一次代码审计已修复 Isaac Lab 接触力字段、base-frame 速度观测、末帧参考速度、
 fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`python -m pytest -q`
 当前为 764 个测试全通过；GPU 9 的 CUDA 合约检查、USD 29-DoF 探针和箱体物理冒烟
@@ -211,8 +225,7 @@ fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`
    `setup/probe_g1_isaaclab.py --device cuda:9` 读取 USD，确认运行时的 29 个关节、29 个执行器和 body 顺序。
 2. **物理冒烟**：在目标 GPU 上运行 `setup/smoke_test_isaaclab.py --steps 20`；如果采用
    Isaac Gym PP4，则按上面的决策树先检查包和 PhysX 架构。
-3. **Stage 1 物理训练**：探针通过后使用 `--backend isaaclab`，记录首个 checkpoint、奖励分组、
-   终止原因和 GPU/吞吐；同时保留同配置的 `--backend torch` 结果作为接口回归基线。
+3. **Stage 1 物理训练**：最小真实 G1 PPO 更新已经通过；接下来扩大并行环境和迭代数，记录首个稳定 checkpoint、奖励分组、终止原因和 GPU/吞吐，同时保留同配置的 `--backend torch` 结果作为接口回归基线。
 4. **Stage 2 物理接入**：把同一批 terrain atlas 高度场注入 Isaac Lab 碰撞场景，验证接触传感器、
    21×21 elevation、terrain-contact 六项奖励和四头 critic。
 5. **M5 评估**：Stage 1/2 稳定后再跑 5 个地形族 × 10 个难度的 matched episodes 和消融，最后补 Table II、Fig. 3/4 与 RGMT 对比。

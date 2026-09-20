@@ -217,14 +217,21 @@ def run(args: argparse.Namespace) -> dict:
         if args.checkpoint and not all_metrics:
             _save_checkpoint(Path(args.checkpoint), ppo, args, env=env)
         return {"updates": all_metrics, "checkpoint": None if args.checkpoint is None else str(args.checkpoint), "device": str(device), "backend": backend}
+    except BaseException:
+        # Print before Kit shutdown: Isaac Sim can swallow an otherwise
+        # unhandled traceback while its application is being closed.
+        import traceback
+        traceback.print_exc()
+        raise
     finally:
         if env is not None and hasattr(env, "close"):
             env.close()
         if app is not None:
-            try:
-                app.close(skip_cleanup=True)
-            except TypeError:
-                app.close()
+            # ``skip_cleanup=True`` maps to Kit's immediate-exit path.  It can
+            # terminate the interpreter before an exception traceback or the
+            # runner's JSON result is emitted, so training uses the normal
+            # shutdown path and keeps failures observable.
+            app.close()
 
 
 def _load_fall_pool(path: str) -> FallRecoveryPool:
