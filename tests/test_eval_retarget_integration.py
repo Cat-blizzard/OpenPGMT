@@ -52,19 +52,26 @@ def row():
 
 
 def test_ik_never_modifies_root_pose(refined):
-    """**A17 独立性的基石**：`refine_full` 不改动 root_pos / root_rot。
+    """**根姿态所有权**：`refine_full` 不得**优化**根姿态（root_rot 逐位
+    冻结；root_pos 的 xy 逐位冻结，z 仅允许一个序列级常量平移）。
 
-    `root_rot_err_deg` 之所以是本口径里**唯一完全独立**的指标，全靠这一条：
-    IK 只优化关节角，根姿态由 `retarget` 冻结。若哪天 IK 开始精修根姿态，
-    该项立刻退化为训练残差，A17 的裁定依据随之失效 —— 故与**调用前的快照**
-    逐位比较（这样替换与原地修改都能抓到）。
+    v2 高度锚定（2026-09-20）起，`_finalize` 会在 IK 后按 G1 自身 FK 的
+    最低体点做一次**确定性刚体 z 校正**（把最低体点压到踝静止高或接触面，
+    IK 残差不变、qpos 不变）。这是根的"落位"而非"拟合"——校正量只由
+    G1 几何决定，不含任何对源关键点的优化，原 invariant 的实质（IK 不把
+    根拟合到源、root_rot 冻结、评估口径不被污染）保持成立：eval_retarget
+    逐帧做骨盆平移对齐，常量 z 平移不改变任何误差指标。
 
     （另两个"留出"指标只做到"未被拟合"：4 个留出点虽不在目标里，但 IK 优化
     全部 29 个关节、会移动同一条运动链，属泛化检验而非独立测量。）
     """
     _, before, out = refined
-    assert np.array_equal(out["root_pos"], before["root_pos"]), "IK 改动了 root_pos"
     assert np.array_equal(out["root_rot"], before["root_rot"]), "IK 改动了 root_rot"
+    assert np.array_equal(out["root_pos"][:, :2], before["root_pos"][:, :2]), \
+        "IK 改动了 root_pos 的 xy"
+    shift = out["root_pos"][:, 2] - before["root_pos"][:, 2]
+    assert np.allclose(shift, shift[0], atol=1e-6), \
+        f"root z 校正不是刚体常量平移: {np.ptp(shift):.2e}"
 
 
 def test_evaluate_reports_the_audited_column_set(row):

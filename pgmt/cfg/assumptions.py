@@ -216,26 +216,30 @@ class AdaptiveSamplingCfg:
 
 @dataclass(frozen=True)
 class DataFilterCfg:
-    """A17：训练数据过滤（M1.5c ground 类裁定）——**结论待复核**。
+    """A17：训练数据过滤（M1.5c ground 类裁定）——**已改判（2026-09-20）：不过滤，保留全集**。
 
-    原裁定理由：ground 类（躺地/翻滚）分解退化（38–116 cm），G1 无脊柱
-    且躺地时欧拉分解退化，参考不可用；从训练集排除，摔倒池改用
-    fall/push 类（28 cm）。
+    原裁定理由（已推翻）：ground 类（躺地/翻滚）分解退化（38–116 cm）。
+    该观测来自 lafan1_g1_v1_snapshot（v1 版数据），当前数据上无从复现
+    （ground 五序列留出误差与 fall 类完全重叠）。
 
-    ⚠️ 复核状态：该 38–116 cm 观测来自 lafan1_g1_v1_snapshot（v1 版数据）。
-    当前 data/processed/quality_report.csv 中 ground 五个序列为
-    14.45 / 15.17 / 15.71 / 15.74 / 15.92 cm（均值 15.40，最差但无病态），
-    排除理由在当前数据上不成立。注意 eval_retarget 的 FK 误差与 ik_refine
-    的优化目标高度重叠（13/18 关键点相同），且只用骨盆平移对齐，属"自证"
-    指标 —— 因此**不能仅凭该数字就恢复**，需先用留出关键点 + 绝对位置/
-    根朝向误差的独立口径重测。
+    改判依据（两条独立证据）：
+    1. 论文立场：训练设置只说 "motions from LAFAN1 retargeted to a
+       humanoid robot"，自适应采样明示 "retaining uniform coverage of the
+       full motion dataset"，全文无任何数据过滤表述；且能力主张直接依赖
+       躺地/摔倒动作（遥操作 "lying down"、扰动恢复 "fallen configuration
+       … upright and fallen states"）。摔倒池只能给"从摔倒状态恢复"的
+       经验，"执行躺地参考"需要训练分布里存在躺地参考。
+    2. 病根已修复：真正的缺陷是 retarget 的垂直锚定假设"足是最低接触点"
+       ——躺地序列整体悬浮 0.42–0.49 m、跨障序列压入地面至踝 −0.286 m
+       （实测见 data/probe_heights）。v2 两段式锚定（源侧全身最低体点
+       触地 + IK 后刚体校正）修复后，77 序列全集在
+       data/processed/lafan1_g1_anchored 重新生成并通过验收，ground 类
+       最低踝原点全部落在 0.036–0.108 m。
 
-    在重测完成前保留本过滤行为（保守）；重测通过后应清空
-    excluded_prefixes —— 论文的 fall recovery 与 recovery curriculum 正
-    需要躺地类动作，排除它们使摔倒池只能依赖 fall/push 类。
+    excluded_prefixes 保留为机制（MotionDatabase 按前缀过滤），当前为空。
     """
 
-    excluded_prefixes: tuple = ("ground",)
+    excluded_prefixes: tuple = ()
 
 
 @dataclass(frozen=True)
@@ -463,7 +467,8 @@ ASSUMPTIONS: Dict[str, Assumption] = {
     "A16": Assumption("A16", "adaptive_sampling", AdaptiveSamplingCfg(),
                      "论文只说失败频次提高采样概率并保留全覆盖；取线性软加权"),
     "A17": Assumption("A17", "data_filter", DataFilterCfg(),
-                     "ground 类重定向退化（待复核，见 DataFilterCfg docstring）；论文未提数据过滤"),
+                     "已改判（2026-09-20）：论文支持全集均匀覆盖且能力主张依赖躺地动作；"
+                     "原缺陷是垂直锚定（v2 已修复），不再按类过滤（见 DataFilterCfg docstring）"),
     "A18": Assumption("A18", "reward_impl", RewardImpl(),
                       "Table I 权重与 Eq.10 松弛形式照搬论文；核函数取 exp(−e²/σ)"
                       "（依据 OmniH2O 奖励表 exp(−0.5‖p−p̂‖²) 与其配置注释"

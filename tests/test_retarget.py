@@ -27,6 +27,39 @@ def walk():
     return retarget(load_bvh(os.path.join(DATA_DIR, "walk1_subject1.bvh")))
 
 
+@pytest.fixture(scope="module")
+def ground():
+    return retarget(load_bvh(os.path.join(DATA_DIR, "ground1_subject1.bvh")))
+
+
+def test_lying_reference_lowest_body_point_touches_ground(ground):
+    """v2 高度锚定：躺地序列的全身最低体点应触地，而不是足部锚定
+    （v1 锚到"最像站立"的帧，ground1_subject1 的参考整体悬浮 0.42 m+）。
+    断言源侧隐含最低体点：root_z + (最低源体点 − 髋) ≈ 0。
+    """
+    from data.retarget_lafan1 import W
+    bvh = load_bvh(os.path.join(DATA_DIR, "ground1_subject1.bvh"))
+    gpos_cm, _ = bvh.fk(unit_scale=1.0)
+    gpos = gpos_cm @ W.T * float(ground["scale"])
+    hip_z = gpos[:, bvh.joint_index("Hips"), 2]
+    implied_lowest = ground["root_pos"][:, 2] + (gpos[:, :, 2] - hip_z[:, None]).min(-1)
+    assert implied_lowest.min() < 0.10, (
+        f"躺地参考最低体点悬浮 {implied_lowest.min():.3f} m（v1 锚定回退）")
+    assert implied_lowest.min() > -0.05, f"最低体点穿地 {implied_lowest.min():.3f} m"
+
+
+def test_walking_reference_lowest_body_point_touches_ground(walk):
+    """直立步行的最低体点是足，v2 锚定行为应与 v1 一致（足触地）。"""
+    from data.retarget_lafan1 import W
+    bvh = load_bvh(os.path.join(DATA_DIR, "walk1_subject1.bvh"))
+    gpos_cm, _ = bvh.fk(unit_scale=1.0)
+    gpos = gpos_cm @ W.T * float(walk["scale"])
+    hip_z = gpos[:, bvh.joint_index("Hips"), 2]
+    implied_lowest = walk["root_pos"][:, 2] + (gpos[:, :, 2] - hip_z[:, None]).min(-1)
+    assert implied_lowest.min() < 0.10
+    assert implied_lowest.min() > -0.05
+
+
 def test_output_shapes(walk):
     assert walk["qpos"].shape[1] == 29
     assert walk["qvel"].shape == walk["qpos"].shape

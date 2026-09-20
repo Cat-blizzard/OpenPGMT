@@ -253,7 +253,7 @@ fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`
 
 论文未公开的超参集中在 [`pgmt/cfg/assumptions.py`](pgmt/cfg/assumptions.py)（A1–**A22**），训练启动时 `dump()` 写入运行日志，最终报告逐项对照说明偏差。
 
-- **A17（数据过滤）待复核**：其"ground 类重定向退化（38–116cm）"的依据来自旧版数据，当前质量报告显示 ground 五个序列为 14.45–15.92cm（最差但无病态）。需用独立指标重测后决定是否恢复这 5 个躺地/翻滚序列进训练集——详见 `复现方案.md` §M1.5。
+- **A17（数据过滤）已改判（2026-09-20）**：原"ground 类重定向退化"的裁定依据被推翻；论文证据（"retaining uniform coverage of the **full motion dataset**"、遥操作含 lying down、全文无任何数据过滤表述）支持**保留全部 77 序列**。原病根是 `retarget()` 的垂直锚定假设"足是最低接触点"——躺地（锚到最像站立的帧，参考悬浮 0.42–0.49 m）与跨障（髋低于足，参考压入地面至踝 −0.286 m）两类动作失效。已修复为**两段式 v2 锚定**：① `retarget()` 源侧按"全序列全身最低体点触地"；② `_finalize` 在 IK 后按 G1 自身 FK 最低体点做刚体 z 校正（IK 目标随 root 刚体移动，残差与 qpos 不变；最低体点为踝时锚到静止踝高 0.036，否则锚到 0）。全集已重生成于 `data/processed/lafan1_g1_anchored`（验收零违例），训练以此为唯一参考集；旧 `lafan1_g1_continuous`（42 序列、来历无记录）废弃。
 - **A18（奖励实现）**：Table I 的逐项权重与 Eq.10 的松弛形式**照搬论文**（见 `pgmt/rewards/spec.py`，并有逐字对照的回归测试）。论文未写出的部分：核函数取 **`exp(−e²/σ)`（高斯式，误差平方）**，依据是 PGMT 明示继承的 tracking 实现（OmniH2O 奖励表 `exp(−0.5‖p−p̂‖²)` 与其配置注释 `exp(-error^2/sigma)`）；σ 取值见 `spec.SIGMAS`。
   - `python -m data.probe_reward_scales` 用真实参考运动暴露量纲错误、给出各 σ 的响应区；**但它量的是参考运动幅度而非跟踪误差，不能用来验证 σ 已标定正确** —— 最终标定须等训练时读到实际误差分布，详见 `复现方案.md` §M2.0b。
   - `pgmt/rewards/semantics.py` 是 Table I 逐项语义对照表（28 条，标注与参照实现的对应关系：identical / approx / PGMT-specific / **待定 4 项**）。待定项为 `head_torso_impact`、`ee_accel_mismatch`、`floating_anchor_pos`、`ta_link_ori` —— 论文或参照实现未给出足够依据，现已按 A18/A21 的显式假设实现，但参照依据仍待核对。标注纪律由测试强制：note 里出现"未确认/未见/未验证"等措辞时只能标待定。
@@ -264,9 +264,12 @@ fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`
 ## 数据管线产物
 
 - `data/raw/lafan1/*.bvh` — 77 个源序列。**不纳入版本控制**，用 `data/download_lafan1.sh` 获取
-- `data/processed/lafan1_g1/*.npz` — 77 个精修后序列（qpos/qvel/root_pos/root_rot/contacts）。
-  **不纳入版本控制**（数十 MB 二进制 + LAFAN1 衍生数据许可约束），用 `python -m data.retarget_lafan1` 生成
-- `data/processed/quality_report.csv` — 质量报告，**含在仓库内**
+- `data/processed/lafan1_g1_anchored/*.npz` — **77 个 v2 锚定精修序列（当前正式训练参考集）**。
+  **不纳入版本控制**（体积 + LAFAN1 衍生数据许可），用 `python -m data.retarget_lafan1
+  --out-dir data/processed/lafan1_g1_anchored` 生成
+- `data/processed/quality_report_anchored.csv` — 当前管线的质量报告（拟合 14.80 / 留出 12.67cm）
+- `data/processed/quality_report.csv` — 旧版基线（修复前 IK + v1 锚定，保留作对比）
+- 旧产物（`lafan1_g1`、`lafan1_g1_continuous`、`lafan1_g1_continuous_full`）保留作对比，不再用于训练
 
 建议在正式训练前把重定向产物放到独立目录，并运行只读验收：
 

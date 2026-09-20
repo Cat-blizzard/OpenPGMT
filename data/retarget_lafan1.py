@@ -8,7 +8,8 @@
   2. 以固定 M_RIG 和 G1 静止链基框架对齐源关节相对旋转。
   3. 除腰部外用旋转均值去绑定偏移，再按链做欧拉分解、奇异区保护。
      中间帧静止倾斜采用近似；IK 精修补偿位置误差。
-  4. 根位置做序列 xy 居中与高度重锚。高度是启发式，躺倒/跨障需要复核。
+  4. 根位置做序列 xy 居中；高度锚定为"全序列全身最低体点触地"（v2，
+     不再假定足是最低接触点——躺地/跨障由手/躯干等最低部位定锚）。
   5. 29 个有限关节投影到机械限位，速度直接差分导出坐标，不用 wrap/unwrap。
   6. 接触标签用足速、序列高度阈值与中值滤波；批量导出默认再做全链 IK。
 
@@ -469,18 +470,21 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
     grot_g1 = quat_mul(np.tile(qw, (T, 1, 1)), grot_q)  # G1 系朝向
 
     # ---- 根 ----
-    # 高度锚定：均值髋高 → G1 骨盆高 0.793（腿长比缩放后的残余系统偏差
-    # 消除）；源足底最低点（相对髋）→ G1 零姿态的相对踝高
-    # （0.036 − 0.793 ≈ −0.757），避免足底穿地/悬空。
-    G1_ANKLE_REL = float(_G1_REST["left_ankle_roll_link"][0][2] - G1_PELVIS_HEIGHT)
+    # 高度锚定（v2，2026-09-20）：全序列全身最低体点触地。重定向把源髋高
+    # 变化保留进骨盆、体点以"相对髋偏移"映射，两者都是 z 平移不变量，
+    # 唯一自由度是常量 Δ；令隐含最低体点 = 0 可解得
+    #   root_z(t) = hip_z(t) − min_{t′, 所有源体点} kp_z(t′)
+    # （G1_PELVIS_HEIGHT / G1_ANKLE_REL 在该条件下完全消去：竖直位置由
+    # 接触决定，与名义静止骨盆高无关）。
+    # 旧版用「min(足高−髋高)帧的足触地」，隐含"足是最低接触点"：躺地
+    # （足抬在空中 → 锚到最像站立的帧，参考整体悬浮 0.42–0.49 m）与跨障
+    # （髋压得比足低 → 参考压入地面，最深踝原点 −0.286 m）两类动作失效，
+    # 实测证据见 data/probe_heights（2026-09-20，ground1_subject1/4 与
+    # obstacles5_subject2）。
     root_pos = gpos[:, bvh.joint_index("Hips")].copy()
     root_pos[:, 0] -= root_pos[:, 0].mean()
     root_pos[:, 1] -= root_pos[:, 1].mean()
-    hip_z = root_pos[:, 2].copy()
-    root_pos[:, 2] = G1_PELVIS_HEIGHT + (hip_z - hip_z.mean())
-    foot_rel = np.minimum(gpos[:, bvh.joint_index("LeftFoot"), 2],
-                          gpos[:, bvh.joint_index("RightFoot"), 2]) - hip_z
-    root_pos[:, 2] += G1_ANKLE_REL - foot_rel.min()
+    root_pos[:, 2] -= float(gpos[:, :, 2].min())
     # 根朝向：rig 约定 → G1 基座约定（G1 局部前 +x / 左 +y / 上 +z）
     root_rot = source_root_quat_to_g1_base(grot[:, bvh.joint_index("Hips")])
 

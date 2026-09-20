@@ -37,10 +37,11 @@ def _rng(x: np.ndarray) -> str:
     return f"[{x.min():7.3f}, {x.max():7.3f}] 均 {x.mean():7.3f}"
 
 
-def probe(seq_name: str, *, regenerate: bool = False) -> dict:
+def probe(seq_name: str, *, regenerate: bool = False,
+          npz_dir: str | None = None) -> dict:
     """算出该序列的垂直剖面（**不做判断**，只报数）。"""
     bvh = load_bvh(os.path.join(SRC_DIR, seq_name + ".bvh"))
-    data = load_reference(seq_name, bvh, regenerate=regenerate)
+    data = load_reference(seq_name, bvh, regenerate=regenerate, npz_dir=npz_dir)
     scale = float(data["scale"])
 
     gpos = bvh.fk(unit_scale=1.0)[0] @ W.T * scale      # 源（G1 系，米）
@@ -98,10 +99,13 @@ def report(r: dict) -> None:
 
 def main(argv: Sequence[str]) -> int:
     import argparse
+    from data.eval_retarget import NPZ_DIR
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("sequences", nargs="*")
     parser.add_argument("--regenerate", action="store_true",
                         help="显式检查重新生成的候选，默认读存储 NPZ")
+    parser.add_argument("--npz-dir", default=NPZ_DIR,
+                        help="待检查的 NPZ 目录（默认 %(default)s）")
     args = parser.parse_args(argv)
     names = args.sequences or list(DEFAULT_SEQS)
     missing = [n for n in names
@@ -112,7 +116,7 @@ def main(argv: Sequence[str]) -> int:
     failed = False
     for n in names:
         try:
-            report(probe(n, regenerate=args.regenerate))
+            report(probe(n, regenerate=args.regenerate, npz_dir=args.npz_dir))
         except Exception as e:  # noqa: BLE001
             failed = True
             print(f"[跳过] {n}: {e}")

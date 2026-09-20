@@ -243,6 +243,25 @@ def _finalize(data: Dict[str, np.ndarray], qpos: np.ndarray) -> Dict[str, np.nda
     out["qpos"] = qpos_bounded
     out["qvel"] = qvel.astype(np.float32)
     pos = g1_forward_kinematics(qpos_bounded, root_pos, root_rot)
+    # IK 后刚体 z 校正（高度锚定 v2 第二段，2026-09-20）。IK 目标随 root
+    # 刚体移动（refine_full 的 delta = 源髋 − root），平移 root 不改变任何
+    # 残差，精修后的 qpos 仍最优。retarget 的源侧锚定只把"源最低体点"
+    # 放到地面，G1 与源骨架的几何差仍有残差（实测 ground1_subject1 源侧
+    # 锚定后 G1 最低踝原点 −0.343 m：躺姿下 G1 腿/踝比源更低）。这里按
+    # 实测最低体点补一次刚体校正：最低体点为踝时锚到 G1 静止踝高（足底
+    # 触地的原 v1 语义），否则锚到 0（手/背/躯干接触，body 原点即接触面）。
+    # 必须在 contact_labels 之前——接触标签依赖校正后的足部高度。
+    low_name, low_z = min(((name, float(p[:, 2].min())) for name, p in pos.items()),
+                          key=lambda kv: kv[1])
+    ankle_rest_z = float(_G1_REST["left_ankle_roll_link"][0][2])
+    floor = ankle_rest_z if "ankle_roll_link" in low_name else 0.0
+    shift = floor - low_z
+    if abs(shift) > 1e-9:
+        root_pos = root_pos.copy()
+        root_pos[:, 2] += shift
+        for value in pos.values():
+            value[:, 2] += shift
+        out["root_pos"] = root_pos.astype(np.float32)
     feet = np.stack([pos["left_ankle_roll_link"], pos["right_ankle_roll_link"]], axis=1)
     from data.retarget_lafan1 import contact_labels
     from pgmt.cfg.assumptions import get

@@ -35,7 +35,12 @@ def test_db_load_and_lengths(db):
 
 
 def test_db_excludes_ground_sequences(tmp_path):
-    """A17：ground 类（重定向退化 63 cm）从训练集排除。"""
+    """A17（2026-09-20 改判后）：不再按类过滤——ground 序列保留进训练集。
+
+    原排除理由（v1 数据的 38–116 cm 退化）已被推翻；论文 "retaining
+    uniform coverage of the full motion dataset" 且能力主张依赖躺地动作；
+    真正的缺陷是垂直锚定，已由 v2 两段式锚定修复（见 DataFilterCfg）。
+    """
     for name, T in [("ground1_subject1", 30), ("walk1_subject1", 30)]:
         qpos = np.zeros((T, 29))
         np.savez(tmp_path / f"{name}.npz", qpos=qpos, qvel=qpos,
@@ -44,8 +49,8 @@ def test_db_excludes_ground_sequences(tmp_path):
                  contacts=np.zeros((T, 2), dtype=bool),
                  frame_time=np.float32(1 / 30), joint_names=np.zeros(29))
     db2 = MotionDatabase(str(tmp_path))
-    assert db2.num_sequences == 1
-    assert db2.seqs[0]["name"] == "walk1_subject1"
+    assert db2.num_sequences == 2
+    assert {s["name"] for s in db2.seqs} == {"walk1_subject1", "ground1_subject1"}
 
 
 def test_ref_at_interpolation(db):
@@ -239,7 +244,9 @@ def test_from_sequences_a17_filter_is_opt_in():
     }
     seqs = [dict(base, name="ground1_subject1"), dict(base, name="walk1_subject1")]
     assert MotionDatabase.from_sequences(seqs).num_sequences == 2  # 默认不过滤
-    assert MotionDatabase.from_sequences(seqs, apply_a17_filter=True).num_sequences == 1
+    # A17 改判后 excluded_prefixes 为空：opt-in 的过滤机制仍在，但当前
+    # 注册表配置下不再排除任何类（改判依据见 DataFilterCfg docstring）。
+    assert MotionDatabase.from_sequences(seqs, apply_a17_filter=True).num_sequences == 2
 
 
 # ---------------------------------------------------------------------------
