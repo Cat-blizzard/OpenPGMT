@@ -23,7 +23,7 @@ import subprocess
 import sys
 
 
-def phase1() -> bool:
+def phase1(device: str = "cuda:0") -> bool:
     print("\n" + "=" * 60)
     print("Phase 1: torch + CUDA")
     print("=" * 60)
@@ -42,7 +42,7 @@ def phase1() -> bool:
         print(f"[WARN] 非目标架构（期望 sm_89 / RTX 5880 Ada），当前 sm_{cap[0]}{cap[1]}；继续")
 
     try:
-        x = torch.randn(2048, 2048, device="cuda:0")
+        x = torch.randn(2048, 2048, device=device)
         y = (x @ x).sum().item()
         assert x.isfinite().all()
         print(f"[i] GPU 矩阵乘 OK（sum={y:.2e}）")
@@ -63,7 +63,7 @@ def phase1() -> bool:
     return True
 
 
-def phase2(steps: int) -> bool:
+def phase2(steps: int, device: str = "cuda:0") -> bool:
     print("\n" + "=" * 60)
     print("Phase 2: Isaac Lab 物理仿真")
     print("=" * 60)
@@ -73,7 +73,13 @@ def phase2(steps: int) -> bool:
     try:
         from isaaclab.app import AppLauncher
 
-        app_launcher = AppLauncher(headless=True)
+        # Keep Kit/Vulkan and PhysX on the same explicitly selected GPU.  The
+        # multi-GPU renderer otherwise probes every visible card on a shared
+        # server; CUDA_VISIBLE_DEVICES alone does not reliably constrain Kit.
+        app_launcher = AppLauncher(
+            headless=True, device=device, multi_gpu=False,
+            kit_args="--/renderer/multiGpu/enabled=False --/renderer/multiGpu/autoEnable=False",
+        )
         simulation_app = app_launcher.app
         print("[i] Isaac Sim 启动成功")
     except Exception as e:
@@ -97,7 +103,7 @@ def phase2(steps: int) -> bool:
             os.path.join(os.getcwd(), "data", "processed", "isaaclab_logs"),
         )
         os.makedirs(log_dir, exist_ok=True)
-        sim_cfg = sim_utils.SimulationCfg(dt=0.02, device="cuda:0", log_dir=log_dir)
+        sim_cfg = sim_utils.SimulationCfg(dt=0.02, device=device, log_dir=log_dir)
         sim = SimulationContext(sim_cfg)
 
         # 地面
@@ -129,6 +135,10 @@ def phase2(steps: int) -> bool:
         assert (z > 0.2).all() and (z < 0.6).all(), \
             f"箱体高度异常: z ∈ [{z.min():.3f}, {z.max():.3f}]（预期 ~0.25）"
         print(f"[i] 箱体静止高度 z ∈ [{z.min():.3f}, {z.max():.3f}]，物理仿真 OK")
+        # Kit's immediate shutdown may terminate the interpreter before code
+        # after the cleanup block is reached, so emit the decisive success
+        # marker while the simulation is still alive.
+        print("[PASS] Phase 2")
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -155,19 +165,19 @@ def phase2(steps: int) -> bool:
         except Exception:
             pass
 
-    print("[PASS] Phase 2")
     return True
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--steps", type=int, default=100)
+    p.add_argument("--device", default=os.environ.get("PGMT_CUDA_DEVICE", "cuda:0"))
     args = p.parse_args()
 
     # 首个失败即停止（Phase 2 依赖 Phase 1 的 torch/CUDA 可用性）
     phases = [
-        ("Phase 1: torch/CUDA", phase1),
-        ("Phase 2: Isaac Lab 物理", lambda: phase2(args.steps)),
+        ("Phase 1: torch/CUDA", lambda: phase1(args.device)),
+        ("Phase 2: Isaac Lab 物理", lambda: phase2(args.steps, args.device)),
     ]
     failed = 0
     for i, (name, fn) in enumerate(phases, 1):

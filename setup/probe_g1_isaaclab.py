@@ -12,13 +12,22 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
+
+
+# Allow ``python setup/probe_g1_isaaclab.py`` from the repository root to
+# import the local ``pgmt`` package without requiring PYTHONPATH=. explicitly.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--asset", required=True, type=Path)
     parser.add_argument("--json", type=Path)
+    parser.add_argument("--device", default=os.environ.get("PGMT_CUDA_DEVICE", "cuda:0"))
     args, _ = parser.parse_known_args(argv)
     if args.asset.suffix.lower() not in {".usd", ".usda", ".usdc"}:
         parser.error("--asset must be a USD/USDA/USDC file")
@@ -37,7 +46,10 @@ def main(argv=None) -> int:
     try:
         from isaaclab.app import AppLauncher
 
-        simulation_app = AppLauncher(headless=True).app
+        simulation_app = AppLauncher(
+            headless=True, device=args.device, multi_gpu=False,
+            kit_args="--/renderer/multiGpu/enabled=False --/renderer/multiGpu/autoEnable=False",
+        ).app
         import isaaclab.sim as sim_utils
         from isaaclab.assets import Articulation, ArticulationCfg
         from isaaclab.sim import SimulationContext
@@ -49,7 +61,7 @@ def main(argv=None) -> int:
             os.path.join(os.getcwd(), "data", "processed", "isaaclab_logs"),
         )
         os.makedirs(log_dir, exist_ok=True)
-        sim_cfg = sim_utils.SimulationCfg(dt=0.005, device="cuda:0", log_dir=log_dir)
+        sim_cfg = sim_utils.SimulationCfg(dt=0.005, device=args.device, log_dir=log_dir)
         sim = SimulationContext(sim_cfg)
         sim_utils.spawn_ground_plane("/World/ground", sim_utils.GroundPlaneCfg())
         robot_cfg = ArticulationCfg(

@@ -83,6 +83,23 @@ def _quat_delta(a: torch.Tensor, b: torch.Tensor, dt: float) -> torch.Tensor:
     return v / v.norm(dim=-1, keepdim=True).clamp_min(1e-8) * (angle / dt_t).unsqueeze(-1)
 
 
+def _matrix_delta_angular(a: torch.Tensor, b: torch.Tensor, dt: float | torch.Tensor) -> torch.Tensor:
+    """Small-step world angular velocity from two rotation matrices.
+
+    This avoids converting link rotations through a near-π matrix-to-quaternion
+    branch merely to differentiate them.  The FK integration step is 1e-4 s,
+    so ``sin(theta) / dt`` is accurate to second order while remaining stable
+    for every link orientation.
+    """
+    delta = b @ a.transpose(-1, -2)
+    skew = 0.5 * (delta - delta.transpose(-1, -2))
+    vee = torch.stack((skew[..., 2, 1], skew[..., 0, 2], skew[..., 1, 0]), -1)
+    dt_t = torch.as_tensor(dt, device=a.device, dtype=a.dtype)
+    while dt_t.ndim < vee.ndim - 1:
+        dt_t = dt_t.unsqueeze(-1)
+    return vee / dt_t.unsqueeze(-1)
+
+
 class ReferenceMotion:
     """URDF FK view over a :class:`MotionDatabase` or TorchMotionDatabase."""
 
@@ -187,7 +204,7 @@ class ReferenceMotion:
         p0, q0 = self._fk(q); eps = 1e-4
         p1, q1 = self._fk(q + qd * eps)
         R = _qmat(rr)
-        root_step = torch.cat((torch.zeros_like(rw[:, :1]), rw * eps), -1)
+        root_step = rw * eps
         root_step_norm = root_step.norm(dim=-1, keepdim=True)
         root_delta = torch.cat((torch.cos(root_step_norm / 2),
                                 torch.sin(root_step_norm / 2) *
@@ -204,10 +221,12 @@ class ReferenceMotion:
         R1 = _qmat(rr1)
         body_pos = rp[:, None] + torch.einsum("bij,bnj->bni", R, p0)
         body_pos_1 = rp[:, None] + rv[:, None] * eps + torch.einsum("bij,bnj->bni", R1, p1)
-        body_quat = _matq(R[:, None] @ _qmat(q0))
-        body_quat_1 = _matq(R1[:, None] @ _qmat(q1))
+        body_rot = R[:, None] @ _qmat(q0)
+        body_rot_1 = R1[:, None] @ _qmat(q1)
+        body_quat = _matq(body_rot)
+        body_quat_1 = _matq(body_rot_1)
         body_lin = (body_pos_1 - body_pos) / eps
-        body_ang = _quat_delta(body_quat, body_quat_1, eps)
+        body_ang = _matrix_delta_angular(body_rot, body_rot_1, eps)
         return dict(body_pos=body_pos, body_quat=body_quat,
                     body_lin_vel=body_lin, body_ang_vel=body_ang,
                     body_accel=torch.zeros_like(body_pos),
@@ -239,12 +258,14 @@ class ReferenceMotion:
         root_R, root_Rn = _qmat(rr), _qmat(rrn)
         body_p = rp[:,None] + torch.einsum("bij,bnj->bni", root_R, body_local_p)
         bp_n = rpn[:,None] + torch.einsum("bij,bnj->bni", root_Rn, body_local_p_n)
-        body_q = _matq(root_R[:,None] @ _qmat(body_local_q))
-        bq_n = _matq(root_Rn[:,None] @ _qmat(body_local_q_n))
+        body_rot = root_R[:,None] @ _qmat(body_local_q)
+        body_rot_n = root_Rn[:,None] @ _qmat(body_local_q_n)
+        body_q = _matq(body_rot)
+        bq_n = _matq(body_rot_n)
         root_lin = (rpn-rp) / next_dt_safe[:, None]
         root_ang = _quat_delta(rr, rrn, next_dt_safe)
         body_lin = (bp_n-body_p) / next_dt_safe[:, None, None]
-        body_ang = _quat_delta(body_q, bq_n, next_dt_safe)
+        body_ang = _matrix_delta_angular(body_rot, body_rot_n, next_dt_safe)
         body_p_p = rpp[:, None] + torch.einsum("bij,bnj->bni", _qmat(rrp), body_local_p_p)
         body_lin_p = (body_p - body_p_p) / prev_dt_safe[:, None, None]
         body_accel = (body_lin - body_lin_p) / self.control_dt

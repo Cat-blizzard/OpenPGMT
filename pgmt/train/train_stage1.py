@@ -165,7 +165,10 @@ def run(args: argparse.Namespace) -> dict:
             if not args.asset or not args.urdf or not args.reference_data:
                 raise ValueError("--backend isaaclab requires --asset, --urdf, and --reference-data")
             from isaaclab.app import AppLauncher
-            app = AppLauncher(headless=True, device=str(device)).app
+            app = AppLauncher(
+                headless=True, device=str(device), multi_gpu=False,
+                kit_args="--/renderer/multiGpu/enabled=False --/renderer/multiGpu/autoEnable=False",
+            ).app
         backend = "mock" if args.mock or args.dry_run else args.backend
         pool = _load_fall_pool(args.fall_pool) if args.fall_pool else None
         env = build_env(args.num_envs, device, mock=False, backend=backend,

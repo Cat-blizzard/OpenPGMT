@@ -11,7 +11,7 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 完成并验证**；G1 资产静态验收、29-DoF 映射、PD/参考动作/批量奖励适配器和 Stage 1 PPO 入口已接入；Isaac Lab USD 运行时探针与物理训练仍需在 GPU 空闲后完成
+- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 代码闭环完成**；G1 资产静态验收、29-DoF 映射、PD/参考动作/批量奖励适配器和 Stage 1 PPO 入口已接入。GPU 9 已通过 CUDA Torch、USD 运行时映射（29 个关节）和 Isaac Lab 箱体物理验证；真实 G1 物理训练还需先修复 Isaac Sim 5.1 与 Warp 版本不匹配（见下文）。
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
 
@@ -118,6 +118,14 @@ python -m data.viz_terrain --dump stairs 9       # 无 matplotlib 时打印高�
 
 **驱动 580 风险预案**: 若 PP4 在 580 上崩溃（create_sim/PhysX 初始化错误），优先把这台机器（或其中某几张卡对应的训练进程）降驱动到 535/545 档；机器不便降驱动则转第 3 步 Isaac Lab。
 
+Isaac Sim 5.1 的 Python 扩展仍使用 `warp.types.array`。安装脚本默认固定
+`warp-lang==1.12.1`；当前环境若显示 `warp-lang 1.14+` 或启动时报
+`AttributeError: module 'warp.types' has no attribute 'array'`，先执行：
+
+```bash
+pip install --force-reinstall --no-deps 'warp-lang==1.12.1'
+```
+
 ### 冒烟测试通过标准（M0 验收）
 
 - 主路线: `smoke_test.py` 三阶段全 PASS（128 env 物理 + 10 iter PPO 闭环）
@@ -150,10 +158,14 @@ URDF/MJCF 的 29 个关节、29 个执行器、body 名称和网格路径会被�
 USD 的关节顺序必须在 Isaac Sim 进程中核验：
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python setup/probe_g1_isaaclab.py \
+python setup/probe_g1_isaaclab.py --device cuda:9 \
   --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
   --json data/processed/g1_usd_runtime_probe.json
 ```
+
+Isaac Lab/Kit 使用 `--device cuda:k` 选择卡；不要只依赖
+`CUDA_VISIBLE_DEVICES` 限制 Vulkan 的设备探测。纯 Torch 训练仍可使用
+`CUDA_VISIBLE_DEVICES=9 --device cuda:0` 的单卡写法。
 
 启动一次不依赖 Isaac Sim 的 Stage 1 PPO 训练（使用本仓库已有重定向 NPZ，
 PD、参考动作和三头批量奖励均走 `G1Env`）：
@@ -187,15 +199,16 @@ CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage2 --backend torch --devic
 
 最近一次代码审计已修复 Isaac Lab 接触力字段、base-frame 速度观测、末帧参考速度、
 fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`python -m pytest -q`
-当前为 764 个测试全通过；这仍不替代 USD 运行时探针、真实地形 mesh 和 headless
-物理冒烟，后者必须在 Isaac Lab 进程中单独验收。
+当前为 764 个测试全通过；GPU 9 的 CUDA 合约检查、USD 29-DoF 探针和箱体物理冒烟
+也已通过。真实 G1 训练目前会在 Kit 扩展加载阶段被 Warp 版本错误阻断，不能把它
+记作物理训练通过。
 
 ## 接下来做什么
 
 按以下顺序推进，避免把协议测试误当成物理训练结果：
 
 1. **M0 运行时验收**：从仓库根目录执行 `setup/check_g1_asset.py`，再用
-   `setup/probe_g1_isaaclab.py` 读取 USD，确认运行时的 29 个关节、29 个执行器和 body 顺序。
+   `setup/probe_g1_isaaclab.py --device cuda:9` 读取 USD，确认运行时的 29 个关节、29 个执行器和 body 顺序。
 2. **物理冒烟**：在目标 GPU 上运行 `setup/smoke_test_isaaclab.py --steps 20`；如果采用
    Isaac Gym PP4，则按上面的决策树先检查包和 PhysX 架构。
 3. **Stage 1 物理训练**：探针通过后使用 `--backend isaaclab`，记录首个 checkpoint、奖励分组、
@@ -204,7 +217,7 @@ fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`
    21×21 elevation、terrain-contact 六项奖励和四头 critic。
 5. **M5 评估**：Stage 1/2 稳定后再跑 5 个地形族 × 10 个难度的 matched episodes 和消融，最后补 Table II、Fig. 3/4 与 RGMT 对比。
 
-当前 `pytest`、Torch FK/PD/reward 和最小 PPO 更新只证明代码接口闭环；它们不证明 Isaac Lab 刚体动力学或论文指标已经复现。
+当前 `pytest`、Torch FK/PD/reward 和最小 PPO 更新只证明代码接口闭环；箱体冒烟只证明 Isaac Lab 基础物理可启动，仍不证明 G1 刚体动力学或论文指标已经复现。
 
 ## 假设清单
 

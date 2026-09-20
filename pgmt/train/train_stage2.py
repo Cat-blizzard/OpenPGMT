@@ -125,7 +125,10 @@ def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
             if not asset or not urdf or not reference_data:
                 raise ValueError("--backend isaaclab requires --asset, --urdf, and --reference-data")
             from isaaclab.app import AppLauncher
-            app = AppLauncher(headless=True, device=str(dev)).app
+            app = AppLauncher(
+                headless=True, device=str(dev), multi_gpu=False,
+                kit_args="--/renderer/multiGpu/enabled=False --/renderer/multiGpu/autoEnable=False",
+            ).app
             import importlib
             import pgmt.envs.g1_env as g1_module
             g1_module = importlib.reload(g1_module)

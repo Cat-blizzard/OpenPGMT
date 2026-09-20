@@ -20,6 +20,7 @@ cd "$(dirname "$0")/.."
 
 ENV_NAME=pgmt-lab
 ISAACLAB_VER="${ISAACLAB_VER:-2.3.2.post1}"
+WARP_VER="${WARP_VER:-1.12.1}"
 SKIP_SMOKE=0
 
 while [[ $# -gt 0 ]]; do
@@ -51,6 +52,17 @@ if python -c "import isaaclab" 2>/dev/null; then
 else
   pip install "isaaclab[isaacsim,all]==${ISAACLAB_VER}" --extra-index-url https://pypi.nvidia.com
 fi
+
+# Isaac Sim 5.1's Python utilities still annotate with ``warp.types.array``;
+# newer pip Warp releases removed that public alias.  Keep the Isaac Sim 5.1
+# environment reproducible instead of allowing pip to resolve an incompatible
+# latest Warp release.  Override WARP_VER only when moving the simulator stack.
+pip install --force-reinstall --no-deps "warp-lang==${WARP_VER}"
+python - <<'PY'
+import warp
+assert hasattr(warp.types, "array"), "warp.types.array is required by Isaac Sim 5.1"
+print(f"[i] warp {getattr(warp, '__version__', 'unknown')} (Isaac Sim 5.1 compatible API)")
+PY
 
 echo "===== 3. torch (cu128) ====="
 # 注意顺序: 先装 isaaclab 再装 torch，按 Isaac Lab 官方文档
