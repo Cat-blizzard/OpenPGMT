@@ -104,6 +104,72 @@ class _TinyEnv:
         return self.observations, rewards, terminated, truncated, {}
 
 
+class _GaussianTinyPolicy(torch.nn.Module):
+    """log_prob 依赖可训练参数的最小策略，用于观测 PPO 更新幅度。"""
+
+    head_names = ("upper", "lower", "aux")
+
+    def __init__(self):
+        super().__init__()
+        self.mean = torch.nn.Parameter(torch.zeros(1, 29))
+        self.log_std = torch.nn.Parameter(torch.zeros(1, 29))
+
+    def _dist(self, n):
+        return torch.distributions.Normal(self.mean.expand(n, 29),
+                                          self.log_std.exp().expand(n, 29))
+
+    def act(self, observations, deterministic=False):
+        n = observations["obs"].shape[0]
+        dist = self._dist(n)
+        actions = dist.mean if deterministic else dist.sample()
+        return _policy_output(actions, dist.log_prob(actions).sum(-1),
+                              torch.zeros(n, 3), dist.entropy().sum(-1))
+
+    def value(self, observations):
+        return torch.zeros(observations["obs"].shape[0], 3)
+
+    def evaluate_actions(self, observations, actions):
+        n = actions.shape[0]
+        dist = self._dist(n)
+        return _policy_output(actions, dist.log_prob(actions).sum(-1),
+                              torch.zeros(n, 3), dist.entropy().sum(-1))
+
+
+def _policy_output(actions, log_probs, values, entropy):
+    from types import SimpleNamespace
+    return SimpleNamespace(actions=actions, log_probs=log_probs,
+                           values=values, entropy=entropy)
+
+
+def test_single_minibatch_update_reports_post_update_kl():
+    """单一巨批（1 epoch × 1 minibatch）下 pre-step 的 KL 恒为 0，必须靠
+    更新后重估的 ``approx_kl_post`` 观测策略是否真的移动（2026-09-20 GPU8
+    256env 验证曾因此被误读为 actor 冻结）。"""
+    torch.manual_seed(0)
+    policy = _GaussianTinyPolicy()
+    config = replace(get("A6").value, num_steps_per_env=4,
+                     num_learning_epochs=1, num_mini_batches=1)
+
+    class _RandomRewardEnv:
+        def __init__(self, n):
+            self.n = n
+            self.observations = _small_observations(n)
+
+        def step(self, actions):
+            n = actions.shape[0]
+            rewards = torch.randn(n, 3)
+            terminated = torch.zeros(n, dtype=torch.bool)
+            truncated = torch.zeros_like(terminated)
+            return self.observations, rewards, terminated, truncated, {}
+
+    observations = _small_observations(3)
+    ppo = PPO(policy, config=config, total_updates=1)
+    observations, _ = ppo.collect_rollout(_RandomRewardEnv(3), observations)
+    metrics = ppo.update()
+    assert metrics["approx_kl"] == 0.0
+    assert metrics["approx_kl_post"] > 0.0
+
+
 def test_ppo_collect_and_update_with_environment_protocol():
     observations = _small_observations(batch=2)
     config = replace(get("A6").value, num_steps_per_env=2,

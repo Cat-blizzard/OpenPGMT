@@ -108,7 +108,9 @@ class PPO:
         )}
         totals.update({"value_loss_" + name: 0.0 for name in self.policy.head_names})
         samples = 0
+        last_batch = None
         for batch in self.storage.minibatches(cfg.num_mini_batches, cfg.num_learning_epochs):
+            last_batch = batch
             output = self.policy.evaluate_actions(batch["observations"], batch["actions"])
             log_ratio = output.log_probs - batch["log_probs"]
             ratio = log_ratio.exp()
@@ -146,8 +148,17 @@ class PPO:
                 totals[key] += value * size
             samples += size
         self.update_count += 1
-        self.storage.clear()
         metrics = {key: value / samples for key, value in totals.items()}
+        # 上面的 ratio 指标在每个 minibatch 的 optimizer.step() 之前求值；当
+        # epochs × minibatches = 1（单一巨批）时它们恒为 ratio=1 处的恒等值，
+        # 对策略是否移动完全失明。这里在更新后的参数下重估同一批数据，
+        # 给出真实的更新幅度。
+        with torch.no_grad():
+            output = self.policy.evaluate_actions(last_batch["observations"],
+                                                  last_batch["actions"])
+            log_ratio = output.log_probs - last_batch["log_probs"]
+            metrics["approx_kl_post"] = (((log_ratio.exp() - 1) - log_ratio).mean().item())
+        self.storage.clear()
         metrics.update(learning_rate=learning_rate, num_updates=self.update_count)
         return metrics
 

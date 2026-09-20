@@ -115,7 +115,8 @@ def _build_torch_env(*, device: torch.device, num_envs: int, reference_data: str
 
 
 def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
-        updates: int = 1, learning_epochs: int = 1, mini_batches: int = 1,
+        updates: int = 1, learning_epochs: int | None = None,
+        mini_batches: int | None = None,
         stage1_checkpoint: Path | None = None, checkpoint: Path | None = None,
         resume: Path | None = None, backend: str = "mock",
         reference_data: str | None = None, asset: str | None = None,
@@ -162,6 +163,12 @@ def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
             cfg_env.scene.env_spacing = 2.5
             env = g1_module.IsaacLabPPOAdapter(g1_module.IsaacLabG1Env(cfg_env))
         cfg = get("A6").value
+        if learning_epochs is None:
+            learning_epochs = cfg.num_learning_epochs
+        if mini_batches is None:
+            mini_batches = cfg.num_mini_batches
+        if learning_epochs <= 0 or mini_batches <= 0:
+            raise ValueError("learning_epochs and mini_batches must be positive")
         from dataclasses import replace
         cfg = replace(cfg, num_steps_per_env=steps_per_env,
                       num_learning_epochs=learning_epochs,
@@ -232,8 +239,10 @@ def main(argv=None):
     parser.add_argument("--num-envs", type=int, default=2)
     parser.add_argument("--steps-per-env", type=int, default=8)
     parser.add_argument("--updates", type=int, default=1)
-    parser.add_argument("--learning-epochs", type=int, default=1)
-    parser.add_argument("--mini-batches", type=int, default=1)
+    parser.add_argument("--learning-epochs", type=int, default=None,
+                        help="PPO learning epochs per update (default: A6 assumption)")
+    parser.add_argument("--mini-batches", type=int, default=None,
+                        help="PPO minibatches per epoch (default: A6 assumption)")
     parser.add_argument("--stage1-checkpoint", type=Path)
     parser.add_argument("--resume", type=Path)
     parser.add_argument("--reference-data")

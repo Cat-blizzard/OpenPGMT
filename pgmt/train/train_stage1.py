@@ -194,10 +194,16 @@ def run(args: argparse.Namespace) -> dict:
         env = build_env(args.num_envs, device, mock=False, backend=backend,
                         reference_data=args.reference_data, asset_path=args.asset,
                         reference_urdf=args.urdf, fall_pool=pool, app=app)
-        config = replace(get("A6").value,
+        if (args.learning_epochs is not None and args.learning_epochs <= 0) or (
+                args.mini_batches is not None and args.mini_batches <= 0):
+            raise ValueError("--learning-epochs and --mini-batches must be positive")
+        base = get("A6").value
+        learning_epochs = base.num_learning_epochs if args.learning_epochs is None else args.learning_epochs
+        mini_batches = base.num_mini_batches if args.mini_batches is None else args.mini_batches
+        config = replace(base,
                          num_steps_per_env=args.steps_per_env,
-                         num_learning_epochs=args.learning_epochs,
-                         num_mini_batches=min(args.mini_batches, args.steps_per_env * args.num_envs))
+                         num_learning_epochs=learning_epochs,
+                         num_mini_batches=min(mini_batches, args.steps_per_env * args.num_envs))
         policy = Stage1Policy().to(device)
         ppo = PPO(policy, config=config, total_updates=args.updates)
         restored_env = False
@@ -281,8 +287,10 @@ def main(argv=None):
     parser.add_argument("--num-envs", type=int, default=4)
     parser.add_argument("--steps-per-env", type=int, default=24)
     parser.add_argument("--updates", type=int, default=1)
-    parser.add_argument("--learning-epochs", type=int, default=1)
-    parser.add_argument("--mini-batches", type=int, default=1)
+    parser.add_argument("--learning-epochs", type=int, default=None,
+                        help="PPO learning epochs per update (default: A6 assumption)")
+    parser.add_argument("--mini-batches", type=int, default=None,
+                        help="PPO minibatches per epoch (default: A6 assumption)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--metrics", type=Path, help="write final training metrics as JSON")
