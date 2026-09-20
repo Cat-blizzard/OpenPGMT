@@ -46,6 +46,22 @@ def _zeros_observations(num_envs: int, device: torch.device) -> Dict[str, torch.
     }
 
 
+def _json_default(value):
+    if isinstance(value, torch.Tensor):
+        value = value.detach().cpu()
+        return value.item() if value.ndim == 0 else value.tolist()
+    if isinstance(value, Path):
+        return str(value)
+    raise TypeError(f"cannot serialize metrics value of type {type(value).__name__}")
+
+
+def _write_metrics(path: Path | None, result: dict) -> None:
+    if path is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result, ensure_ascii=False, indent=2,
+                                   default=_json_default) + "\n", encoding="utf-8")
+
+
 class MockStage1Env:
     """A deterministic protocol test double, not a physics environment."""
 
@@ -167,7 +183,11 @@ def run(args: argparse.Namespace) -> dict:
             from isaaclab.app import AppLauncher
             app = AppLauncher(
                 headless=True, device=str(device), multi_gpu=False,
-                kit_args="--/renderer/multiGpu/enabled=False --/renderer/multiGpu/autoEnable=False",
+                kit_args=(
+                    "--/renderer/multiGpu/enabled=False "
+                    "--/renderer/multiGpu/autoEnable=False "
+                    "--/renderer/multiGpu/maxGpuCount=1"
+                ),
             ).app
         backend = "mock" if args.mock or args.dry_run else args.backend
         pool = _load_fall_pool(args.fall_pool) if args.fall_pool else None
@@ -216,7 +236,9 @@ def run(args: argparse.Namespace) -> dict:
                 _save_checkpoint(Path(args.checkpoint), ppo, args, env=env)
         if args.checkpoint and not all_metrics:
             _save_checkpoint(Path(args.checkpoint), ppo, args, env=env)
-        return {"updates": all_metrics, "checkpoint": None if args.checkpoint is None else str(args.checkpoint), "device": str(device), "backend": backend}
+        result = {"updates": all_metrics, "checkpoint": None if args.checkpoint is None else str(args.checkpoint), "device": str(device), "backend": backend}
+        _write_metrics(getattr(args, "metrics", None), result)
+        return result
     except BaseException:
         # Print before Kit shutdown: Isaac Sim can swallow an otherwise
         # unhandled traceback while its application is being closed.
@@ -263,6 +285,7 @@ def main(argv=None):
     parser.add_argument("--mini-batches", type=int, default=1)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--checkpoint", type=Path)
+    parser.add_argument("--metrics", type=Path, help="write final training metrics as JSON")
     parser.add_argument("--resume", type=Path)
     parser.add_argument("--reference-data", type=str, help="directory of retargeted G1 NPZ reference motions")
     parser.add_argument("--asset", type=str, help="licensed local G1 USD/URDF path (validated, not copied)")

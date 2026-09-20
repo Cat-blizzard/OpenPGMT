@@ -24,6 +24,22 @@ from pgmt.train.policy import Stage1Policy, Stage2Policy
 from pgmt.train.ppo import PPO
 
 
+def _json_default(value):
+    if isinstance(value, torch.Tensor):
+        value = value.detach().cpu()
+        return value.item() if value.ndim == 0 else value.tolist()
+    if isinstance(value, Path):
+        return str(value)
+    raise TypeError(f"cannot serialize metrics value of type {type(value).__name__}")
+
+
+def _write_metrics(path: Path | None, result: dict) -> None:
+    if path is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result, ensure_ascii=False, indent=2,
+                                   default=_json_default) + "\n", encoding="utf-8")
+
+
 def _observations(n: int, device: torch.device) -> dict[str, torch.Tensor]:
     return {
         "obs": torch.zeros(n, OBS_DIM, device=device),
@@ -103,7 +119,8 @@ def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
         stage1_checkpoint: Path | None = None, checkpoint: Path | None = None,
         resume: Path | None = None, backend: str = "mock",
         reference_data: str | None = None, asset: str | None = None,
-        urdf: str | None = None, fall_pool: Path | None = None) -> dict:
+        urdf: str | None = None, fall_pool: Path | None = None,
+        metrics: Path | None = None) -> dict:
     if stage1_checkpoint is not None and resume is not None:
         raise ValueError("--stage1-checkpoint and --resume are mutually exclusive")
     if backend not in {"mock", "torch", "isaaclab"}:
@@ -127,7 +144,11 @@ def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
             from isaaclab.app import AppLauncher
             app = AppLauncher(
                 headless=True, device=str(dev), multi_gpu=False,
-                kit_args="--/renderer/multiGpu/enabled=False --/renderer/multiGpu/autoEnable=False",
+                kit_args=(
+                    "--/renderer/multiGpu/enabled=False "
+                    "--/renderer/multiGpu/autoEnable=False "
+                    "--/renderer/multiGpu/maxGpuCount=1"
+                ),
             ).app
             import importlib
             import pgmt.envs.g1_env as g1_module
@@ -174,20 +195,22 @@ def run(*, device: str = "cpu", num_envs: int = 2, steps_per_env: int = 8,
             obs = env.reset()
         if backend != "mock" and "elevation" not in obs:
             raise RuntimeError("Stage 2 environment must provide an 'elevation' observation; terrain provider was not connected")
-        metrics = []
+        all_metrics = []
         for _ in range(updates - ppo.update_count):
             obs, collected = ppo.collect_rollout(env, obs)
             update = ppo.update()
             update.update({"reward_mean": collected["reward_mean"], "timeouts": collected["timeouts"]})
-            metrics.append(update)
+            all_metrics.append(update)
         if checkpoint is not None:
             checkpoint.parent.mkdir(parents=True, exist_ok=True)
             payload = {"ppo": ppo.state_dict(), "assumptions": dump_assumptions()}
             if hasattr(env, "state_dict"):
                 payload["env"] = env.state_dict()
             torch.save(payload, checkpoint)
-        return {"updates": metrics, "heads": list(policy.head_names), "device": str(dev),
-                "backend": backend, "checkpoint": None if checkpoint is None else str(checkpoint)}
+        result = {"updates": all_metrics, "heads": list(policy.head_names), "device": str(dev),
+                  "backend": backend, "checkpoint": None if checkpoint is None else str(checkpoint)}
+        _write_metrics(metrics, result)
+        return result
     except BaseException:
         import traceback
         traceback.print_exc()
@@ -218,6 +241,7 @@ def main(argv=None):
     parser.add_argument("--urdf")
     parser.add_argument("--fall-pool", type=Path)
     parser.add_argument("--checkpoint", type=Path)
+    parser.add_argument("--metrics", type=Path, help="write final training metrics as JSON")
     args = parser.parse_args(argv)
     if min(args.num_envs, args.steps_per_env, args.updates) <= 0:
         parser.error("num-envs, steps-per-env, and updates must be positive")

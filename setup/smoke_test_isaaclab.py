@@ -78,7 +78,11 @@ def phase2(steps: int, device: str = "cuda:0") -> bool:
         # server; CUDA_VISIBLE_DEVICES alone does not reliably constrain Kit.
         app_launcher = AppLauncher(
             headless=True, device=device, multi_gpu=False,
-            kit_args="--/renderer/multiGpu/enabled=False --/renderer/multiGpu/autoEnable=False",
+            kit_args=(
+                "--/renderer/multiGpu/enabled=False "
+                "--/renderer/multiGpu/autoEnable=False "
+                "--/renderer/multiGpu/maxGpuCount=1"
+            ),
         )
         simulation_app = app_launcher.app
         print("[i] Isaac Sim 启动成功")

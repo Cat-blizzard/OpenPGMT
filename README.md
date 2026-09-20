@@ -11,7 +11,7 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 代码闭环完成**；G1 资产静态验收、29-DoF 映射、PD/参考动作/批量奖励适配器和 Stage 1 PPO 入口已接入。GPU 9 已通过 CUDA Torch、USD 运行时映射（29 个关节）、Isaac Lab 箱体物理和一次最小真实 G1 Stage 1 PPO 更新；长时间训练前仍需处理多卡服务器上的 CUDA P2P/IOMMU 警告，并完成 Stage 2 地形物理接入。
+- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 代码闭环完成**；G1 资产静态验收、29-DoF 映射、PD/参考动作/批量奖励适配器和 Stage 1 PPO 入口已接入。GPU 9 已通过 CUDA Torch、USD 运行时映射（29 个关节）、Isaac Lab 箱体物理和一次最小真实 G1 Stage 1 PPO 更新；Stage 1/2 训练入口支持 `--metrics` JSON 落盘。多卡服务器上的 CUDA P2P/IOMMU 输出已完成归因和单卡参数处理，但主机 IOMMU 探测告警仍可能出现；它不阻止已验证的单卡物理运行，Stage 2 地形物理接入仍待完成。
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
 
@@ -132,6 +132,19 @@ pip install --force-reinstall --no-deps 'warp-lang==1.12.1'
 - 兜底: `smoke_test_isaaclab.py` 两阶段全 PASS（torch + headless 物理仿真）
 - 服务器回归: `python -m pytest tests -q` 全绿
 
+### CUDA P2P / IOMMU 告警处置
+
+这台 10 卡服务器启用了 IOMMU，Isaac Sim 的 `carb.cudainterop` 会在启动时对可见的
+物理卡做 P2P 带宽/延迟探测，并可能打印 `cudaErrorTooManyPeers`。Stage 1/2 和冒烟入口
+都显式使用 `multi_gpu=False`、关闭渲染多 GPU，并设置 `renderer.multiGpu.maxGpuCount=1`；
+GPU 9 上的 20 步箱体物理仍通过（z=0.250）。这组参数不能阻止底层全局拓扑探测，因而
+偶尔仍会看到 IOMMU/P2P 输出，但不会改变 PhysX 实际使用的 `cuda:9`。
+
+不要在 Isaac Sim 路径使用 `CUDA_VISIBLE_DEVICES=9` 代替 `--device cuda:9`：隔离测试虽
+隐藏了 P2P 输出，却使 GPU foundation 进入 CUDA bad state 并导致物理冒烟失败。除非要
+由管理员统一调整主机 IOMMU/驱动配置，否则无需改内核参数；该告警目前属于启动诊断，
+不构成已验证单卡训练的失败条件。
+
 ### G1 资产与 Stage 1 入口
 
 仓库不重新分发第三方 G1 网格或 USD。服务器上已有授权的 ProtoMotions
@@ -197,7 +210,7 @@ CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage2 --backend torch --devic
 不会重新 reset 环境或重复已完成的 PPO 更新。checkpoint 同时保存 Torch 环境的
 参考帧、观测历史、接触历史、恢复池和自适应采样状态。
 
-真实 Isaac Lab Stage 1 训练需要显式指定 USD、URDF、参考数据和物理卡：
+真实 Isaac Lab Stage 1 训练需要显式指定 USD、URDF、参考数据和物理卡；`--metrics` 可把最终更新和设备信息写到 JSON，避免 Kit 关闭时终端结果被吞掉：
 
 ```bash
 python -m pgmt.train.train_stage1 --backend isaaclab --device cuda:9 \
@@ -205,17 +218,21 @@ python -m pgmt.train.train_stage1 --backend isaaclab --device cuda:9 \
   --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
   --reference-data data/processed/lafan1_g1_continuous \
-  --checkpoint runs/stage1_g1_isaaclab.pt
+  --checkpoint runs/stage1_g1_isaaclab.pt \
+  --metrics runs/stage1_g1_isaaclab.metrics.json
 ```
 
 最小物理闭环已用 `--num-envs 2 --steps-per-env 2 --updates 1` 成功保存一个
 17 MiB checkpoint；它是启动和接口验收，不代表训练收敛或论文指标。
 
-最近一次代码审计已修复 Isaac Lab 接触力字段、base-frame 速度观测、末帧参考速度、
+Isaac Lab 启动器显式关闭渲染多 GPU，并设置 `renderer.multiGpu.maxGpuCount=1`；这只能
+限制渲染路径，不能改变主机 CUDA/Vulkan 的全局设备枚举。最近一次代码审计已修复 Isaac Lab 接触力字段、base-frame 速度观测、末帧参考速度、
 fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`python -m pytest -q`
 当前为 764 个测试全通过；GPU 9 的 CUDA 合约检查、USD 29-DoF 探针和箱体物理冒烟
-也已通过。真实 G1 训练目前会在 Kit 扩展加载阶段被 Warp 版本错误阻断，不能把它
-记作物理训练通过。
+也已通过。使用 `CUDA_VISIBLE_DEVICES=9` 虽能消除 P2P/IOMMU 输出，但会让 Isaac Sim
+的 GPU foundation 进入 CUDA bad state，箱体冒烟失败，因此不作为 Isaac Sim 的运行方式；
+正式路径继续使用不设置该变量的 `--device cuda:9`。真实 G1 最小物理 PPO 更新已经
+保存 checkpoint，不能把它等同于训练收敛或论文指标复现。
 
 ## 接下来做什么
 
@@ -223,9 +240,9 @@ fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`
 
 1. **M0 运行时验收**：从仓库根目录执行 `setup/check_g1_asset.py`，再用
    `setup/probe_g1_isaaclab.py --device cuda:9` 读取 USD，确认运行时的 29 个关节、29 个执行器和 body 顺序。
-2. **物理冒烟**：在目标 GPU 上运行 `setup/smoke_test_isaaclab.py --steps 20`；如果采用
+2. **物理冒烟**：在目标 GPU 上运行 `setup/smoke_test_isaaclab.py --device cuda:9 --steps 20`；如果采用
    Isaac Gym PP4，则按上面的决策树先检查包和 PhysX 架构。
-3. **Stage 1 物理训练**：最小真实 G1 PPO 更新已经通过；接下来扩大并行环境和迭代数，记录首个稳定 checkpoint、奖励分组、终止原因和 GPU/吞吐，同时保留同配置的 `--backend torch` 结果作为接口回归基线。
+3. **Stage 1 物理训练**：最小真实 G1 PPO 更新已经通过；接下来扩大并行环境和迭代数，使用 `--metrics` 记录首个稳定 checkpoint、奖励分组、终止原因和 GPU/吞吐，同时保留同配置的 `--backend torch` 结果作为接口回归基线。
 4. **Stage 2 物理接入**：把同一批 terrain atlas 高度场注入 Isaac Lab 碰撞场景，验证接触传感器、
    21×21 elevation、terrain-contact 六项奖励和四头 critic。
 5. **M5 评估**：Stage 1/2 稳定后再跑 5 个地形族 × 10 个难度的 matched episodes 和消融，最后补 Table II、Fig. 3/4 与 RGMT 对比。
