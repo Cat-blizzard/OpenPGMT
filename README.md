@@ -186,7 +186,7 @@ PD、参考动作和三头批量奖励均走 `G1Env`）：
 ```bash
 CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage1 \
   --backend torch --device cuda:0 --num-envs 256 --steps-per-env 24 --updates 1000 \
-  --reference-data data/processed/lafan1_g1_continuous \
+  --reference-data data/processed/lafan1_g1_anchored \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
   --checkpoint runs/stage1_g1.pt
 ```
@@ -201,7 +201,7 @@ Stage 2 的协议路径也已接通（21×21 elevation、Terrain Glimpse、terra
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage2 --backend torch --device cuda:0 \
-  --reference-data data/processed/lafan1_g1_continuous \
+  --reference-data data/processed/lafan1_g1_anchored \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
   --num-envs 4 --steps-per-env 24 --updates 1
 ```
@@ -217,7 +217,7 @@ python -m pgmt.train.train_stage1 --backend isaaclab --device cuda:9 \
   --num-envs 256 --steps-per-env 24 --updates 1000 \
   --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
-  --reference-data data/processed/lafan1_g1_continuous \
+  --reference-data data/processed/lafan1_g1_anchored \
   --checkpoint runs/stage1_g1_isaaclab.pt \
   --metrics runs/stage1_g1_isaaclab.metrics.json
 ```
