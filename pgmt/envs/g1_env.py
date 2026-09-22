@@ -27,8 +27,9 @@ from pgmt.contracts import ACT_DIM, HISTORY_LEN, OBS_DIM, REF_FRAME_DIM
 from pgmt.envs.observations import PRIV_DIM, PRIV_LAYOUT
 from pgmt.train.stage1 import BatchRewardAdapter, TorchMotionDatabase
 from pgmt.rewards.spec import SIGMAS
-from pgmt.rewards.batched import BatchedRewardComputer
+from pgmt.rewards.batched import BatchedRewardComputer, root_relative_body_positions
 from pgmt.envs.recovery import FallRecoveryPool
+from pgmt.envs.actuators import G1_EFFORT_LIMITS
 from pgmt.cfg.assumptions import get
 from pgmt.envs.terrain.batched import TerrainAtlas
 from pgmt.envs.termination import TerminationReason, termination_delay, tolerance_budget
@@ -177,10 +178,9 @@ class G1EnvConfig:
     decimation: int = 4
     episode_length_s: float = 30.0
     asset_path: str | None = None
-    action_scale: float = 0.5
     stiffness: float | Sequence[float] = 80.0
     damping: float | Sequence[float] = 2.0
-    torque_limit: float | Sequence[float] = 120.0
+    torque_limit: float | Sequence[float] = G1_EFFORT_LIMITS
     default_root_pos: tuple[float, float, float] = (0.0, 0.0, 0.793)
     default_root_quat: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
     default_joint_pos: Sequence[float] | None = None
@@ -197,8 +197,23 @@ class G1EnvConfig:
     enable_adaptive_sampling: bool = True
     max_joint_velocity: float = 30.0
     auto_reset: bool = True
+    seed: int = 0
+    terrain_curriculum: bool = False
+    terrain_repeats: int = 8
+    terrain_resolution: float = 0.1
+    recovery_grace_s: float = 3.0
+    fall_collection: bool = False
+    randomize_dynamics: bool = False
+    corrupt_observations: bool = False
+    max_action_delay: int = 0
+    # Experimental ordinary-reset ablation, not an author-disclosed setting.
+    reset_mode: str = "nominal"
 
     def __post_init__(self):
+        if self.reset_mode not in ("nominal", "reference_state"):
+            raise ValueError("reset_mode must be nominal or reference_state")
+        if self.reset_mode == "reference_state" and (self.stage != 1 or self.terrain_family != "flat"):
+            raise ValueError("reference_state reset currently supports Stage 1 flat ground only")
         if self.num_envs <= 0 or self.decimation <= 0:
             raise ValueError("num_envs and decimation must be positive")
         if self.control_dt <= 0 or self.sim_dt <= 0 or self.episode_length_s <= 0:
@@ -206,8 +221,8 @@ class G1EnvConfig:
         expected_dt = self.sim_dt * self.decimation
         if not np.isclose(expected_dt, self.control_dt, rtol=0, atol=1e-8):
             raise ValueError(f"control_dt ({self.control_dt}) must equal sim_dt*decimation ({expected_dt})")
-        if self.action_scale <= 0 or self.max_joint_velocity <= 0:
-            raise ValueError("action_scale and max_joint_velocity must be positive")
+        if self.max_joint_velocity <= 0:
+            raise ValueError("max_joint_velocity must be positive")
         if self.stage not in (1, 2):
             raise ValueError("stage must be 1 or 2")
         if self.terrain_level < 0 or self.terrain_level > 9:
@@ -319,11 +334,13 @@ class G1Env:
                  reference_database: Any | None = None,
                  recovery_pool: FallRecoveryPool | None = None):
         self.cfg = config or G1EnvConfig()
+        self.diagnostics = None  # optional bounded recorder; never part of dynamics/RNG
+        self._diagnostic_step = 0
         self.articulation = articulation
         self.reference_database = reference_database
         self.recovery_pool = recovery_pool
         self._adaptive_sampler = None
-        self._rng = np.random.default_rng()
+        self._rng = np.random.default_rng(self.cfg.seed)
         if articulation is not None:
             actual_joint_names = list(getattr(articulation, "joint_names", getattr(getattr(articulation, "data", None), "joint_names", [])))
             actual_body_names = list(getattr(articulation, "body_names", getattr(getattr(articulation, "data", None), "body_names", [])))
@@ -341,11 +358,18 @@ class G1Env:
             self.body_ids = torch.arange(len(REQUIRED_BODY_NAMES), dtype=torch.long, device=self.device)
         self.joint_ids = self.joint_ids.to(self.device)
         self.body_ids = self.body_ids.to(self.device)
-        self._terrain = TerrainAtlas(self.device, stage=self.cfg.stage) if self.cfg.stage == 2 else None
+        self._terrain = TerrainAtlas(self.device, stage=self.cfg.stage, resolution=self.cfg.terrain_resolution, repeats=self.cfg.terrain_repeats) if self.cfg.stage == 2 else None
         self._terrain_family_id = {"flat": 0, "slopes": 1, "stairs": 2, "boxes": 3, "rough": 4}[self.cfg.terrain_family]
         self._terrain_families = torch.full((self.num_envs,), self._terrain_family_id, dtype=torch.long, device=self.device)
         self._terrain_levels = torch.full((self.num_envs,), self.cfg.terrain_level, dtype=torch.long, device=self.device)
+        from pgmt.envs.terrain.curriculum import TerrainCurriculum
         _families = ("flat", "slopes", "stairs", "boxes", "rough")
+        self.terrain_curriculum = None
+        if self.cfg.stage == 2 and self.cfg.terrain_curriculum:
+            self._terrain_families = torch.arange(self.num_envs, device=self.device) % 5
+            self.terrain_curriculum = TerrainCurriculum([_families[int(f)] for f in self._terrain_families], promote_after=1)
+            for st in self.terrain_curriculum.states:
+                st.level = self.cfg.terrain_level
         _term_cfg = get("A20").value
         self._termination_ref_threshold = torch.full(
             (self.num_envs,), float(_term_cfg.ref_deviation_base), device=self.device)
@@ -391,12 +415,22 @@ class G1Env:
         self._contact_sensor_available = articulation is None
         self.action = torch.zeros_like(self.qpos)
         self.target = torch.zeros_like(self.qpos)
+        if self.cfg.max_action_delay < 0:
+            raise ValueError("max_action_delay must be nonnegative")
+        self._action_queue = torch.zeros((self.num_envs, self.cfg.max_action_delay + 1, ACT_DIM), device=self.device)
+        self._action_delay = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+        self._observation_noise = torch.zeros((self.num_envs, OBS_DIM), device=self.device)
+        self._elevation_noise_seed = 0
+        self._forced_reference = {}
         self.reference_qpos = torch.zeros_like(self.qpos)
         self.reference_qvel = torch.zeros_like(self.qvel)
         self.reference_root_pos = torch.zeros_like(self.root_pos)
         self.reference_root_quat = torch.zeros_like(self.root_quat)
         self.reference_root_lin_vel = torch.zeros_like(self.root_lin_vel)
         self.episode_length_buf = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+        self._reset_joint_rmse = torch.zeros(self.num_envs, device=self.device)
+        self._reset_height_lift = torch.zeros(self.num_envs, device=self.device)
+        self._last_termination_reasons = {}
         self._termination_elapsed = {
             "ref_deviation": torch.zeros(self.num_envs, device=self.device),
             "root_low": torch.zeros(self.num_envs, device=self.device),
@@ -428,6 +462,18 @@ class G1Env:
             from pgmt.envs.reference_sampler import MotionDatabase
             self.reference_database = MotionDatabase(self.cfg.reference_data_dir)
         if self.reference_database is not None:
+            if self.cfg.stage == 2 and self.articulation is not None:
+                if any(str(item.get("contact_source", "")) != "offline_reference_mesh_v2" for item in self.reference_database.seqs):
+                    raise ValueError("physical Stage 2 requires offline reference-mesh contact labels")
+            if self.recovery_pool is not None and getattr(self.recovery_pool, "provenance", {}):
+                names = [item["name"] for item in self.reference_database.seqs]
+                if self.recovery_pool.provenance.get("pose_fingerprint") != self.reference_database.pose_fingerprint():
+                    raise ValueError("recovery pool poses differ from the reference database")
+                if self.recovery_pool.provenance.get("sequence_names") != names:
+                    raise ValueError("recovery pool motion ordering differs from the reference database")
+                for item in self.recovery_pool._states:
+                    if not 0 <= item.seq_idx < len(names) or not 0 <= item.frame < len(self.reference_database.seqs[item.seq_idx]["qpos"]):
+                        raise ValueError("recovery pool reference index is out of range")
             if isinstance(self.reference_database, TorchMotionDatabase):
                 if self.reference_database.device != self.device:
                     raise ValueError(
@@ -452,6 +498,12 @@ class G1Env:
             raise ValueError(
                 "physics G1Env requires reference_urdf_path (or an URDF asset) "
                 "to compute body-level reference tracking")
+        self._reset_collision_floor = None
+        if self.cfg.reset_mode == "reference_state":
+            if self._reference_motion is None:
+                raise ValueError("reference_state reset requires reference data and URDF body tracking")
+            from pgmt.envs.reset_geometry import CollisionFloor
+            self._reset_collision_floor = CollisionFloor(urdf, REQUIRED_BODY_NAMES, self.device)
         self._reward_computer = BatchedRewardComputer(
             REQUIRED_BODY_NAMES, G1_JOINT_NAMES, device=self.device,
             dt=self.cfg.control_dt)
@@ -459,7 +511,7 @@ class G1Env:
         self._last_reward_metrics: dict[str, Any] = {}
         self.reset()
 
-    def _read_articulation(self):
+    def _read_articulation(self, *, update_previous=True):
         if self.articulation is None:
             if self._reference_motion is not None:
                 # Match the articulation path's finite-difference history so
@@ -476,8 +528,9 @@ class G1Env:
                 self._body_state_available = True
             return
         data = self.articulation.data
-        self._previous_root_lin_vel.copy_(self.root_lin_vel)
-        self._previous_body_lin_vel.copy_(self.body_lin_vel)
+        if update_previous:
+            self._previous_root_lin_vel.copy_(self.root_lin_vel)
+            self._previous_body_lin_vel.copy_(self.body_lin_vel)
         self.qpos.copy_(data.joint_pos[:, self.joint_ids])
         self.qvel.copy_(data.joint_vel[:, self.joint_ids])
         self.root_pos.copy_(data.root_link_pos_w)
@@ -526,6 +579,8 @@ class G1Env:
         root_rot = _quat_to_mat(self.root_quat)
         omega_base = torch.bmm(root_rot.transpose(1, 2), self.root_ang_vel.unsqueeze(-1)).squeeze(-1)
         obs = torch.cat((e6, omega_base, self.qpos, self.qvel, self.action), dim=-1)
+        if self.cfg.corrupt_observations:
+            obs = obs + self._observation_noise
         self._last_obs = {"obs": obs}
         return self._last_obs
 
@@ -554,6 +609,9 @@ class G1Env:
         privileged[:, PRIV_LAYOUT.index("base_ang_vel")] = base_ang_vel
         privileged[:, PRIV_LAYOUT.index("foot_contact_states")] = self.foot_contact.float()
         privileged[:, PRIV_LAYOUT.index("friction_coefficients")] = self.priv_friction
+        if self._terrain is not None:
+            feet = [REQUIRED_BODY_NAMES.index(n) for n in ("left_ankle_roll_link", "right_ankle_roll_link")]
+            self.priv_terrain_height.copy_(self._terrain.query(self.body_pos[:, feet, :2]))
         privileged[:, PRIV_LAYOUT.index("terrain_height_at_feet")] = self.priv_terrain_height
         privileged[:, PRIV_LAYOUT.index("base_mass_perturbation")] = self.priv_mass
         privileged[:, PRIV_LAYOUT.index("com_perturbation")] = self.priv_com
@@ -563,7 +621,8 @@ class G1Env:
         if self._terrain is not None:
             out["elevation"] = self._terrain.elevation(
                 self.root_pos, self.root_quat,
-                families=self._terrain_families, levels=self._terrain_levels)
+                families=self._terrain_families, levels=self._terrain_levels,
+                corrupt=self.cfg.corrupt_observations, noise_seed=self._elevation_noise_seed)
         return out
 
     def get_observations(self) -> dict[str, torch.Tensor]:
@@ -574,6 +633,47 @@ class G1Env:
         frame a second time.
         """
         return self._build_observations(update_history=False)
+
+    def _refresh_observation_noise(self):
+        if self.cfg.corrupt_observations:
+            sigma = np.zeros(OBS_DIM, dtype=np.float32)
+            sigma[:6], sigma[6:9], sigma[9:38], sigma[38:67] = .01, .02, .01, .1
+            self._observation_noise.copy_(torch.as_tensor(self._rng.normal(size=(self.num_envs, OBS_DIM)) * sigma, device=self.device))
+            self._elevation_noise_seed = int(self._rng.integers(2**31))
+
+    def _terrain_reset(self, ids):
+        if self._terrain is not None:
+            origins = self._terrain.origins(self._terrain_families[ids], self._terrain_levels[ids])
+            self.default_root_pos[ids, :2] = origins[:, :2]
+            self.default_root_pos[ids, 2] = self.cfg.default_root_pos[2] + self._terrain.query(origins[:, :2])
+        self.root_pos[ids] = self.default_root_pos[ids]
+        families = ("flat", "slopes", "stairs", "boxes", "rough")
+        for i in ids.tolist():
+            f, level = families[int(self._terrain_families[i])], int(self._terrain_levels[i])
+            self._termination_ref_threshold[i] = tolerance_budget(f, level)
+            self._termination_ref_delay[i] = termination_delay(TerminationReason.REF_DEVIATION, f, level)
+        if self.cfg.max_action_delay:
+            self._action_delay[ids] = torch.as_tensor(self._rng.integers(0, self.cfg.max_action_delay + 1, size=len(ids)), device=self.device)
+        self._action_queue[ids] = self.default_q[ids, None]
+        self._refresh_observation_noise()
+
+    def record_episode_outcomes(self, terminated, truncated):
+        """Called once before reset by both torch and Isaac rollouts."""
+        ids = (terminated | truncated).nonzero(as_tuple=False).flatten().tolist()
+        for i in ids:
+            failed = bool(terminated[i])
+            if self._adaptive_sampler is not None and failed:
+                self._adaptive_sampler.update(int(self.reference_seq_idx[i]), int(self.reference_start_frame[i]), failed=True)
+            if self.recovery_pool is not None:
+                if bool(self._recovery_active[i]):
+                    self.recovery_pool.record_outcome(not failed)
+                else:
+                    self.recovery_pool.record_ordinary_episode(
+                        float(self.episode_length_buf[i]) * self.cfg.control_dt,
+                        self.cfg.episode_length_s)
+            if self.terrain_curriculum is not None:
+                self.terrain_curriculum.update([i], success=not failed)
+                self._terrain_levels[i] = self.terrain_curriculum.level_of(i)
 
     def _set_reference_defaults(self, env_ids: torch.Tensor):
         self.reference_qpos[env_ids] = self.default_q[env_ids]
@@ -623,7 +723,9 @@ class G1Env:
 
     def _sample_reference(self, env_ids: torch.Tensor) -> None:
         """Sample/update reference motion for a subset of environments."""
+        self._reset_height_lift[env_ids] = 0
         if self._torch_reference is None:
+            self._terrain_reset(env_ids)
             self._set_reference_defaults(env_ids)
             if not hasattr(self, "reference_future"):
                 self.reference_future = torch.zeros((self.num_envs, 6, REF_FRAME_DIM), device=self.device)
@@ -631,6 +733,7 @@ class G1Env:
             self.reference_future[env_ids, :, ACT_DIM:2 * ACT_DIM] = self.reference_qvel[env_ids, None]
             self.reference_future[env_ids, :, 2 * ACT_DIM:] = self.reference_root_lin_vel[env_ids, None]
             return
+        self._terrain_reset(env_ids)
         recovery_mask = np.zeros(int(env_ids.numel()), dtype=bool)
         if self.recovery_pool is not None and len(self.recovery_pool):
             recovery_mask = self._rng.random(int(env_ids.numel())) < self.recovery_pool.probability
@@ -661,16 +764,43 @@ class G1Env:
         else:
             ordered_ids = env_ids
             self._recovery_active[ordered_ids] = 0.0
+        if self.cfg.stage == 2 and self.reference_database is not None:
+            from pgmt.envs.terrain.curriculum import is_compatible, motion_category
+            from pgmt.envs.terrain.generators import FAMILIES
+            for j, eid in enumerate(ordered_ids.tolist()):
+                family, level = FAMILIES[int(self._terrain_families[eid])], int(self._terrain_levels[eid])
+                allowed = [k for k, item in enumerate(self.reference_database.seqs)
+                           if is_compatible(motion_category(item["name"]), family, level)]
+                if not allowed:
+                    raise ValueError(f"no compatible motions for {family}/L{level}")
+                if int(seq[j]) not in allowed:
+                    if self._recovery_active[eid]:
+                        self._recovery_active[eid] = 0
+                        self.qpos[eid], self.qvel[eid] = self.default_q[eid], 0
+                        self.root_pos[eid], self.root_quat[eid] = self.default_root_pos[eid], self.default_root_quat[eid]
+                        self.root_lin_vel[eid], self.root_ang_vel[eid] = 0, 0
+                    for attempt in range(10000):
+                        k, t = self._adaptive_sampler.sample(self._rng) if self._adaptive_sampler else (int(self._rng.choice(allowed)), 0)
+                        if k in allowed:
+                            seq[j], frame[j] = k, t
+                            break
+                    else:
+                        raise RuntimeError("compatible reference rejection sampler exhausted")
+        for j, eid in enumerate(ordered_ids.tolist()):
+            if eid in self._forced_reference:
+                seq[j], frame[j] = self._forced_reference.pop(eid)
+                self._recovery_active[eid] = 0
         self.reference_seq_idx[ordered_ids] = seq
         self.reference_frame[ordered_ids] = frame.to(torch.float32)
-        self.reference_start_frame[ordered_ids] = frame
+        self.reference_start_frame[ordered_ids] = frame.long()
         if recovery_count:
-            self.qpos[recovery_ids] = rec["qpos"]
-            self.qvel[recovery_ids] = rec["qvel"]
-            self.root_pos[recovery_ids] = rec["root_pos"]
-            self.root_quat[recovery_ids] = rec["root_quat"]
-            self.root_lin_vel[recovery_ids] = rec["root_lin_vel"]
-            self.root_ang_vel[recovery_ids] = rec["root_ang_vel"]
+            accepted = self._recovery_active[recovery_ids].bool()
+            recovery_ids = recovery_ids[accepted]
+            for key in ("qpos", "qvel", "root_pos", "root_quat", "root_lin_vel", "root_ang_vel"):
+                getattr(self, key)[recovery_ids] = rec[key][accepted]
+            self.root_pos[recovery_ids, :2] += self.default_root_pos[recovery_ids, :2]
+            if self._terrain is not None:
+                self.root_pos[recovery_ids, 2] += self._terrain.query(self.root_pos[recovery_ids, :2])
         env_ids = ordered_ids
         # Place each sampled sequence at the simulator reset pose.  This keeps
         # the raw dataset's arbitrary world translation/heading out of the
@@ -678,17 +808,23 @@ class G1Env:
         _, _, raw_pos, raw_quat = self._torch_reference.ref_at(seq, self.reference_frame[env_ids])
         self._reference_raw_root_pos[env_ids] = raw_pos
         self._reference_raw_root_quat[env_ids] = raw_quat
-        yaw_delta = _yaw(self.root_quat[env_ids]) - _yaw(raw_quat)
+        yaw_delta = _yaw(self.default_root_quat[env_ids]) - _yaw(raw_quat)
         self._reference_placement_quat[env_ids] = _yaw_quat(yaw_delta)
         inv_place = _quat_to_mat(self._reference_placement_quat[env_ids]).transpose(1, 2)
-        desired = torch.bmm(inv_place, self.root_pos[env_ids].unsqueeze(-1)).squeeze(-1)
+        desired_root = self.root_pos[env_ids].clone()
+        desired_root[self._recovery_active[env_ids].bool()] = self.default_root_pos[env_ids][self._recovery_active[env_ids].bool()]
+        desired = torch.bmm(inv_place, desired_root.unsqueeze(-1)).squeeze(-1)
         self._reference_placement_pos[env_ids] = desired - raw_pos
         batch = self._reference_batch(
             seq, self.reference_frame[env_ids],
             placement_pos=self._reference_placement_pos[env_ids],
             placement_quat=self._reference_placement_quat[env_ids])
+        if self.cfg.reset_mode == "reference_state":
+            ordinary = ~self._recovery_active[env_ids].bool()
+            self._initialize_reference_state(env_ids[ordinary], batch, ordinary)
         self.reference_qpos[env_ids] = batch["joint_pos"] if isinstance(batch, dict) else batch.qpos
         self.reference_qvel[env_ids] = batch["joint_vel"] if isinstance(batch, dict) else batch.qvel
+        self._reset_joint_rmse[env_ids] = (self.qpos[env_ids] - self.reference_qpos[env_ids]).square().mean(-1).sqrt()
         self.reference_root_pos[env_ids] = batch["root_pos"] if isinstance(batch, dict) else batch.root_pos
         self.reference_root_quat[env_ids] = batch["root_quat"] if isinstance(batch, dict) else batch.root_rot
         local_vel = (batch["future"] if isinstance(batch, dict) else batch.future)[:, 0, -3:]
@@ -706,6 +842,57 @@ class G1Env:
             for key, value in batch.items():
                 if isinstance(value, torch.Tensor):
                     self.reference_body[key][env_ids] = value
+
+    def _initialize_reference_state(self, ids, batch, mask):
+        """Initialize ordinary episodes; pool states and caller sampling stay intact.
+
+        Keep the existing 0.793 m reference anchor, lifting only penetration
+        against the flat collision plane. Translate the entire reference by
+        the same constant; do not change pitch/roll, joint state or velocity.
+        """
+        if not len(ids):
+            return
+        q = batch["joint_pos"][mask]
+        if ((q < self.joint_low - 1e-5) | (q > self.joint_high + 1e-5)).any():
+            raise ValueError("reference reset joint position outside legal action interval")
+        minimum = self._reset_collision_floor.min_height(batch["body_pos"][mask], batch["body_quat"][mask])
+        lift = (-minimum).clamp_min(0)
+        self._reset_height_lift[ids] = lift
+        # Placement rotation is yaw-only, so world z and placement z coincide.
+        self._reference_placement_pos[ids, 2] += lift
+        batch["root_pos"][mask, 2] += lift
+        batch["body_pos"][mask, :, 2] += lift[:, None]
+        for dest, source in (("qpos", "joint_pos"), ("qvel", "joint_vel"),
+                             ("root_pos", "root_pos"), ("root_quat", "root_quat"),
+                             ("root_lin_vel", "root_lin_vel"), ("root_ang_vel", "root_ang_vel")):
+            getattr(self, dest)[ids] = batch[source][mask]
+        # Reset the command history to the initial legal position. Subsequent
+        # calls still execute their supplied action, including the first one.
+        for name in ("action", "_prev_action", "target"):
+            getattr(self, name)[ids] = q
+        self._action_queue[ids] = q[:, None]
+        self.history[ids] = 0  # no invented past observations
+        kin = self._reference_motion.kinematics(self.qpos[ids], self.qvel[ids],
+            self.root_pos[ids], self.root_quat[ids], self.root_lin_vel[ids], self.root_ang_vel[ids])
+        for name in ("body_pos", "body_quat", "body_lin_vel", "body_ang_vel"):
+            getattr(self, name)[ids] = kin[name]
+        self._previous_body_lin_vel[ids] = self.body_lin_vel[ids]
+        self._previous_root_lin_vel[ids] = self.root_lin_vel[ids]
+        self._body_state_available = True
+
+    def _write_reset_root_state(self, root_state, ids=None):
+        # Legacy Isaac API interprets linear velocity at COM. New reference
+        # states are link-frame states: use its explicit link API, preserving
+        # the existing write semantics for nominal/recovery controls.
+        if self.cfg.reset_mode == "reference_state":
+            all_ids = torch.arange(self.num_envs, device=self.device) if ids is None else ids
+            ordinary = ~self._recovery_active[all_ids].bool()
+            if ordinary.any():
+                self.articulation.write_root_link_state_to_sim(root_state[ordinary], env_ids=all_ids[ordinary])
+            if (~ordinary).any():
+                self.articulation.write_root_state_to_sim(root_state[~ordinary], env_ids=all_ids[~ordinary])
+        else:
+            self.articulation.write_root_state_to_sim(root_state, env_ids=ids)
 
     def _advance_reference(self) -> None:
         if self._torch_reference is None:
@@ -763,7 +950,7 @@ class G1Env:
             # teleporting every episode back to the nominal pose.
             root_state = torch.cat((self.root_pos, self.root_quat,
                                     self.root_lin_vel, self.root_ang_vel), dim=-1)
-            self.articulation.write_root_state_to_sim(root_state)
+            self._write_reset_root_state(root_state)
             self.articulation.write_joint_state_to_sim(self.qpos, self.qvel, joint_ids=self.joint_ids)
             self.articulation.set_joint_position_target(self.target[:, :], joint_ids=self.joint_ids)
         return self._build_observations()
@@ -803,6 +990,17 @@ class G1Env:
             "reference_raw_root_quat": self._reference_raw_root_quat.detach().cpu(),
             "rng_state": self._rng.bit_generator.state,
         }
+        state["protocol_version"] = 4
+        state["reset_mode"] = self.cfg.reset_mode
+        state["reset_height_lift"] = self._reset_height_lift.detach().cpu()
+        state["revised_buffers"] = {key: getattr(self, key).detach().cpu() for key in (
+            "default_root_pos", "_terrain_families", "_terrain_levels", "_termination_ref_threshold", "_termination_ref_delay",
+            "_action_queue", "_action_delay", "_observation_noise", "_reset_joint_rmse", "priv_friction", "priv_mass", "priv_com", "priv_push", "priv_motor_strength")}
+        state["termination_elapsed"] = {k: v.detach().cpu() for k, v in self._termination_elapsed.items()}
+        state["elevation_noise_seed"] = self._elevation_noise_seed
+        if self.terrain_curriculum is not None:
+            from dataclasses import asdict
+            state["terrain_curriculum"] = [asdict(item) for item in self.terrain_curriculum.states]
         if self.reference_body is not None:
             state["reference_body"] = {
                 key: value.detach().cpu() for key, value in self.reference_body.items()
@@ -816,6 +1014,9 @@ class G1Env:
 
     def load_state_dict(self, state: Mapping[str, Any]) -> None:
         """Restore :meth:`state_dict` after construction."""
+        if state.get("reset_mode", "nominal") != self.cfg.reset_mode:
+            raise ValueError("resume reset_mode differs")
+        self._reset_height_lift.copy_(torch.as_tensor(state.get("reset_height_lift", 0.), device=self.device))
         for key, target in (("qpos", self.qpos), ("qvel", self.qvel),
                             ("root_pos", self.root_pos), ("root_quat", self.root_quat),
                             ("root_lin_vel", self.root_lin_vel), ("root_ang_vel", self.root_ang_vel),
@@ -848,6 +1049,14 @@ class G1Env:
             if value is not None and getattr(self, attr) is not None:
                 getattr(self, attr).copy_(torch.as_tensor(value, device=self.device,
                                                           dtype=getattr(self, attr).dtype))
+        for key, value in state.get("revised_buffers", {}).items():
+            getattr(self, key).copy_(value.to(self.device))
+        for key, value in state.get("termination_elapsed", {}).items():
+            self._termination_elapsed[key].copy_(value.to(self.device))
+        self._elevation_noise_seed = int(state.get("elevation_noise_seed", 0))
+        if self.terrain_curriculum is not None and "terrain_curriculum" in state:
+            from pgmt.envs.terrain.curriculum import CurriculumState
+            self.terrain_curriculum.states = [CurriculumState(**item) for item in state["terrain_curriculum"]]
         if self._adaptive_sampler is not None and "adaptive_fails" in state:
             self._adaptive_sampler.fails = dict(state["adaptive_fails"])
             self._adaptive_sampler._invalidate_weights()
@@ -870,9 +1079,18 @@ class G1Env:
             raise ValueError(f"actions must have shape ({self.num_envs},{ACT_DIM}), got {tuple(actions.shape)}")
         if not torch.isfinite(actions).all():
             raise ValueError("actions contain NaN/Inf")
-        self.action.copy_(actions.clamp(-1.0, 1.0))
-        self.target.copy_(torch.clamp(self.default_q + self.cfg.action_scale * self.action,
-                                      self.joint_low, self.joint_high))
+        if ((actions < self.joint_low - 1e-6) | (actions > self.joint_high + 1e-6)).any():
+            raise ValueError("actions must be joint position targets within G1 joint limits")
+        first = None
+        if self.diagnostics is not None:
+            self._diagnostic_step += 1
+            first = self.diagnostics.before_action(self)
+        self.action.copy_(actions)
+        self._action_queue[:, 1:] = self._action_queue[:, :-1].clone()
+        self._action_queue[:, 0] = actions
+        self.target.copy_(self._action_queue[torch.arange(self.num_envs, device=self.device), self._action_delay])
+        if first is not None:
+            self.diagnostics.after_action(self, first)
         if self.articulation is not None:
             self.articulation.set_joint_position_target(self.target, joint_ids=self.joint_ids)
 
@@ -911,6 +1129,8 @@ class G1Env:
             }
             reference = {key: value for key, value in self.reference_body.items()
                          if isinstance(value, torch.Tensor)}
+            if self.diagnostics is not None:
+                self.diagnostics.physics(self, state, reference)
             terrain = None
             if self.cfg.stage == 2:
                 feet = torch.tensor([
@@ -966,7 +1186,9 @@ class G1Env:
             "root_ori": torch.ones(self.num_envs, device=self.device),
             "corrected_root_vel": torch.exp(-root_vel_err.square() / SIGMAS["link_lin_vel"]),
             "floating_anchor_pos": torch.exp(-anchor_err.square() / 1.0),
-            "recovery_upward_vel": torch.ones(self.num_envs, device=self.device),
+            "recovery_upward_vel": self._recovery_active * torch.exp(
+                -(float(get("A21").value.recovery_target_upward_vel) - self.root_lin_vel[:, 2]).clamp_min(0).square()
+                / float(get("A21").value.sigma_recovery_upward)),
             "pelvis_vert_accel": torch.zeros(self.num_envs, device=self.device),
             "ee_accel_mismatch": torch.zeros(self.num_envs, device=self.device),
             "action_rate": (self.action - self._prev_action).square().mean(-1),
@@ -991,7 +1213,12 @@ class G1Env:
         gravity_z = r[:, 2, 2]
         if (self._body_state_available and self.reference_body is not None
                 and isinstance(self.reference_body.get("body_pos"), torch.Tensor)):
-            body_error = (self.body_pos - self.reference_body["body_pos"]).norm(dim=-1).mean(-1)
+            # Tracking deviation uses the same coordinates and link set as
+            # the reward. Global root drift remains a separate logged error.
+            diff = self._body_tracking_difference()
+            names = self._reward_computer.upper_bodies + self._reward_computer.lower_bodies
+            indices = [self._reward_computer.bi[name] for name in names]
+            body_error = diff[:, indices].norm(dim=-1).mean(-1)
             ref_delay = self._termination_ref_delay
             ref_condition = body_error > self._termination_ref_threshold
         elif "body_pos_error" in self._last_reward_metrics:
@@ -1003,7 +1230,7 @@ class G1Env:
             ref_condition = deviation > float(term_cfg.ref_deviation_base)
         active = {
             "ref_deviation": ref_condition,
-            "root_low": self.root_pos[:, 2] < float(term_cfg.root_height_min),
+            "root_low": (self.root_pos[:, 2] - (self._terrain.query(self.root_pos[:, :2]) if self._terrain is not None else 0)) < float(term_cfg.root_height_min),
             "tilted": gravity_z < float(np.cos(np.deg2rad(term_cfg.tilt_max_deg))),
         }
         delays = {
@@ -1011,17 +1238,59 @@ class G1Env:
             "root_low": float(term_cfg.delay_s["root_low"]),
             "tilted": float(term_cfg.delay_s["tilted"]),
         }
-        fired = []
+        fired = {}
         for name, condition in active.items():
             elapsed = self._termination_elapsed[name]
             elapsed.add_(condition.to(elapsed.dtype) * self.cfg.control_dt)
             elapsed.masked_fill_(~condition, 0.0)
             delay = delays[name] if isinstance(delays[name], torch.Tensor) else float(delays[name])
-            fired.append(condition & (elapsed >= delay - 1e-7))
+            fired[name] = condition & (elapsed >= delay - 1e-7)
         # Retain a conservative high-speed guard from the fallback adapter.
-        fired.append(self.qvel.abs().amax(-1) > self.cfg.max_joint_velocity * 1.5)
-        terminated = torch.stack(fired, dim=-1).any(-1)
+        fired["joint_speed"] = self.qvel.abs().amax(-1) > self.cfg.max_joint_velocity * 1.5
+        grace = self._recovery_active.bool() & (self.episode_length_buf * self.cfg.control_dt < self.cfg.recovery_grace_s)
+        fired = {name: mask & ~grace for name, mask in fired.items()}
+        for elapsed in self._termination_elapsed.values():
+            elapsed[grace] = 0
+        if self.cfg.fall_collection:
+            fired = {name: torch.zeros_like(mask) for name, mask in fired.items()}
+        if self._terrain is not None:
+            origins = self._terrain.origins(self._terrain_families, self._terrain_levels)
+            self._terrain_out_of_bounds = ((self.root_pos[:, :2] - origins[:, :2]).abs().amax(-1)
+                                          >= self._terrain.size / 2 - .25)
+            fired["terrain_out_of_bounds"] = self._terrain_out_of_bounds.clone()
+        self._last_termination_reasons = fired
+        terminated = torch.stack(list(fired.values()), dim=-1).any(-1)
         return terminated, timeout & ~terminated
+
+    def _body_tracking_difference(self):
+        ref = self.reference_body
+        return (root_relative_body_positions(self.root_pos, self.root_quat, self.body_pos)
+                - root_relative_body_positions(ref["root_pos"], ref["root_quat"], ref["body_pos"]))
+
+    def episode_diagnostics(self):
+        """Capture before reset, including every simultaneous failure reason."""
+        out = {"episode_steps": self.episode_length_buf.clone(),
+               "episode_elapsed_s": self.episode_length_buf * self.cfg.control_dt,
+               "recovery_active": self._recovery_active.bool().clone(),
+               "reset_joint_rmse": self._reset_joint_rmse.clone(),
+               "termination_reasons": {k: v.clone() for k, v in self._last_termination_reasons.items()}}
+        if self.recovery_pool is not None:
+            out["recovery_curriculum"] = self.recovery_pool.curriculum_metrics()
+        return out
+
+    def tracking_metrics(self):
+        """Per-step metrics captured before Isaac's automatic reset."""
+        out = {"joint_mse": (self.qpos - self.reference_qpos).square().mean(-1),
+               "root_mse": (self.root_pos - self.reference_root_pos).square().mean(-1)}
+        if self.reference_body is not None:
+            ref = self.reference_body
+            # Use independent yaw-aligned root frames for body tracking.
+            out["body_mse"] = self._body_tracking_difference().square().mean((1, 2))
+            truth = ref["foot_contact"].bool()
+            pred = self.foot_contact
+            out.update(contact_tp=(pred & truth).sum(-1), contact_fp=(pred & ~truth).sum(-1),
+                       contact_fn=(~pred & truth).sum(-1))
+        return out
 
     def step(self, actions: torch.Tensor):
         self._read_articulation()
@@ -1033,25 +1302,8 @@ class G1Env:
         self._advance_reference()
         rewards = self._reward()
         terminated, truncated = self._dones()
-        if self._adaptive_sampler is not None and terminated.any():
-            for env_id in torch.nonzero(terminated, as_tuple=False).flatten().tolist():
-                self._adaptive_sampler.update(
-                    int(self.reference_seq_idx[env_id]),
-                    int(self.reference_start_frame[env_id]),
-                    failed=True)
-        if self.recovery_pool is not None and (terminated | truncated).any():
-            finished = torch.nonzero(terminated | truncated, as_tuple=False).flatten()
-            for env_id in finished.tolist():
-                if not bool(self._recovery_active[env_id]):
-                    continue
-                self.recovery_pool.record_outcome(not bool(terminated[env_id]))
-                if bool(terminated[env_id]) and self.reference_seq_idx is not None:
-                    self.recovery_pool.add(
-                        {"qpos": self.qpos[env_id], "qvel": self.qvel[env_id],
-                         "root_pos": self.root_pos[env_id], "root_quat": self.root_quat[env_id],
-                         "root_lin_vel": self.root_lin_vel[env_id], "root_ang_vel": self.root_ang_vel[env_id]},
-                        seq_idx=int(self.reference_seq_idx[env_id]),
-                        frame=float(self.reference_frame[env_id]))
+        self.record_episode_outcomes(terminated, truncated)
+        diagnostics = self.episode_diagnostics()
         terminal_observation = None
         if truncated.any():
             # Preserve the pre-reset state for PPO timeout bootstrapping.
@@ -1087,8 +1339,10 @@ class G1Env:
             for value in self._termination_elapsed.values():
                 value[ids] = 0.0
             self._sample_reference(ids)
+        self._refresh_observation_noise()
         observations = self._build_observations()
-        info: dict[str, Any] = {"episode_length": self.episode_length_buf.clone()}
+        info: dict[str, Any] = {"episode_length": self.episode_length_buf.clone(),
+                                **diagnostics}
         if terminal_observation is not None:
             info["terminal_observation"] = terminal_observation
         return observations, rewards, terminated, truncated, info
@@ -1187,7 +1441,7 @@ if _ISAACLAB_IMPORTABLE:
 
         cfg: G1DirectRLEnvCfg
 
-        def __init__(self, cfg: G1DirectRLEnvCfg, **kwargs):
+        def __init__(self, cfg: G1DirectRLEnvCfg, *, recovery_pool=None, **kwargs):
             if cfg.robot_cfg is None:
                 raise ValueError("G1DirectRLEnvCfg.robot_cfg must be set to a licensed USD/URDF")
             self._pgmt_cfg = cfg.pgmt_cfg
@@ -1203,11 +1457,19 @@ if _ISAACLAB_IMPORTABLE:
             # Keep Isaac's physics clock identical to the simulator-independent
             # contract.  Isaac Lab defaults to 1/60 s, which would otherwise
             # turn the declared 20 ms control step into 66.7 ms at decimation 4.
+            cfg.seed = self._pgmt_cfg.seed
+            cfg.episode_length_s = self._pgmt_cfg.episode_length_s
             cfg.sim.dt = self._pgmt_cfg.sim_dt
             cfg.sim.device = self._pgmt_cfg.device
             cfg.decimation = self._pgmt_cfg.decimation
+            cfg.sim.render_interval = cfg.decimation
             super().__init__(cfg, **kwargs)
-            self.core = G1Env(self._pgmt_cfg, articulation=self.robot)
+            self.core = G1Env(self._pgmt_cfg, articulation=self.robot, recovery_pool=recovery_pool)
+            from pgmt.envs.randomization import IsaacRandomizer
+            self.randomizer = IsaacRandomizer(self.robot, self.core)
+            if self._pgmt_cfg.stage == 2:
+                # Assert identical grids before any simulated rollout.
+                assert torch.equal(self._physics_terrain.heights.cpu(), self.core._terrain.heights.cpu())
             self._sync_contact_forces()
             self.last_adapter_obs = None
             reward_heads = 4 if self._pgmt_cfg.stage == 2 else 3
@@ -1218,9 +1480,20 @@ if _ISAACLAB_IMPORTABLE:
         def _setup_scene(self):
             self.robot = Articulation(self.cfg.robot_cfg)
             self.scene.articulations["robot"] = self.robot
-            _sim_utils.spawn_ground_plane("/World/ground", _sim_utils.GroundPlaneCfg())
+            if self._pgmt_cfg.stage == 2:
+                import trimesh
+                from isaaclab.terrains.utils import create_prim_from_mesh
+                self._physics_terrain = TerrainAtlas("cpu", resolution=self._pgmt_cfg.terrain_resolution,
+                                                    repeats=self._pgmt_cfg.terrain_repeats)
+                vertices, faces = self._physics_terrain.mesh()
+                create_prim_from_mesh("/World/terrain", trimesh.Trimesh(vertices, faces, process=False),
+                                      physics_material=_sim_utils.RigidBodyMaterialCfg(static_friction=1.0, dynamic_friction=1.0))
+                ground_paths = ["/World/terrain"]
+            else:
+                _sim_utils.spawn_ground_plane("/World/ground", _sim_utils.GroundPlaneCfg())
+                ground_paths = ["/World/ground"]
             self.scene.clone_environments(copy_from_source=False)
-            self.scene.filter_collisions(global_prim_paths=[])
+            self.scene.filter_collisions(global_prim_paths=ground_paths)
 
         def _sync_contact_forces(self):
             sensor = self.scene.sensors.get("contact_forces")
@@ -1273,13 +1546,17 @@ if _ISAACLAB_IMPORTABLE:
             self.core._contact_sensor_available = True
 
         def _pre_physics_step(self, actions: torch.Tensor):
+            self.core._previous_root_lin_vel.copy_(self.core.root_lin_vel)
+            self.core._previous_body_lin_vel.copy_(self.core.body_lin_vel)
+            self.core._refresh_observation_noise()
             self.core._apply_action(actions)
 
         def _apply_action(self):
             self.robot.set_joint_position_target(self.core.target, joint_ids=self.core.joint_ids)
 
         def _get_observations(self):
-            self.core._read_articulation()
+            self.core._read_articulation(update_previous=False)
+            self._sync_contact_forces()
             obs = self.core._build_observations()
             self.last_adapter_obs = {key: value.clone() for key, value in obs.items()}
             # DirectRLEnv expects a single policy tensor; training adapters can
@@ -1289,17 +1566,31 @@ if _ISAACLAB_IMPORTABLE:
         def _get_rewards(self):
             self._sync_contact_forces()
             self.core.episode_length_buf.copy_(self.episode_length_buf)
-            self.core._advance_reference()
             self.last_terminal_obs = None
             if self.reset_time_outs.any():
                 self.last_terminal_obs = {
                     key: value.clone() for key, value in self.core._build_observations(update_history=False).items()
                 }
             self.last_split_reward = self.core._reward()
+            from pgmt.rewards.spec import AUX
+            aux = self.core._last_reward_metrics.get("aux", {})
+            self.extras["weighted_aux_terms"] = {name: aux[name] * weight
+                                                  for name, weight in AUX.terms if name in aux}
+            self.extras["tracking"] = {k: v.clone() for k, v in self.core.tracking_metrics().items()}
+            self.extras["physics"] = {
+                "contact_force_max_n": self.core.contact_forces.norm(dim=-1).amax(-1),
+                "root_up_z": 1 - 2 * self.core.root_quat[:, 1:3].square().sum(-1),
+            }
+            if self.core._terrain is not None:
+                self.extras["terrain_out_of_bounds"] = self.core._terrain_out_of_bounds.clone()
+            self.core.record_episode_outcomes(self.reset_terminated, self.reset_time_outs)
+            self.extras.update(self.core.episode_diagnostics())
             return self.last_split_reward.sum(-1)
 
         def _get_dones(self):
-            self.core._read_articulation()
+            self.core._read_articulation(update_previous=False)
+            self._sync_contact_forces()
+            self.core._advance_reference()
             self.core.episode_length_buf.copy_(self.episode_length_buf)
             terminated, timeout = self.core._dones()
             return terminated, timeout
@@ -1318,11 +1609,21 @@ if _ISAACLAB_IMPORTABLE:
             self.core.target[ids] = self.core.default_q[ids]
             self.core.history[ids] = 0.0
             self.core.episode_length_buf[ids] = 0
+            for buf in self.core._termination_elapsed.values():
+                buf[ids] = 0
+            self.core.contact_forces[ids] = 0
+            self.core._previous_contact_forces[ids] = 0
+            self.core._previous_body_lin_vel[ids] = 0
+            self.core._previous_root_lin_vel[ids] = 0
+            self.core._previous_foot_contact[ids] = False
+            self.core.foot_contact[ids] = False
+            self.core._contact_age[ids] = 0
             self.core._sample_reference(ids)
+            self.randomizer.apply(ids)
             # ``DirectRLEnv._reset_idx`` resets bookkeeping and actuator
             # buffers, but it does not write a fallen articulation pose.  Use
             # the sampled nominal/recovery state for the actual simulator too.
-            self.robot.write_root_state_to_sim(torch.cat((
+            self.core._write_reset_root_state(torch.cat((
                 self.core.root_pos[ids], self.core.root_quat[ids],
                 self.core.root_lin_vel[ids], self.core.root_ang_vel[ids]), dim=-1), ids)
             self.robot.write_joint_state_to_sim(
@@ -1356,6 +1657,43 @@ class IsaacLabPPOAdapter:
     def reset(self):
         self.env.reset()
         return self.env.last_adapter_obs
+
+    def close(self):
+        self.env.close()
+
+    def state_dict(self):
+        # PhysX contact solver caches are not serializable; this preserves the
+        # policy-visible physical state and curriculum, not bitwise replay.
+        view = self.env.robot.root_physx_view
+        return {"schema": "isaac_pgmt_state_v2", "core": self.env.core.state_dict(),
+                "physics_properties": {key: getattr(view, "get_" + key)().cpu()
+                                       for key in ("masses", "inertias", "coms", "material_properties")}}
+
+    def load_state_dict(self, state):
+        if state.get("schema") != "isaac_pgmt_state_v2":
+            raise ValueError("incompatible Isaac environment state")
+        c, robot = self.env.core, self.env.robot
+        c.load_state_dict(state["core"])
+        ids = torch.arange(c.num_envs, device=c.device)
+        for key, value in state["physics_properties"].items():
+            getattr(robot.root_physx_view, "set_" + key)(value.cpu(), ids.cpu())
+        kp, kd = c.pd.kp * c.priv_motor_strength, c.pd.kd * c.priv_motor_strength
+        robot.write_joint_stiffness_to_sim(kp, joint_ids=c.joint_ids, env_ids=ids)
+        robot.write_joint_damping_to_sim(kd, joint_ids=c.joint_ids, env_ids=ids)
+        kp_runtime, kd_runtime = torch.zeros_like(kp), torch.zeros_like(kd)
+        kp_runtime[:, c.joint_ids], kd_runtime[:, c.joint_ids] = kp, kd
+        for actuator in robot.actuators.values():
+            actuator.stiffness[ids] = kp_runtime[:, actuator.joint_indices]
+            actuator.damping[ids] = kd_runtime[:, actuator.joint_indices]
+        self.env.episode_length_buf.copy_(c.episode_length_buf)
+        c._write_reset_root_state(torch.cat((c.root_pos, c.root_quat, c.root_lin_vel, c.root_ang_vel), -1), ids)
+        robot.write_joint_state_to_sim(c.qpos, c.qvel, joint_ids=c.joint_ids, env_ids=ids)
+        c.target.copy_(c._action_queue[ids, c._action_delay])
+        robot.set_joint_position_target(c.target, joint_ids=c.joint_ids)
+        self.env.last_adapter_obs = c.get_observations()
+
+    def get_observations(self):
+        return self.env.core.get_observations()
 
     def step(self, actions):
         _, _, terminated, truncated, extras = self.env.step(actions)

@@ -1,7 +1,10 @@
 """Regression tests for the simulator-independent Stage 1 training pieces."""
 
 from dataclasses import replace
+from argparse import Namespace
+import json
 
+import pytest
 import torch
 
 from pgmt.cfg.assumptions import get
@@ -89,6 +92,10 @@ class _TinyPolicy(torch.nn.Module):
     def evaluate_actions(self, observations, actions):
         return self._output(observations, actions)
 
+    def latent_distribution(self, observations):
+        n = observations["obs"].shape[0]
+        return torch.distributions.Normal(self.bias.expand(n, 29), torch.ones(n, 29))
+
 
 class _TinyEnv:
     def __init__(self, observations):
@@ -117,6 +124,9 @@ class _GaussianTinyPolicy(torch.nn.Module):
     def _dist(self, n):
         return torch.distributions.Normal(self.mean.expand(n, 29),
                                           self.log_std.exp().expand(n, 29))
+
+    def latent_distribution(self, observations):
+        return self._dist(observations["obs"].shape[0])
 
     def act(self, observations, deterministic=False):
         n = observations["obs"].shape[0]
@@ -182,3 +192,65 @@ def test_ppo_collect_and_update_with_environment_protocol():
     updated = ppo.update()
     assert updated["num_updates"] == 1
     assert torch.isfinite(torch.tensor(list(updated.values()), dtype=torch.float32)).all()
+
+
+def test_stage1_interruption_keeps_metrics_and_resumes_from_saved_update(tmp_path, monkeypatch):
+    from pgmt.train import train_stage1 as runner
+
+    monkeypatch.setattr(runner, "Stage1Policy", _TinyPolicy)
+    args = Namespace(
+        seed=0, device="cpu", dry_run=False, backend="mock", mock=True,
+        asset=None, urdf=None, reference_data=None, fall_pool=None,
+        num_envs=2, learning_epochs=1, mini_batches=1, steps_per_env=2,
+        updates=3, resume=None, checkpoint=tmp_path / "policy.pt",
+        metrics=tmp_path / "interrupted.json",
+    )
+    original_collect = PPO.collect_rollout
+
+    def interrupt_after_one_update(self, *a, **kw):
+        if self.update_count == 1:
+            raise RuntimeError("simulated interruption")
+        return original_collect(self, *a, **kw)
+
+    monkeypatch.setattr(PPO, "collect_rollout", interrupt_after_one_update)
+    with pytest.raises(RuntimeError, match="simulated interruption"):
+        runner.run(args)
+    saved = torch.load(args.checkpoint, weights_only=False)
+    metrics = json.loads(args.metrics.read_text())
+    assert saved["ppo"]["update_count"] == metrics["completed_updates"] == 1
+    assert metrics["status"] == "running"
+    assert metrics["updates"][0]["num_updates"] == 1
+    assert {"reward_upper", "reward_lower", "reward_aux", "terminations", "steps"} <= metrics["updates"][0].keys()
+
+    monkeypatch.setattr(PPO, "collect_rollout", original_collect)
+    args.resume = args.checkpoint
+    args.metrics = tmp_path / "resumed.json"
+    result = runner.run(args)
+    assert result["start_update"] == 1
+    assert result["completed_updates"] == 3
+    assert result["status"] == "completed"
+    assert result["environment_restored"] is False
+    assert [m["num_updates"] for m in result["updates"]] == [2, 3]
+    assert result["lr_schedule_updates"] == 1000
+    assert result["updates"][0]["learning_rate"] == pytest.approx(get("A6").value.learning_rate * (1 - 1 / 1000))
+    assert json.loads(args.metrics.read_text()) == result
+
+
+def test_failed_checkpoint_write_preserves_previous_file(tmp_path, monkeypatch):
+    from pgmt.train import train_stage1 as runner
+
+    ppo = PPO(_TinyPolicy())
+    args = Namespace(seed=0, mock=True, dry_run=False)
+    path = tmp_path / "policy.pt"
+    runner._save_checkpoint(path, ppo, args)
+    previous = path.read_bytes()
+
+    def broken_save(payload, stream):
+        stream.write(b"incomplete checkpoint")
+        raise OSError("simulated interrupted write")
+
+    monkeypatch.setattr(torch, "save", broken_save)
+    with pytest.raises(OSError, match="simulated interrupted write"):
+        runner._save_checkpoint(path, ppo, args)
+    assert path.read_bytes() == previous
+    assert list(tmp_path.iterdir()) == [path]

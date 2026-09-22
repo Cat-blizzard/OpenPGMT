@@ -236,7 +236,7 @@ STAGE12_SEMANTICS: Tuple[TermSemantics, ...] = (
         False, "feet_contact_forces / termination_contact",
         Corr.APPROX,
         "参照实现分'足部接触力'与'终止接触'两类；PGMT 的 undesired_contact 更接近"
-        "后者的连续化版本",
+        "后者；A21 采用超阈值部位计数，强度另由撞击项度量（非作者公开公式）",
     ),
     TermSemantics(
         "head_torso_impact", "aux",
@@ -263,10 +263,9 @@ STAGE2_SEMANTICS: Tuple[TermSemantics, ...] = (
         "参考接触标签与仿真接触的一致性（标签来自离线地形网格查询）",
         False, None,
         Corr.PGMT_SPECIFIC,
-        "论文明写接触标签由 offline terrain-mesh queries 得到；本仓库的 "
-        "`contacts` 字段改由 LAFAN1 足部位置的速度阈值生成"
-        "（data/retarget_lafan1.py 的 contact_labels），与论文口径**不同源** —— "
-        "该项数值因此有系统性偏差，报告须说明",
+        "论文明写接触标签由 offline terrain-mesh queries 得到；新版使用 "
+        "data.build_mesh_contacts 对 URDF 碰撞球和参考网格离线查询。作者未提供"
+        "参考地形资产，默认平面及 2cm 容差属于工程假设；旧启发式标签另存供比较",
     ),
     TermSemantics(
         "slip", "terrain",

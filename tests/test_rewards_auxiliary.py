@@ -164,9 +164,9 @@ def test_undesired_contact_cost_zero_when_only_allowed_bodies_touch():
 
 def test_undesired_contact_cost_counts_other_bodies_over_threshold():
     allowed = ("left_ankle_roll_link", "right_ankle_roll_link")
-    # torso 接触力 3.0，阈值 1.0 → 超出 2.0 → 4.0
+    # torso 超过阈值算一个接触，与力的幅度无关。
     got = undesired_contact_cost({"torso_link": 3.0}, allowed, threshold=1.0)
-    assert got == pytest.approx(4.0)
+    assert got == pytest.approx(1.0)
     # 未超阈值 → 0
     assert undesired_contact_cost({"torso_link": 0.5}, allowed,
                                   threshold=1.0) == pytest.approx(0.0)

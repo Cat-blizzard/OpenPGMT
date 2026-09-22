@@ -179,7 +179,9 @@ def joint_limit_cost(joint_pos: np.ndarray,
 def undesired_contact_cost(contact_forces: Mapping[str, float],
                            allowed_bodies: Sequence[str],
                            threshold: float = 0.0) -> float:
-    """非期望部位接触代价：除允许部位外，接触力超过死区的平方和 ≥ 0。
+    """非期望部位接触代价：除允许部位外，接触力超过阈值的部位数。
+
+    A21 工程定义；撞击强度由独立的 head_torso_impact 项度量。
 
     Args:
         contact_forces: {body: 法向接触力大小}
@@ -193,8 +195,7 @@ def undesired_contact_cost(contact_forces: Mapping[str, float],
     for body, f in contact_forces.items():
         if body in allowed:
             continue
-        over = max(float(f) - threshold, 0.0)
-        total += over ** 2
+        total += float(float(f) > threshold)
     return float(total)
 
 

@@ -17,6 +17,8 @@ G1_JOINT_NAMES 顺序一致（见 data/retarget_lafan1.py）。
 from __future__ import annotations
 
 import os
+import json
+import hashlib
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -53,6 +55,25 @@ class MotionDatabase:
             self.seqs.append(self._validate_sequence(d, name))
         if not self.seqs:
             raise ValueError(f"{npz_dir} 中没有 npz 序列（先跑 data.retarget_lafan1）")
+        if any(str(s.get("contact_source", "")) == "offline_reference_mesh_v2" for s in self.seqs):
+            manifest_path = os.path.join(npz_dir, "contact_manifest.json")
+            if not os.path.isfile(manifest_path):
+                raise ValueError("mesh-contact generation is incomplete: contact_manifest.json is missing")
+            with open(manifest_path) as stream:
+                manifest = json.load(stream)
+            if manifest["sequence_names"] != [s["name"] for s in self.seqs]:
+                raise ValueError("motion corpus differs from the complete mesh-contact manifest")
+
+    def pose_fingerprint(self):
+        """Bind recovery states to the exact poses and sequence ordering."""
+        digest = hashlib.sha256()
+        for seq in self.seqs:
+            digest.update(seq["name"].encode())
+            for key in ("qpos", "qvel", "root_pos", "root_rot", "frame_time"):
+                value = np.asarray(seq[key])
+                digest.update(str((value.shape, value.dtype)).encode())
+                digest.update(value.tobytes())
+        return digest.hexdigest()
 
     @classmethod
     def from_sequences(cls, sequences: List[Dict[str, np.ndarray]],

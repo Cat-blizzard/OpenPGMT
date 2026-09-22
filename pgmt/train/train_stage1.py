@@ -12,8 +12,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
-from dataclasses import replace
+import tempfile
+from contextlib import contextmanager
+from dataclasses import replace, asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -24,6 +28,8 @@ from pgmt.cfg.assumptions import dump as dump_assumptions, get
 from pgmt.contracts import ACT_DIM, HISTORY_LEN, OBS_DIM, REF_FRAME_DIM
 from pgmt.envs.observations import PRIV_DIM
 from pgmt.envs.g1_env import G1Env, G1EnvConfig
+from pgmt.envs.actuators import ACTUATOR_PROFILES, actuator_options, validate_actuator_resume
+from pgmt.train.diagnostics import attach_diagnostics
 from pgmt.envs.reference_sampler import MotionDatabase
 from pgmt.envs.recovery import FallRecoveryPool
 from pgmt.train.policy import Stage1Policy
@@ -55,11 +61,41 @@ def _json_default(value):
     raise TypeError(f"cannot serialize metrics value of type {type(value).__name__}")
 
 
+@contextmanager
+def _atomic_output(path: Path):
+    """Keep the last complete artifact if serialization is interrupted."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w+b", dir=path.parent,
+                                     prefix=f".{path.name}.", suffix=".tmp",
+                                     delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            yield stream
+            stream.flush()
+            os.fsync(stream.fileno())
+            stream.close()
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
 def _write_metrics(path: Path | None, result: dict) -> None:
     if path is not None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(result, ensure_ascii=False, indent=2,
-                                   default=_json_default) + "\n", encoding="utf-8")
+        encoded = (json.dumps(result, ensure_ascii=False, indent=2,
+                              default=_json_default) + "\n").encode("utf-8")
+        with _atomic_output(Path(path)) as stream:
+            stream.write(encoded)
+
+
+def _lr_schedule_horizon(stop_update, requested=None, checkpoint=None):
+    saved = None if checkpoint is None else checkpoint.get("ppo", checkpoint)
+    if requested is None:
+        requested = saved["total_updates"] if saved is not None else get("A6").value.lr_schedule_updates
+    if requested is None or requested <= 0 or stop_update > requested:
+        raise ValueError("lr schedule horizon must be positive and cover --updates")
+    if saved is not None and requested != saved["total_updates"]:
+        raise ValueError("resume must preserve the checkpoint learning-rate schedule")
+    return requested
 
 
 class MockStage1Env:
@@ -94,7 +130,7 @@ class MockStage1Env:
             "root_ori": torch.ones(n, device=self.device),
             "corrected_root_vel": torch.ones(n, device=self.device),
             "floating_anchor_pos": torch.ones(n, device=self.device),
-            "recovery_upward_vel": torch.ones(n, device=self.device),
+            "recovery_upward_vel": torch.zeros(n, device=self.device),
             "pelvis_vert_accel": torch.zeros(n, device=self.device),
             "ee_accel_mismatch": torch.zeros(n, device=self.device),
             "action_rate": action.square().mean(-1),
@@ -128,7 +164,8 @@ def build_env(num_envs: int, device: torch.device, *, mock: bool = False,
               reference_data: str | None = None, asset_path: str | None = None,
               reference_urdf: str | None = None,
               fall_pool: FallRecoveryPool | None = None,
-              backend: str = "torch", app=None):
+              backend: str = "torch", app=None, env_options=None):
+    env_options = dict(env_options or {})
     if backend not in {"mock", "torch", "isaaclab"}:
         raise ValueError(f"unknown backend: {backend}")
     if backend == "mock" or mock:
@@ -145,12 +182,12 @@ def build_env(num_envs: int, device: torch.device, *, mock: bool = False,
             raise RuntimeError("Isaac Lab modules were not available after AppLauncher startup")
         pgmt_cfg = G1EnvConfig(num_envs=num_envs, device=str(device), asset_path=asset_path,
                                reference_data_dir=reference_data,
-                               reference_urdf_path=reference_urdf)
+                               reference_urdf_path=reference_urdf, **env_options)
         robot_cfg = g1_module.make_g1_articulation_cfg(asset_path, pgmt_cfg)
         cfg = g1_module.G1DirectRLEnvCfg(robot_cfg=robot_cfg, pgmt_cfg=pgmt_cfg)
         cfg.scene.num_envs = num_envs
         cfg.scene.env_spacing = 2.5
-        return g1_module.IsaacLabPPOAdapter(g1_module.IsaacLabG1Env(cfg))
+        return g1_module.IsaacLabPPOAdapter(g1_module.IsaacLabG1Env(cfg, recovery_pool=fall_pool))
     if asset_path:
         path = Path(asset_path).expanduser()
         if not path.is_file():
@@ -164,7 +201,7 @@ def build_env(num_envs: int, device: torch.device, *, mock: bool = False,
     database = MotionDatabase(reference_data) if reference_data else None
     return G1Env(G1EnvConfig(num_envs=num_envs, device=str(device), asset_path=asset_path,
                              reference_data_dir=reference_data,
-                             reference_urdf_path=reference_urdf, stage=1),
+                             reference_urdf_path=reference_urdf, **env_options),
                  reference_database=database, recovery_pool=fall_pool)
 
 
@@ -176,39 +213,47 @@ def run(args: argparse.Namespace) -> dict:
         args.num_envs = min(args.num_envs, 2)
     app = None
     env = None
+    backend = "mock" if args.mock or args.dry_run else args.backend
+    pool = _load_fall_pool(args.fall_pool) if args.fall_pool else None
     try:
-        if args.backend == "isaaclab":
+        if backend == "isaaclab" and pool is None:
+            raise ValueError("physical Stage 1 requires --fall-pool; collect an offline pool first")
+        if backend == "isaaclab":
             if not args.asset or not args.urdf or not args.reference_data:
                 raise ValueError("--backend isaaclab requires --asset, --urdf, and --reference-data")
-            from isaaclab.app import AppLauncher
-            app = AppLauncher(
-                headless=True, device=str(device), multi_gpu=False,
-                kit_args=(
-                    "--/renderer/multiGpu/enabled=False "
-                    "--/renderer/multiGpu/autoEnable=False "
-                    "--/renderer/multiGpu/maxGpuCount=1"
-                ),
-            ).app
-        backend = "mock" if args.mock or args.dry_run else args.backend
-        pool = _load_fall_pool(args.fall_pool) if args.fall_pool else None
+            from pgmt.envs.isaac_app import launch_isaac_app
+            app = launch_isaac_app(device)
         env = build_env(args.num_envs, device, mock=False, backend=backend,
                         reference_data=args.reference_data, asset_path=args.asset,
-                        reference_urdf=args.urdf, fall_pool=pool, app=app)
+                        reference_urdf=args.urdf, fall_pool=pool, app=app,
+                        env_options={"seed": args.seed, "randomize_dynamics": True,
+                                     "corrupt_observations": True, "max_action_delay": 2,
+                                     **actuator_options(getattr(args, "actuator_profile", "asset_effort_v1"))})
+        diagnostics = attach_diagnostics(env, getattr(args, "diagnostics_dir", None))
         if (args.learning_epochs is not None and args.learning_epochs <= 0) or (
                 args.mini_batches is not None and args.mini_batches <= 0):
             raise ValueError("--learning-epochs and --mini-batches must be positive")
         base = get("A6").value
+        state = torch.load(args.resume, map_location=device, weights_only=False) if args.resume else None
+        if state is not None and backend != "mock":
+            core = getattr(getattr(env, "env", env), "core", env)
+            validate_actuator_resume(state, core.cfg)
+        schedule = _lr_schedule_horizon(args.updates, getattr(args, "lr_schedule_updates", None), state)
+        complete_critic = getattr(args, "critic_completion", None)
+        if complete_critic is None and state is not None:
+            complete_critic = state.get("ppo", state)["config"]["complete_critic_epochs"]
         learning_epochs = base.num_learning_epochs if args.learning_epochs is None else args.learning_epochs
         mini_batches = base.num_mini_batches if args.mini_batches is None else args.mini_batches
         config = replace(base,
                          num_steps_per_env=args.steps_per_env,
                          num_learning_epochs=learning_epochs,
+                         lr_schedule_updates=schedule,
+                         complete_critic_epochs=base.complete_critic_epochs if complete_critic is None else complete_critic,
                          num_mini_batches=min(mini_batches, args.steps_per_env * args.num_envs))
         policy = Stage1Policy().to(device)
-        ppo = PPO(policy, config=config, total_updates=args.updates)
+        ppo = PPO(policy, config=config, total_updates=schedule, diagnostics=diagnostics)
         restored_env = False
         if args.resume:
-            state = torch.load(args.resume, map_location=device, weights_only=False)
             ppo.load_state_dict(state["ppo"] if "ppo" in state else state)
             if ppo.update_count > args.updates:
                 raise ValueError(
@@ -233,17 +278,44 @@ def run(args: argparse.Namespace) -> dict:
         else:
             observations = env.reset()
         all_metrics = []
+        result = {
+            "updates": all_metrics,
+            "checkpoint": None if args.checkpoint is None else str(args.checkpoint),
+            "device": str(device), "backend": backend,
+            "status": "running", "start_update": ppo.update_count,
+            "completed_updates": ppo.update_count, "target_updates": args.updates,
+            "resume": None if args.resume is None else str(args.resume),
+            "environment_restored": restored_env,
+            "lr_schedule_updates": schedule, "critic_completion": config.complete_critic_epochs,
+            "started_at": datetime.now(timezone.utc).isoformat(),
+        }
+        metrics_path = getattr(args, "metrics", None)
+        _write_metrics(metrics_path, result)
+        print(json.dumps({key: value for key, value in result.items() if key != "updates"}),
+              flush=True)
+        initial_checkpoint = getattr(args, "initial_checkpoint", None)
+        if initial_checkpoint is not None:
+            if args.resume or ppo.update_count:
+                raise ValueError("--initial-checkpoint is only valid for a fresh run")
+            if Path(initial_checkpoint).exists():
+                raise FileExistsError(initial_checkpoint)
+            _save_checkpoint(Path(initial_checkpoint), ppo, args, env=env)
         for _ in range(args.updates - ppo.update_count):
             observations, collected = ppo.collect_rollout(env, observations)
             metrics = ppo.update()
-            metrics.update({"reward_mean": collected["reward_mean"], "timeouts": collected["timeouts"]})
+            metrics.update(collected)
+            metrics["timestamp"] = datetime.now(timezone.utc).isoformat()
             all_metrics.append(metrics)
             if args.checkpoint:
                 _save_checkpoint(Path(args.checkpoint), ppo, args, env=env)
+            result["completed_updates"] = ppo.update_count
+            _write_metrics(metrics_path, result)
+            print(json.dumps({"event": "update", **metrics}, default=_json_default), flush=True)
         if args.checkpoint and not all_metrics:
             _save_checkpoint(Path(args.checkpoint), ppo, args, env=env)
-        result = {"updates": all_metrics, "checkpoint": None if args.checkpoint is None else str(args.checkpoint), "device": str(device), "backend": backend}
-        _write_metrics(getattr(args, "metrics", None), result)
+        result["status"] = "completed"
+        result["finished_at"] = datetime.now(timezone.utc).isoformat()
+        _write_metrics(metrics_path, result)
         return result
     except BaseException:
         # Print before Kit shutdown: Isaac Sim can swallow an otherwise
@@ -263,19 +335,25 @@ def run(args: argparse.Namespace) -> dict:
 
 
 def _load_fall_pool(path: str) -> FallRecoveryPool:
-    payload = torch.load(path, map_location="cpu", weights_only=False)
-    if not isinstance(payload, FallRecoveryPool):
-        raise TypeError("--fall-pool must point to a serialized FallRecoveryPool")
-    return payload
+    from pgmt.envs.recovery import load_fall_pool
+    return load_fall_pool(path)
 
 
 def _save_checkpoint(path: Path, ppo: PPO, args: argparse.Namespace, *, env=None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"ppo": ppo.state_dict(), "assumptions": dump_assumptions(),
-               "runner": {"seed": args.seed, "mock": bool(args.mock or args.dry_run)}}
+               "runner": {"seed": args.seed, "stage": 1,
+                          "backend": "mock" if args.mock or args.dry_run else getattr(args, "backend", "torch"),
+                          "mock": bool(args.mock or args.dry_run or getattr(args, "backend", "") == "mock")}}
+    core = getattr(getattr(env, "env", env), "core", env)
+    if core is not None and hasattr(core, "cfg"):
+        from pgmt.envs.randomization import RANDOMIZATION_SPEC
+        payload["environment_config"] = asdict(core.cfg)
+        payload["randomization_spec"] = RANDOMIZATION_SPEC
     if env is not None and hasattr(env, "state_dict"):
         payload["env"] = env.state_dict()
-    torch.save(payload, path)
+    with _atomic_output(path) as stream:
+        torch.save(payload, stream)
 
 
 def main(argv=None):
@@ -286,19 +364,27 @@ def main(argv=None):
     parser.add_argument("--backend", choices=("torch", "mock", "isaaclab"), default="torch")
     parser.add_argument("--num-envs", type=int, default=4)
     parser.add_argument("--steps-per-env", type=int, default=24)
-    parser.add_argument("--updates", type=int, default=1)
+    parser.add_argument("--updates", type=int, default=1, help="absolute stopping update for this invocation")
+    parser.add_argument("--lr-schedule-updates", type=int,
+                        help="full LR schedule horizon (default A6=1000; on resume inherit checkpoint)")
+    parser.add_argument("--critic-completion", action=argparse.BooleanOptionalAction, default=None,
+                        help="complete remaining value steps with only private critic parameters")
     parser.add_argument("--learning-epochs", type=int, default=None,
                         help="PPO learning epochs per update (default: A6 assumption)")
     parser.add_argument("--mini-batches", type=int, default=None,
                         help="PPO minibatches per epoch (default: A6 assumption)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--checkpoint", type=Path)
-    parser.add_argument("--metrics", type=Path, help="write final training metrics as JSON")
+    parser.add_argument("--initial-checkpoint", type=Path, help="optional fresh policy snapshot for matched learning diagnostics")
+    parser.add_argument("--metrics", type=Path, help="save this invocation's training metrics after every update")
     parser.add_argument("--resume", type=Path)
     parser.add_argument("--reference-data", type=str, help="directory of retargeted G1 NPZ reference motions")
     parser.add_argument("--asset", type=str, help="licensed local G1 USD/URDF path (validated, not copied)")
     parser.add_argument("--urdf", help="licensed local G1 URDF used for reference FK; may be paired with --asset USD")
     parser.add_argument("--fall-pool", help="serialized FallRecoveryPool; omitted means recovery is disabled")
+    parser.add_argument("--actuator-profile", choices=ACTUATOR_PROFILES, default="asset_effort_v1",
+                        help="effort-only correction, or explicit v4 limit control; kp/kd unchanged")
+    parser.add_argument("--diagnostics-dir", type=Path, help="opt-in bounded anomaly snapshots for CPU replay")
     args = parser.parse_args(argv)
     if args.updates <= 0 or args.steps_per_env <= 0:
         parser.error("--updates and --steps-per-env must be positive")

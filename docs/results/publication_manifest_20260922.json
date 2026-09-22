@@ -1,0 +1,87 @@
+{
+  "date": "2026-09-22",
+  "artifacts": {
+    "stability_v3_20260921.png": {
+      "source": "runs/stability_v3_20260921_16env20upd/training_metrics.png",
+      "source_sha256": "43b7df840c585d60d019f859d2afebec0534d9b323919900943fa8ad5e8942a9",
+      "transform": "byte-identical copy",
+      "published_sha256": "43b7df840c585d60d019f859d2afebec0534d9b323919900943fa8ad5e8942a9"
+    },
+    "curriculum_v4_20260921.png": {
+      "source": "runs/curriculum_v4_20260921/learning_curves.png",
+      "source_sha256": "c489fa687af8fb29d1688a62200826aba00cb3b337f6844d1e19a04664c8c219",
+      "transform": "byte-identical copy",
+      "published_sha256": "c489fa687af8fb29d1688a62200826aba00cb3b337f6844d1e19a04664c8c219"
+    },
+    "actuator_comparison_20260922.png": {
+      "source": "runs/actuator_physics_20260922/comparison.png",
+      "source_sha256": "c42e7f296f04e44a1f16c030f009528cdf042481fcd7f4d7ad00078851d30a2c",
+      "transform": "byte-identical copy",
+      "published_sha256": "c42e7f296f04e44a1f16c030f009528cdf042481fcd7f4d7ad00078851d30a2c"
+    },
+    "actuator_comparison_20260922.csv": {
+      "source": "runs/actuator_physics_20260922/paired_results.csv",
+      "source_sha256": "2fce00243264d4da8ba0ba3d71acc14a79ff9f667d7aff1a6c7f20247f724bb3",
+      "transform": "CSV CRLF normalized to LF; fields unchanged",
+      "published_sha256": "6e1be87c84f3a14f48f9c64d8445bb60ab1d43ccaaecc8899915093dacd2cb78"
+    },
+    "reset_comparison_20260922.png": {
+      "source": "runs/reset_physics_20260922/comparison.png",
+      "source_sha256": "ae13bf18bf9c326e56e2d3d90281f20b056b18ae960fc4df0225cd38bafd9c9d",
+      "transform": "byte-identical copy",
+      "published_sha256": "ae13bf18bf9c326e56e2d3d90281f20b056b18ae960fc4df0225cd38bafd9c9d"
+    },
+    "reset_episodes_20260922.csv": {
+      "source": "runs/reset_physics_20260922/paired_episodes.csv",
+      "source_sha256": "fcec3aca81fe598237a57182585e474b336d7ad836461da9ae765c5b99382909",
+      "transform": "CSV CRLF normalized to LF; fields unchanged",
+      "published_sha256": "e074e126031351b8b3353b485896edfd45033351d4647b13b1e1ec5daca7e50d"
+    },
+    "reset_validation_20260922.json": {
+      "source": "runs/reset_physics_20260922/validation_status.json",
+      "source_sha256": "009238864c4897cc4ec92f088379dafdc9a3b19be81ea852e2169d1de9c72c6b",
+      "transform": "byte-identical copy",
+      "published_sha256": "009238864c4897cc4ec92f088379dafdc9a3b19be81ea852e2169d1de9c72c6b"
+    },
+    "curriculum_v4_20260921.json": {
+      "source": "runs/curriculum_v4_20260921/training_summary.json",
+      "source_sha256": "8a0366097c5e262f47166a6bb3cd809ac778ca241fbfcb9db440d7ab9e76162c",
+      "transform": {
+        "select_top_level_keys": [
+          "training",
+          "matched_eval",
+          "scope"
+        ]
+      },
+      "published_sha256": "900ff6d9ef29d1db3e9ff89fe28a3a58653c372be715f11f70c870034a2ec89d"
+    },
+    "actuator_comparison_20260922.json": {
+      "source": "runs/actuator_physics_20260922/summary.json",
+      "source_sha256": "ee84c0f03da458d93dac1ead022a93830e1501364f76ff9b0998cb1b589d69b1",
+      "transform": {
+        "select_top_level_keys": [
+          "scope",
+          "groups",
+          "completed_runs",
+          "unpaired_completed_runs"
+        ]
+      },
+      "published_sha256": "d7ef03b8a75bafbcf73f58d2677a128c9d75eb00ebfbd6121599fb56c4851206"
+    },
+    "reset_comparison_20260922.json": {
+      "source": "runs/reset_physics_20260922/summary.json",
+      "source_sha256": "f242026b8df688407e8cb1cb8f221a96489c53eeba1d18c24e8cbda461f3bb5f",
+      "transform": {
+        "select_top_level_keys": [
+          "scope",
+          "candidate",
+          "seeds",
+          "groups",
+          "completed_runs",
+          "unpaired_completed_runs"
+        ]
+      },
+      "published_sha256": "221da4912767aeb9d76579605132c8bd79089211e8017905d569cd437cb4f7b4"
+    }
+  }
+}

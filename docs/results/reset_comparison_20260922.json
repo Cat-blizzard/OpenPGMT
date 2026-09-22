@@ -1,0 +1,121 @@
+{
+  "scope": "ordinary reference PD playback, no learning; first episodes only, 3-second censoring",
+  "candidate": "reference joint/root pose+velocity, complete command buffers, upward-only collision clearance",
+  "seeds": [
+    17,
+    18,
+    19
+  ],
+  "groups": {
+    "nominal": {
+      "seed_summary": {
+        "mean_observed_first_episode_s": {
+          "mean": 1.1316666666666666,
+          "sample_sd": 0.14011899704655803,
+          "values": [
+            1.2449999999999999,
+            0.9749999999999999,
+            1.1749999999999998
+          ]
+        },
+        "common_joint_rmse_rad": {
+          "mean": 0.1453741685299305,
+          "sample_sd": 0.00968549855199854,
+          "values": [
+            0.1409338751376999,
+            0.1387048985891707,
+            0.1564837318629208
+          ]
+        },
+        "common_body_rmse_m": {
+          "mean": 0.10033358551247547,
+          "sample_sd": 0.015767069599807924,
+          "values": [
+            0.08273157372937519,
+            0.11316291235150314,
+            0.10510627045654809
+          ]
+        },
+        "first_step_peak_state_ee_accel_m_s2": {
+          "mean": 124.45609488264415,
+          "sample_sd": 29.217720066120133,
+          "values": [
+            92.21697468093907,
+            149.1869564140104,
+            131.964353552983
+          ]
+        },
+        "common_p95_ee_error_m_s2": {
+          "mean": 66.3060365095282,
+          "sample_sd": 3.3632076621369955,
+          "values": [
+            62.534633179981654,
+            68.99395602069417,
+            67.38952032790876
+          ]
+        }
+      },
+      "first_episode_failures": 12,
+      "censored_at_3s": 0,
+      "first_episode_count": 12,
+      "overspeed_transitions": 0,
+      "max_joint_speed_rad_s": 36.99908447265625
+    },
+    "candidate": {
+      "seed_summary": {
+        "mean_observed_first_episode_s": {
+          "mean": 0.93,
+          "sample_sd": 0.06500000000000009,
+          "values": [
+            0.8899999999999999,
+            1.0050000000000001,
+            0.895
+          ]
+        },
+        "common_joint_rmse_rad": {
+          "mean": 0.10966497070335586,
+          "sample_sd": 0.011004148597533842,
+          "values": [
+            0.11858089661249545,
+            0.09736666430964669,
+            0.1130473511879255
+          ]
+        },
+        "common_body_rmse_m": {
+          "mean": 0.10381442301443516,
+          "sample_sd": 0.018644119476320192,
+          "values": [
+            0.11891272042381729,
+            0.08297489235320554,
+            0.10955565626628266
+          ]
+        },
+        "first_step_peak_state_ee_accel_m_s2": {
+          "mean": 42.58608395611484,
+          "sample_sd": 20.28191536033376,
+          "values": [
+            45.91253826287499,
+            20.846574353224348,
+            60.999139252245186
+          ]
+        },
+        "common_p95_ee_error_m_s2": {
+          "mean": 28.90684445551393,
+          "sample_sd": 14.592787088505776,
+          "values": [
+            29.72436023539955,
+            13.922484143280323,
+            43.07368898786192
+          ]
+        }
+      },
+      "first_episode_failures": 12,
+      "censored_at_3s": 0,
+      "first_episode_count": 12,
+      "overspeed_transitions": 0,
+      "max_joint_speed_rad_s": 17.961971282958984
+    }
+  },
+  "completed_runs": 6,
+  "unpaired_completed_runs": 0
+}

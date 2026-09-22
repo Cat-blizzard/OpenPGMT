@@ -51,6 +51,9 @@ class ModelScale:
 class MlpDims:
     actor: tuple = (512, 256, 128)
     critic: tuple = (512, 256, 128)
+    # Physical pilot: start near the zero-joint reset pose, with small logits.
+    actor_init_noise_std: float = 0.1
+    actor_output_weight_scale: float = 0.01
 
 
 @dataclass(frozen=True)
@@ -64,12 +67,21 @@ class PPOCfg:
     clip_param: float = 0.2
     gamma: float = 0.99
     lam: float = 0.95
-    learning_rate: float = 1e-3  # 递减
+    learning_rate: float = 1e-4  # 递减；2026-09-21 物理对照后修订
     num_steps_per_env: int = 24
     num_learning_epochs: int = 5
     num_mini_batches: int = 4
     entropy_coef: float = 0.01
     max_grad_norm: float = 1.0
+    normalize_value_loss: bool = True
+    value_scale_floor: float = 1.0
+    target_kl: float | None = 0.02
+    kl_stop_fraction: float = 0.9
+    max_kl_backtracks: int = 8
+    kl_chunk_size: int = 256
+    # Optional controlled value fitting after the shared PPO update stops.
+    complete_critic_epochs: bool = False
+    lr_schedule_updates: int = 1000
 
 
 @dataclass(frozen=True)
@@ -139,12 +151,20 @@ class PrivilegedObs:
 
 @dataclass(frozen=True)
 class FallPool:
-    """A10：摔倒状态池。termination 时刻记录 [观测, 参考上下文]。"""
+    """A10：离线物理跌倒池；普通 episode 生存表现驱动渐进课程。
+
+    使用普通 episode 的 duration/horizon 窗口均值，至少 20 集后每 20 集
+    复核，概率向 init+(max-init)*均值移动，每次变化最多 0.02。
+    这是 PGMT 未公开公式的工程补全；恢复失败只统计、不直接升难度。
+    """
 
     capacity: int = 2048
     init_prob: float = 0.1  # 课程初始：以池初始化 episode 的比例
     prob_max: float = 0.5  # 随 episode 生存率渐进提高到该上限
     survival_window: int = 100  # 生存率滑动窗口（episode 数）
+    min_ordinary_episodes: int = 20
+    curriculum_interval: int = 20
+    probability_max_step: float = 0.02
 
 
 @dataclass(frozen=True)
@@ -301,6 +321,8 @@ class TerminationCfg:
         高难度地形上终止被**延迟**
 
     论文**未写的**（本假设负责拍定）：
+      - 身体参考偏差沿用奖励的 root/yaw 局部坐标与链接集合（v4）；
+        世界坐标根位置误差单独记录，不混入身体姿态偏差阈值
       - 具体有哪些触发条件 → 取三类：参考偏差超容忍区 / 基座过低 / 姿态倾斜过度
       - 容忍区的大小 → 取基准值 + **复用 A12 松弛预算 τ**（使"奖励不罚"与
         "不终止"口径一致，这正是 Fig.2 把两者并列的缘由）
@@ -335,14 +357,15 @@ class AuxCfg:
         → 用与跟踪组相同的高斯核 `exp(−e²/σ)`
       - **6 个惩罚项**（权重 < 0）：`pelvis_vert_accel` / `ee_accel_mismatch` /
         `action_rate` / `joint_limit` / `undesired_contact` / `head_torso_impact`
-        → 返回非负平方代价，负号仅由 Table I 权重携带
+        → 返回非负代价，负号仅由 Table I 权重携带
 
     论文未说明各惩罚的**度量方式**与**阈值**，故集中于此：
       - `pelvis_vert_accel`：取加速度**平方**（0 处可导、量纲一致）
       - `ee_accel_mismatch`：取与**参考**比（而非与上一帧比）—— 属 A18 体系里
         标为 UNRESOLVED 的一项，依据不足
       - `joint_limit`：取**越界量的平方**（界内为 0）—— 软约束而非"偏好中位"
-      - `undesired_contact`：除允许部位外的接触力超过死区的平方和
+      - `undesired_contact`：除允许部位外，接触力超过阈值的部位数量；
+        力平方会压过恢复奖励，已由 2026-09-21 物理诊断修订，非作者公开公式
       - `head_torso_impact`：⚠️ **论文完全未说"撞击"如何度量**，取"接触力超过
         阈值的部分"仅为连通组合项；`semantics.py` 中该项标为 UNRESOLVED，
         **不得据此声称已复现**
@@ -441,11 +464,11 @@ ASSUMPTIONS: Dict[str, Assumption] = {
     "A3": Assumption("A3", "model_scale", ModelScale(),
                      "token 维度/头数按 OmniH2O/HOVER 规模"),
     "A4": Assumption("A4", "actor_critic_mlp", MlpDims(),
-                     "同 A3；actor 与 critic 同规模"),
+                     "同 A3；actor 与 critic 同规模；初始化按 2026-09-21 物理对照缩小末层和探索"),
     "A5": Assumption("A5", "rope", RoPECfg(),
                      "RoPE 维度 64 = 4 头 × 16/头，常规设置"),
     "A6": Assumption("A6", "ppo", PPOCfg(),
-                     "按 rsl-rl 惯例（legged 系默认超参）"),
+                     "基础 PPO + 2026-09-21 物理对照：lr=1e-4，逐头价值损失缩放，整批 KL 约束"),
     "A7": Assumption("A7", "terrain_difficulty", TerrainDifficulty(),
                      "论文未给难度数值；端点对齐真机 37 cm 上限（boxes L9=40 cm）"),
     "A8": Assumption("A8", "elevation_noise", ElevationNoise(),
@@ -453,7 +476,7 @@ ASSUMPTIONS: Dict[str, Assumption] = {
     "A9": Assumption("A9", "privileged_obs", PrivilegedObs(),
                      "论文未列出；取 Isaac Gym 标准特权观测集"),
     "A10": Assumption("A10", "fall_pool", FallPool(),
-                     "沿 RGMT 思路：termination 时刻入池，生存率课程渐进提高池初始化比例"),
+                     "离线真实跌倒池；普通 episode 归一化生存时间驱动、有样本门槛和变化限幅的课程"),
     "A11": Assumption("A11", "compatibility_rules", CompatibilityRules(),
                      "论文只说是粗规则；实现为运动特征分类器 + 族/难度排除表"),
     "A12": Assumption("A12", "relaxation", Relaxation(),

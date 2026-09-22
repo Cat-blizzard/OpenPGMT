@@ -4,8 +4,8 @@ a_t = MLP_A([o_t, s_int_t])
 
 拼接当前 proprioception 与 motion-intent token：s_int 提供状态条件的
 运动意图，o_t 保留瞬时反馈供精细控制。输出 29 维关节位置目标，
-经环境层 PD 控制器转力矩。模块只输出 MLP logits；tanh 缩放与
-动作 scale 由环境/训练层负责（M2）。
+经环境层 PD 控制器转力矩。模块只输出 MLP logits；策略包装层负责
+tanh/affine 关节范围映射，环境直接执行合法的绝对关节目标。
 """
 
 from __future__ import annotations

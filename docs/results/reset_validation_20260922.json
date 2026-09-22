@@ -1,0 +1,31 @@
+{
+  "status": "completed",
+  "completed_utc": "2026-09-22T03:29:41.257550+00:00",
+  "full_cpu_regression": {
+    "passed": 813,
+    "skipped": 2
+  },
+  "analysis_cpu_checks": {
+    "passed": 6
+  },
+  "physics_runs_completed": 6,
+  "physics_rollout_transitions": 3600,
+  "seed_pairs": [
+    17,
+    18,
+    19
+  ],
+  "direct_physx_reset_readback": {
+    "cases": 12,
+    "physics_steps": 0,
+    "max_abs_error": 5.960464477539063e-08,
+    "status": "completed"
+  },
+  "prior_nominal_150_step_trajectories_reproduced_bitwise": true,
+  "paired_reference_accelerations_equal": true,
+  "production_source_matches_all_runs": true,
+  "gpu_workers_remaining": [],
+  "ppo_started": false,
+  "deferred_evaluation_started": false,
+  "source_snapshot_sha256": "de2bf42ec332d104d03f3a8b29531390938058ce5cf8b523e835e8082a8bf086"
+}

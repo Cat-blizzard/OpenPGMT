@@ -1,8 +1,4 @@
-"""Stage 1 的完整高斯策略：共享历史/意图编码器、Actor 和三头价值网络。
-
-策略采样的是未缩放的关节动作，log probability 也始终对应这个随机变量。
-动作到 PD 目标的确定性变换由环境负责，不能把缩放/裁剪后的动作写回 PPO。
-"""
+"""Bounded joint-target policies; PPO stores pre-tanh samples explicitly."""
 
 from __future__ import annotations
 
@@ -12,8 +8,11 @@ from typing import Dict, NamedTuple
 import torch
 from torch import nn
 from torch.distributions import Normal
+from torch.nn import functional as F
+from data.retarget_lafan1 import G1_JOINT_NAMES, G1_JOINT_LIMITS
 
 from pgmt.contracts import ACT_DIM
+from pgmt.cfg.assumptions import get
 from pgmt.envs.observations import PRIV_DIM
 from pgmt.policy.actor import Actor
 from pgmt.policy.history_encoder import HistoryEncoder
@@ -28,19 +27,85 @@ class PolicyOutput(NamedTuple):
     log_probs: torch.Tensor
     values: torch.Tensor
     entropy: torch.Tensor
+    latent_actions: torch.Tensor | None = None
 
 
-class Stage1Policy(nn.Module):
+class BoundedJointPolicy(nn.Module):
+    action_contract = "joint_targets_tanh_v2"
+
+    def _init_bounds(self):
+        limits = torch.tensor([G1_JOINT_LIMITS[n] for n in G1_JOINT_NAMES])
+        self.register_buffer("action_mid", limits.mean(-1))
+        self.register_buffer("action_half_range", (limits[:, 1] - limits[:, 0]) / 2)
+
+    def _target(self, latent):
+        return self.action_mid + self.action_half_range * latent.tanh()
+
+    def _init_actor_targets(self, initial_joint_targets=None):
+        # The standard G1 reset has all joints at zero. Preserve absolute
+        # target semantics while centering a fresh policy on that posture.
+        targets = (torch.zeros_like(self.action_mid) if initial_joint_targets is None
+                   else torch.as_tensor(initial_joint_targets, dtype=self.action_mid.dtype))
+        normalized = (targets - self.action_mid) / self.action_half_range
+        if targets.shape != (ACT_DIM,) or not torch.isfinite(normalized).all() or (normalized.abs() >= 1).any():
+            raise ValueError("initial joint targets must be strictly inside joint limits")
+        with torch.no_grad():
+            self.actor.mlp.net[-1].weight.mul_(get("A4").value.actor_output_weight_scale)
+            self.actor.mlp.net[-1].bias.copy_(torch.atanh(normalized))
+
+    def latent_distribution(self, observations):
+        """Untransformed Normal; its analytic KL equals the bounded policy KL."""
+        return self._distribution_and_values(observations)[0]
+
+    @torch.no_grad()
+    def detached_critic_inputs(self, observations):
+        """Freeze shared features only during optional extra value fitting."""
+        return observations["privileged"].detach(), self._intent(observations).detach()
+
+    def _log_prob(self, distribution, latent):
+        # Stable even when tanh(latent) rounds to +/-1 in float32.
+        log_jacobian = self.action_half_range.log() + 2 * (math.log(2) - latent - F.softplus(-2 * latent))
+        return (distribution.log_prob(latent) - log_jacobian).sum(-1)
+
+    def _output(self, distribution, values, latent, actions=None):
+        actions = self._target(latent) if actions is None else actions
+        # Entropy of the transformed distribution, estimated with a fresh
+        # reparameterized sample (never the old rollout actions).
+        entropy = -self._log_prob(distribution, distribution.rsample())
+        return PolicyOutput(actions, self._log_prob(distribution, latent), values, entropy, latent)
+
+    def act(self, observations, deterministic=False):
+        distribution, values = self._distribution_and_values(observations)
+        latent = distribution.mean if deterministic else distribution.sample()
+        return self._output(distribution, values, latent)
+
+    def evaluate_actions(self, observations, actions, *, latent_actions=None):
+        distribution, values = self._distribution_and_values(observations)
+        if latent_actions is None:
+            normalized = (actions - self.action_mid) / self.action_half_range
+            if (normalized.abs() >= 1).any():
+                raise ValueError("saturated joint targets require saved latent_actions")
+            latent_actions = torch.atanh(normalized)
+        elif not torch.allclose(actions, self._target(latent_actions), atol=2e-6, rtol=1e-6):
+            raise ValueError("saved latent_actions do not reproduce the executed targets")
+        return self._output(distribution, values, latent_actions, actions)
+
+
+class Stage1Policy(BoundedJointPolicy):
     """接受 ``obs/history/future/privileged`` 字典，价值列序为 upper/lower/aux。
 
     ``log_std`` 是每个关节独立、与状态无关的可训练探索尺度。
-    ``forward`` 返回确定性均值；``act`` 采样；``evaluate_actions`` 用于 PPO。
+    ``forward`` 返回 latent 均值映射后的确定性目标；``act`` 采样；``evaluate_actions`` 用于 PPO。
     """
 
     head_names = HEAD_ORDER_STAGE1
 
-    def __init__(self, priv_dim: int = PRIV_DIM, init_noise_std: float = 1.0):
+    def __init__(self, priv_dim: int = PRIV_DIM, init_noise_std: float | None = None,
+                 initial_joint_targets=None, neutral_init: bool = True):
         super().__init__()
+        self._init_bounds()
+        if init_noise_std is None:
+            init_noise_std = get("A4").value.actor_init_noise_std
         if not math.isfinite(init_noise_std) or init_noise_std <= 0:
             raise ValueError("init_noise_std must be finite and positive")
         self.history_encoder = HistoryEncoder()
@@ -48,13 +113,15 @@ class Stage1Policy(nn.Module):
         self.actor = Actor()
         self.critic = MultiHeadCritic(priv_dim=priv_dim, head_names=self.head_names)
         self.log_std = nn.Parameter(torch.full((ACT_DIM,), math.log(init_noise_std)))
+        if neutral_init:
+            self._init_actor_targets(initial_joint_targets)
 
     def _intent(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
         history = self.history_encoder(observations["obs"], observations["history"])
         return self.ifm(history, observations["future"])
 
     def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
-        return self.actor(observations["obs"], self._intent(observations))
+        return self._target(self.actor(observations["obs"], self._intent(observations)))
 
     def value(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
         return self.critic(observations["privileged"], self._intent(observations))
@@ -62,25 +129,13 @@ class Stage1Policy(nn.Module):
     def _distribution_and_values(self, observations):
         intent = self._intent(observations)
         mean = self.actor(observations["obs"], intent)
-        distribution = Normal(mean, self.log_std.exp().expand_as(mean))
+        distribution = Normal(mean, self.log_std.clamp(-5, 1).exp().expand_as(mean))
         values = self.critic(observations["privileged"], intent)
         return distribution, values
 
-    def act(self, observations: Dict[str, torch.Tensor],
-            deterministic: bool = False) -> PolicyOutput:
-        distribution, values = self._distribution_and_values(observations)
-        actions = distribution.mean if deterministic else distribution.sample()
-        return PolicyOutput(actions, distribution.log_prob(actions).sum(-1), values,
-                            distribution.entropy().sum(-1))
-
-    def evaluate_actions(self, observations: Dict[str, torch.Tensor],
-                         actions: torch.Tensor) -> PolicyOutput:
-        distribution, values = self._distribution_and_values(observations)
-        return PolicyOutput(actions, distribution.log_prob(actions).sum(-1), values,
-                            distribution.entropy().sum(-1))
 
 
-class Stage2Policy(nn.Module):
+class Stage2Policy(BoundedJointPolicy):
     """Perception-injected policy from Sec. IV-B of the paper.
 
     The history encoder, IFM, actor and critic backbone are initialized from a
@@ -92,8 +147,12 @@ class Stage2Policy(nn.Module):
 
     head_names = HEAD_ORDER_STAGE2
 
-    def __init__(self, priv_dim: int = PRIV_DIM, init_noise_std: float = 1.0):
+    def __init__(self, priv_dim: int = PRIV_DIM, init_noise_std: float | None = None,
+                 initial_joint_targets=None, neutral_init: bool = True):
         super().__init__()
+        self._init_bounds()
+        if init_noise_std is None:
+            init_noise_std = get("A4").value.actor_init_noise_std
         if not math.isfinite(init_noise_std) or init_noise_std <= 0:
             raise ValueError("init_noise_std must be finite and positive")
         self.history_encoder = HistoryEncoder()
@@ -102,6 +161,8 @@ class Stage2Policy(nn.Module):
         self.actor = Actor()
         self.critic = MultiHeadCritic(priv_dim=priv_dim, head_names=self.head_names)
         self.log_std = nn.Parameter(torch.full((ACT_DIM,), math.log(init_noise_std)))
+        if neutral_init:
+            self._init_actor_targets(initial_joint_targets)
 
     @classmethod
     def from_stage1(cls, source: Stage1Policy, *, priv_dim: int | None = None) -> "Stage2Policy":
@@ -119,7 +180,7 @@ class Stage2Policy(nn.Module):
         # The shared policy modules and actor/log_std have identical keys.
         own = self.state_dict()
         required_prefixes = ("history_encoder.", "ifm.", "actor.",
-                             "critic.backbone.", "log_std")
+                             "critic.backbone.", "log_std", "action_mid", "action_half_range")
         required = [key for key in own
                     if any(key.startswith(prefix) for prefix in required_prefixes)]
         missing = [key for key in required if key not in state]
@@ -156,7 +217,7 @@ class Stage2Policy(nn.Module):
         return self.ifm(history, observations["future"], z_terrain=z)
 
     def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
-        return self.actor(observations["obs"], self._intent(observations))
+        return self._target(self.actor(observations["obs"], self._intent(observations)))
 
     def value(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
         return self.critic(observations["privileged"], self._intent(observations))
@@ -164,18 +225,6 @@ class Stage2Policy(nn.Module):
     def _distribution_and_values(self, observations):
         intent = self._intent(observations)
         mean = self.actor(observations["obs"], intent)
-        distribution = Normal(mean, self.log_std.exp().expand_as(mean))
+        distribution = Normal(mean, self.log_std.clamp(-5, 1).exp().expand_as(mean))
         values = self.critic(observations["privileged"], intent)
         return distribution, values
-
-    def act(self, observations: Dict[str, torch.Tensor], deterministic: bool = False) -> PolicyOutput:
-        distribution, values = self._distribution_and_values(observations)
-        actions = distribution.mean if deterministic else distribution.sample()
-        return PolicyOutput(actions, distribution.log_prob(actions).sum(-1), values,
-                            distribution.entropy().sum(-1))
-
-    def evaluate_actions(self, observations: Dict[str, torch.Tensor],
-                         actions: torch.Tensor) -> PolicyOutput:
-        distribution, values = self._distribution_and_values(observations)
-        return PolicyOutput(actions, distribution.log_prob(actions).sum(-1), values,
-                            distribution.entropy().sum(-1))

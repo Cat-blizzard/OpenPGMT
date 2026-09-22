@@ -11,9 +11,23 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态: **M1 / M1.5 / M2.0 / M2.0b / M3 代码闭环完成**；G1 资产静态验收、29-DoF 映射、PD/参考动作/批量奖励适配器和 Stage 1 PPO 入口已接入。GPU 9 已通过 CUDA Torch、USD 运行时映射（29 个关节）、Isaac Lab 箱体物理和一次最小真实 G1 Stage 1 PPO 更新；Stage 1/2 训练入口支持 `--metrics` JSON 落盘。多卡服务器上的 CUDA P2P/IOMMU 输出已完成归因和单卡参数处理，但主机 IOMMU 探测告警仍可能出现；它不阻止已验证的单卡物理运行，Stage 2 地形物理接入仍待完成。
+- 当前状态（2026-09-22）: **旧的 842-update Stage 1 已归档，不再续跑**。v4 的 16 环境 × 20 更新开/关对照，以及三个种子的 64 环境 × 200 更新均已完成。平均 KL 受控、critic 拟合改善；控制行为仍未通过验收，末段普通 episode 平均仅 1.18 秒，恢复尚未成功，且少数 recovery 状态的 KL 尾部仍需排查。后续执行器与 reset 物理对照见下文。本任务 GPU 占用已释放，最终策略评估按用户要求后置。**尚未进入正式扩规模训练**。见 [v4 实验报告](docs/curriculum_critic_20260921.md)、[v3 复验报告](docs/stability_validation_20260921.md)及[物理接口验收](docs/physics_validation_20260921.md)。
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
+
+2026-09-22：完成 URDF/USD 执行器 CPU 审查，将新运行的默认力矩上限从统一 120 Nm
+改为资产对应的逐关节限值，接入限量异常快照和 KL 的 CPU 重放。806 项回归通过、2 项跳过。
+随后完成 8 场小规模物理对照：新上限在 PhysX 中生效，首步冲击降低，但存活与跟踪未改善。
+本任务 GPU 已释放，新的 PPO 与后置评估尚未启动。见[物理对照结果](docs/actuator_physics_20260922.md)
+及[执行器与诊断记录](docs/actuator_diagnostics_20260922.md)。
+
+同日完成固定新上限的 6 场 reset 对照：参考初始化使首步冲击降低约 66%、关节 RMSE 降低
+约 25%，但平均首次时长从 1.13 s 降至 0.93 s，两组均 12/12 提前终止。保留默认 reset，
+候选以显式开关保存；813 项 CPU 回归通过、2 项跳过。本任务 GPU 已释放，尚未启动新的 PPO。
+见[reset 对照报告](docs/reset_physics_20260922.md)。
+
+GitHub 可直接查看[实验图表与汇总数据](docs/results/README.md)；后续安排见
+[下一阶段计划](docs/next_steps_20260922.md)。原始逐步日志、检查点和完整实验源码快照保留在服务器。
 
 ## 仓库结构
 
@@ -33,9 +47,10 @@ pgmt/rewards/     spec.py（Table I 权重 + Eq.10 松弛 + 值域守卫）✅
                   tracking / auxiliary / terrain_contact（Table I 的 28 项残差）✅
 pgmt/train/       Stage 1 策略包装、多头 PPO、rollout 存储与批量 PD/参考/奖励适配器
 data/             ✅ LAFAN1 下载 + BVH 解析 + 重定向 + IK 精修 + 质量评估 + 奖励尺度探针
-eval/             基准评估与消融（M5，未实现）；eval/viz/ 为 M1.5 可视化
+pgmt/eval/        固定 episode 清单与 Isaac 匹配评估器（新路径待物理验收）
+eval/             manifests/ 固定清单；viz/ 为 M1.5 可视化；消融待完成
 baselines/        RGMT-Reimpl（M6，尽力而为）
-tests/            764 个测试（约 55 个需真实数据，缺失时自动 skip）
+tests/            接口、奖励、数据与新版训练协议回归（外部资源缺失时部分 skip）
 ```
 
 **不纳入版本控制**（体积大 / 许可约束，需自行生成）：`data/raw/lafan1/`（LAFAN1 原始 BVH）、
@@ -134,6 +149,12 @@ pip install --force-reinstall --no-deps 'warp-lang==1.12.1'
 
 ### CUDA P2P / IOMMU 告警处置
 
+**2026-09-21 本机状态更新**：GPU 0 故障会使未隔离的 CUDA 初始化失败。本轮已经
+使用 GPU UUID 隔离及显式 Vulkan 映射完成物理验证，具体参数见
+[物理验收记录](docs/physics_validation_20260921.md#运行环境与本轮代码调整)。下述未隔离方式
+是故障发生前的记录，不能直接套用到当前机器；本轮可重放命令保存在各 run 的
+`manifest.json` 和 `run.sh` 中。
+
 这台 10 卡服务器启用了 IOMMU，Isaac Sim 的 `carb.cudainterop` 会在启动时对可见的
 物理卡做 P2P 带宽/延迟探测，并可能打印 `cudaErrorTooManyPeers`。Stage 1/2 和冒烟入口
 都显式使用 `multi_gpu=False`、关闭渲染多 GPU，并设置 `renderer.multiGpu.maxGpuCount=1`；
@@ -186,14 +207,14 @@ PD、参考动作和三头批量奖励均走 `G1Env`）：
 ```bash
 CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage1 \
   --backend torch --device cuda:0 --num-envs 256 --steps-per-env 24 --updates 1000 \
-  --reference-data data/processed/lafan1_g1_anchored \
+  --reference-data data/processed/lafan1_g1_mesh_v2 \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
   --checkpoint runs/stage1_g1.pt
 ```
 
 `--backend torch` 现在使用 URDF FK、真实 body-level tracking residual、PD、A13
 位置修正和批量 PPO；它不包含刚体动力学。`--backend isaaclab` 会强制要求
-`--asset`、`--urdf` 和 `--reference-data`，不会静默退回 torch。`--dry-run` 或
+`--asset`、`--urdf`、`--reference-data` 和物理采集的 `--fall-pool`，不会静默退回 torch。`--dry-run` 或
 `--backend mock` 可在无 GPU/无 Isaac Sim 时验证协议、超时 bootstrap 和 checkpoint。
 
 Stage 2 的协议路径也已接通（21×21 elevation、Terrain Glimpse、terrain-contact
@@ -201,13 +222,18 @@ Stage 2 的协议路径也已接通（21×21 elevation、Terrain Glimpse、terra
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python -m pgmt.train.train_stage2 --backend torch --device cuda:0 \
-  --reference-data data/processed/lafan1_g1_anchored \
+  --reference-data data/processed/lafan1_g1_mesh_v2 \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
+  --stage1-checkpoint runs/stage1_g1.pt \
   --num-envs 4 --steps-per-env 24 --updates 1
 ```
 
-`--updates` 表示本次训练的**总迭代目标**；从 checkpoint 恢复时只运行剩余迭代，
-不会重新 reset 环境或重复已完成的 PPO 更新。checkpoint 同时保存 Torch 环境的
+`--updates` 表示本次训练的**绝对停止迭代**；`--lr-schedule-updates` 独立指定完整
+学习率日程（默认 1000），续跑必须继承原日程。短试验不会将学习率提前衰减至零。
+`--critic-completion` 可启用达到 actor KL 预算后的 critic 独立补充更新，默认关闭；
+其调度和课程公式属于论文未公开细节的工程假设，详见 v4 报告。
+从 checkpoint 恢复时只运行剩余迭代，
+不会重复已完成的 PPO 更新。新版 checkpoint 保存环境可见状态与课程，但 PhysX 内部缓存不保证逐比特复演。checkpoint 同时保存环境的
 参考帧、观测历史、接触历史、恢复池和自适应采样状态。
 
 真实 Isaac Lab Stage 1 训练需要显式指定 USD、URDF、参考数据和物理卡；`--metrics` 可把最终更新和设备信息写到 JSON，避免 Kit 关闭时终端结果被吞掉：
@@ -217,7 +243,7 @@ python -m pgmt.train.train_stage1 --backend isaaclab --device cuda:9 \
   --num-envs 256 --steps-per-env 24 --updates 1000 \
   --asset /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd \
   --urdf /data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf \
-  --reference-data data/processed/lafan1_g1_anchored \
+  --reference-data data/processed/lafan1_g1_mesh_v2 \
   --checkpoint runs/stage1_g1_isaaclab.pt \
   --metrics runs/stage1_g1_isaaclab.metrics.json
 ```
@@ -236,35 +262,29 @@ fallback 加速度历史、超时边界和物理 reset 写回等接口问题。`
 
 ## 接下来做什么
 
-按以下顺序推进，避免把协议测试误当成物理训练结果：
+新版详细操作顺序见 [`docs/alignment_20260921.md`](docs/alignment_20260921.md)：
+先验收物理 fall pool 采集、Stage 1 smoke 和五地形 Stage 2 smoke，再从零开始新的
+Stage 1。旧 842-update 结果只作归档，不进入新训练或 Stage 2。
 
-1. **M0 运行时验收**：从仓库根目录执行 `setup/check_g1_asset.py`，再用
-   `setup/probe_g1_isaaclab.py --device cuda:9` 读取 USD，确认运行时的 29 个关节、29 个执行器和 body 顺序。
-2. **物理冒烟**：在目标 GPU 上运行 `setup/smoke_test_isaaclab.py --device cuda:9 --steps 20`；如果采用
-   Isaac Gym PP4，则按上面的决策树先检查包和 PhysX 架构。
-3. **Stage 1 物理训练**：最小真实 G1 PPO 更新已经通过；接下来扩大并行环境和迭代数，使用 `--metrics` 记录首个稳定 checkpoint、奖励分组、终止原因和 GPU/吞吐，同时保留同配置的 `--backend torch` 结果作为接口回归基线。
-4. **Stage 2 物理接入**：把同一批 terrain atlas 高度场注入 Isaac Lab 碰撞场景，验证接触传感器、
-   21×21 elevation、terrain-contact 六项奖励和四头 critic。
-5. **M5 评估**：Stage 1/2 稳定后再跑 5 个地形族 × 10 个难度的 matched episodes 和消融，最后补 Table II、Fig. 3/4 与 RGMT 对比。
-
-当前 `pytest`、Torch FK/PD/reward 和最小 PPO 更新只证明代码接口闭环；箱体冒烟只证明 Isaac Lab 基础物理可启动，仍不证明 G1 刚体动力学或论文指标已经复现。
+`setup/run_revised.sh` 每次只执行显式选择的一个步骤，不会自动启动下一阶段。
+CPU mock/torch 检查不能代替物理接触和训练收敛验收。
 
 ## 假设清单
 
 论文未公开的超参集中在 [`pgmt/cfg/assumptions.py`](pgmt/cfg/assumptions.py)（A1–**A22**），训练启动时 `dump()` 写入运行日志，最终报告逐项对照说明偏差。
 
-- **A17（数据过滤）已改判（2026-09-20）**：原"ground 类重定向退化"的裁定依据被推翻；论文证据（"retaining uniform coverage of the **full motion dataset**"、遥操作含 lying down、全文无任何数据过滤表述）支持**保留全部 77 序列**。原病根是 `retarget()` 的垂直锚定假设"足是最低接触点"——躺地（锚到最像站立的帧，参考悬浮 0.42–0.49 m）与跨障（髋低于足，参考压入地面至踝 −0.286 m）两类动作失效。已修复为**两段式 v2 锚定**：① `retarget()` 源侧按"全序列全身最低体点触地"；② `_finalize` 在 IK 后按 G1 自身 FK 最低体点做刚体 z 校正（IK 目标随 root 刚体移动，残差与 qpos 不变；最低体点为踝时锚到静止踝高 0.036，否则锚到 0）。全集已重生成于 `data/processed/lafan1_g1_anchored`（验收零违例），训练以此为唯一参考集；旧 `lafan1_g1_continuous`（42 序列、来历无记录）废弃。
+- **A17（数据过滤）已改判（2026-09-20）**：原"ground 类重定向退化"的裁定依据被推翻；论文证据（"retaining uniform coverage of the **full motion dataset**"、遥操作含 lying down、全文无任何数据过滤表述）支持**保留全部 77 序列**。原病根是 `retarget()` 的垂直锚定假设"足是最低接触点"——躺地（锚到最像站立的帧，参考悬浮 0.42–0.49 m）与跨障（髋低于足，参考压入地面至踝 −0.286 m）两类动作失效。已修复为**两段式 v2 锚定**：① `retarget()` 源侧按"全序列全身最低体点触地"；② `_finalize` 在 IK 后按 G1 自身 FK 最低体点做刚体 z 校正（IK 目标随 root 刚体移动，残差与 qpos 不变；最低体点为踝时锚到静止踝高 0.036，否则锚到 0）。全集已重生成于 `data/processed/lafan1_g1_anchored`（验收零违例），新版训练使用其轨迹不变、接触标签重建的 `lafan1_g1_mesh_v2`；旧 `lafan1_g1_continuous`（42 序列、来历无记录）废弃。
 - **A18（奖励实现）**：Table I 的逐项权重与 Eq.10 的松弛形式**照搬论文**（见 `pgmt/rewards/spec.py`，并有逐字对照的回归测试）。论文未写出的部分：核函数取 **`exp(−e²/σ)`（高斯式，误差平方）**，依据是 PGMT 明示继承的 tracking 实现（OmniH2O 奖励表 `exp(−0.5‖p−p̂‖²)` 与其配置注释 `exp(-error^2/sigma)`）；σ 取值见 `spec.SIGMAS`。
   - `python -m data.probe_reward_scales` 用真实参考运动暴露量纲错误、给出各 σ 的响应区；**但它量的是参考运动幅度而非跟踪误差，不能用来验证 σ 已标定正确** —— 最终标定须等训练时读到实际误差分布，详见 `复现方案.md` §M2.0b。
   - `pgmt/rewards/semantics.py` 是 Table I 逐项语义对照表（28 条，标注与参照实现的对应关系：identical / approx / PGMT-specific / **待定 4 项**）。待定项为 `head_torso_impact`、`ee_accel_mismatch`、`floating_anchor_pos`、`ta_link_ori` —— 论文或参照实现未给出足够依据，现已按 A18/A21 的显式假设实现，但参照依据仍待核对。标注纪律由测试强制：note 里出现"未确认/未见/未验证"等措辞时只能标待定。
 - **A19–A22（M3 / M2 新增）**：`A19` tile 规格（边长 / 留白 / 级数）、`A20` 终止条件与容忍区、`A21` auxiliary 组 10 项的度量与阈值、`A22` terrain-contact 组 6 项的度量与阈值（仅 Stage 2）。后两者论文**只给项名与权重**（Table I 里 terrain-contact 那一段连公式都没有），度量方式全部属本仓库拍定，各项依据强度分级写在对应 dataclass 的 docstring 里。
 - **奖励项的符号约定**：Table I 中所有项的值**恒 ≥ 0**，正负完全由权重携带（负权重即惩罚项）。`RewardGroup.sum` 在运行时拒绝负值与 NaN —— 惩罚项若自身返回负值，与负权重相乘会变成**正贡献**（惩罚反转成奖励），这类错误在训练曲线上只表现为"学出怪行为"，极难定位。
-- **一处已知的数据源差异**：`reference_contact_match` 的参考接触标签，论文取自 offline terrain-mesh queries，本仓库取 LAFAN1 足部位置的**速度阈值**（`data/retarget_lafan1.py`）。两者不同源，该项数值有系统性偏差。
+- **参考接触标签（2026-09-21）**：新版 `data.build_mesh_contacts` 使用 URDF 碰撞球与显式参考网格离线查询。作者参考地形未公开，当前使用 z=0 平面参考网格及 2cm 容差，仍属工程假设；也可输入外部高度场。原足速阈值标签保留以供比较。
 
 ## 数据管线产物
 
 - `data/raw/lafan1/*.bvh` — 77 个源序列。**不纳入版本控制**，用 `data/download_lafan1.sh` 获取
-- `data/processed/lafan1_g1_anchored/*.npz` — **77 个 v2 锚定精修序列（当前正式训练参考集）**。
+- `data/processed/lafan1_g1_anchored/*.npz` — **77 个 v2 锚定精修序列（新版 mesh-contact 数据的输入）**。
   **不纳入版本控制**（体积 + LAFAN1 衍生数据许可），用 `python -m data.retarget_lafan1
   --out-dir data/processed/lafan1_g1_anchored` 生成
 - `data/processed/quality_report_anchored.csv` — 当前管线的质量报告（拟合 14.80 / 留出 12.67cm）

@@ -1,0 +1,211 @@
+{
+  "scope": "first episodes only, 3-second diagnostic budget; censored durations are not 30-second success",
+  "groups": {
+    "neutral": {
+      "seeds": [
+        17
+      ],
+      "legacy": {
+        "seed_summary": {
+          "mean_first_episode_s": {
+            "mean": 1.48,
+            "sample_sd": null,
+            "values": [
+              1.48
+            ]
+          },
+          "common_joint_rmse_rad": {
+            "mean": 0.506641726683764,
+            "sample_sd": null,
+            "values": [
+              0.506641726683764
+            ]
+          },
+          "common_body_rmse_m": {
+            "mean": 0.12753326099969586,
+            "sample_sd": null,
+            "values": [
+              0.12753326099969586
+            ]
+          },
+          "first_step_peak_state_ee_accel_m_s2": {
+            "mean": 7.158516525724795,
+            "sample_sd": null,
+            "values": [
+              7.158516525724795
+            ]
+          },
+          "common_p95_ee_error_m_s2": {
+            "mean": 18.176451111841565,
+            "sample_sd": null,
+            "values": [
+              18.176451111841565
+            ]
+          }
+        },
+        "first_episode_failures": 4,
+        "first_episode_count": 4,
+        "overspeed_transitions": 0,
+        "max_joint_speed_rad_s": 2.7909224033355713
+      },
+      "candidate": {
+        "seed_summary": {
+          "mean_first_episode_s": {
+            "mean": 1.48,
+            "sample_sd": null,
+            "values": [
+              1.48
+            ]
+          },
+          "common_joint_rmse_rad": {
+            "mean": 0.506641726683764,
+            "sample_sd": null,
+            "values": [
+              0.506641726683764
+            ]
+          },
+          "common_body_rmse_m": {
+            "mean": 0.12753326099969586,
+            "sample_sd": null,
+            "values": [
+              0.12753326099969586
+            ]
+          },
+          "first_step_peak_state_ee_accel_m_s2": {
+            "mean": 7.158516525724795,
+            "sample_sd": null,
+            "values": [
+              7.158516525724795
+            ]
+          },
+          "common_p95_ee_error_m_s2": {
+            "mean": 18.176451111841565,
+            "sample_sd": null,
+            "values": [
+              18.176451111841565
+            ]
+          }
+        },
+        "first_episode_failures": 4,
+        "first_episode_count": 4,
+        "overspeed_transitions": 0,
+        "max_joint_speed_rad_s": 2.7909224033355713
+      }
+    },
+    "reference": {
+      "seeds": [
+        17,
+        18,
+        19
+      ],
+      "legacy": {
+        "seed_summary": {
+          "mean_first_episode_s": {
+            "mean": 1.1583333333333334,
+            "sample_sd": 0.1387743972544407,
+            "values": [
+              1.285,
+              1.01,
+              1.1800000000000002
+            ]
+          },
+          "common_joint_rmse_rad": {
+            "mean": 0.13734267027270342,
+            "sample_sd": 0.01132112215851379,
+            "values": [
+              0.12913744100574065,
+              0.13263202975071442,
+              0.15025854006165518
+            ]
+          },
+          "common_body_rmse_m": {
+            "mean": 0.11130334532533832,
+            "sample_sd": 0.012753951695287395,
+            "values": [
+              0.09869499239548654,
+              0.11101697089197446,
+              0.12419807268855396
+            ]
+          },
+          "first_step_peak_state_ee_accel_m_s2": {
+            "mean": 266.7395242965311,
+            "sample_sd": 53.14776692608575,
+            "values": [
+              205.61580312034275,
+              292.54710666272626,
+              302.05566310652426
+            ]
+          },
+          "common_p95_ee_error_m_s2": {
+            "mean": 65.23857195639675,
+            "sample_sd": 10.528459902142018,
+            "values": [
+              53.08903344215106,
+              70.93917102609457,
+              71.68751140094464
+            ]
+          }
+        },
+        "first_episode_failures": 12,
+        "first_episode_count": 12,
+        "overspeed_transitions": 0,
+        "max_joint_speed_rad_s": 36.929542541503906
+      },
+      "candidate": {
+        "seed_summary": {
+          "mean_first_episode_s": {
+            "mean": 1.1316666666666666,
+            "sample_sd": 0.14011899704655803,
+            "values": [
+              1.2449999999999999,
+              0.9749999999999999,
+              1.1749999999999998
+            ]
+          },
+          "common_joint_rmse_rad": {
+            "mean": 0.14400526633670377,
+            "sample_sd": 0.012908458212665343,
+            "values": [
+              0.13528662958218385,
+              0.1378947555231327,
+              0.1588344139047948
+            ]
+          },
+          "common_body_rmse_m": {
+            "mean": 0.11628957548485945,
+            "sample_sd": 0.011940634713235091,
+            "values": [
+              0.10436125311116108,
+              0.1162649887752982,
+              0.12824248456811904
+            ]
+          },
+          "first_step_peak_state_ee_accel_m_s2": {
+            "mean": 124.45609488264415,
+            "sample_sd": 29.217720066120133,
+            "values": [
+              92.21697468093907,
+              149.1869564140104,
+              131.964353552983
+            ]
+          },
+          "common_p95_ee_error_m_s2": {
+            "mean": 61.48290086119304,
+            "sample_sd": 9.057955822188488,
+            "values": [
+              51.192488574805076,
+              68.24894780743803,
+              65.00726620133602
+            ]
+          }
+        },
+        "first_episode_failures": 12,
+        "first_episode_count": 12,
+        "overspeed_transitions": 0,
+        "max_joint_speed_rad_s": 36.99908447265625
+      }
+    }
+  },
+  "completed_runs": 8,
+  "unpaired_completed_runs": 0
+}

@@ -11,8 +11,9 @@ this checker with paths into that checkout to produce an auditable manifest::
       --json /tmp/g1_asset_manifest.json
 
 USD inspection is intentionally conservative.  A USD file is reported as a
-candidate and its file hash is recorded; joint-level inspection needs an
-Isaac-Sim process (the normal environment does not expose ``pxr`` directly).
+candidate and its file hash is recorded. For joint-level CPU inspection with
+``pxr`` available, use ``python -m setup.audit_g1_actuators``. Neither checker
+starts Isaac Sim; simulator readback remains a separate physical check.
 """
 
 from __future__ import annotations
@@ -204,7 +205,7 @@ def analyze_usd(path: str | os.PathLike[str]) -> dict[str, Any]:
         with p.open("rb") as f:
             result["magic"] = f.read(8).decode("ascii", errors="replace")
         result["checks"] = {"usd_file_present": True, "joint_mapping_inspected": False}
-        result["note"] = "Binary USD joint mapping requires Isaac Sim/pxr; use the runtime probe before training."
+        result["note"] = "Use setup.audit_g1_actuators with pxr for CPU joint inspection, then verify PhysX readback separately."
     else:
         result["checks"] = {"usd_file_present": False, "joint_mapping_inspected": False}
     return result

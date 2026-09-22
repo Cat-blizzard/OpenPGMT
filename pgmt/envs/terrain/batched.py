@@ -14,10 +14,14 @@ from pgmt.envs.terrain.generators import FAMILIES, TILE_SIZE, params_for, sample
 
 
 class TerrainAtlas:
-    def __init__(self, device="cpu", stage=2, resolution=.025):
+    def __init__(self, device="cpu", stage=2, resolution=.025, repeats=1):
         self.device = torch.device(device)
         self.stage = stage
-        self.size = TILE_SIZE
+        if repeats < 1 or int(repeats) != repeats:
+            raise ValueError("repeats must be a positive integer")
+        self.repeats = int(repeats)
+        self.period = TILE_SIZE
+        self.size = TILE_SIZE * self.repeats
         self.n = round(TILE_SIZE / resolution) + 1
         if self.n < 3:
             raise ValueError("terrain resolution must be smaller than half a tile")
@@ -37,8 +41,8 @@ class TerrainAtlas:
         tile = torch.floor((xy + self.size / 2) / self.size).long()
         family, level = tile.unbind(-1)
         valid = (family >= 0) & (family < 5) & (level >= 0) & (level < 10)
-        local = xy - tile * self.size
-        pixel = ((local + self.size / 2) / self.spacing).clamp(0, self.n - 1 - 1e-5)
+        local = torch.remainder(xy - tile * self.size + self.size / 2, self.period) - self.period / 2
+        pixel = ((local + self.period / 2) / self.spacing).clamp(0, self.n - 1 - 1e-5)
         ij = pixel.floor().long()
         x, y = ij.unbind(-1)
         u, v = (pixel - ij).unbind(-1)
@@ -51,7 +55,7 @@ class TerrainAtlas:
         hi = z00 + v * (z01-z00) + u * (z11-z01)
         return torch.where(valid, torch.where(u >= v, lo, hi), torch.zeros_like(u))
 
-    def elevation(self, root_pos, root_quat, *, families=None, levels=None, corrupt=False):
+    def elevation(self, root_pos, root_quat, *, families=None, levels=None, corrupt=False, noise_seed=0):
         if families is None:
             families = torch.zeros(root_pos.shape[0], device=self.device, dtype=torch.long)
         if levels is None:
@@ -72,8 +76,9 @@ class TerrainAtlas:
             from pgmt.cfg.assumptions import get
             cfg = get("A8").value
             f = levels.float()[:, None, None] / 9
-            out = out + torch.randn_like(out) * (cfg.sigma_min + f*(cfg.sigma_max-cfg.sigma_min))
-            out = out.masked_fill(torch.rand_like(out) < cfg.dropout_prob_max*f, 0)
+            generator = torch.Generator(device=self.device).manual_seed(noise_seed)
+            out = out + torch.randn(out.shape, device=self.device, generator=generator) * (cfg.sigma_min + f*(cfg.sigma_max-cfg.sigma_min))
+            out = out.masked_fill(torch.rand(out.shape, device=self.device, generator=generator) < cfg.dropout_prob_max*f, 0)
         return out
 
     def foot_samples(self, foot_pos):
@@ -84,15 +89,18 @@ class TerrainAtlas:
 
     def mesh(self):
         """CPU vertices/faces, shared between physics and CPU query tests."""
-        axis = np.linspace(-self.size/2, self.size/2, self.n, dtype=np.float32)
+        n = (self.n - 1) * self.repeats + 1
+        axis = np.linspace(-self.size/2, self.size/2, n, dtype=np.float32)
         y, x = np.meshgrid(axis, axis, indexing="ij")
-        ids = np.arange(self.n*self.n).reshape(self.n, self.n)
+        ids = np.arange(n*n).reshape(n, n)
         a, b = ids[:-1, :-1].flatten(), ids[:-1, 1:].flatten()
         c, d = ids[1:, :-1].flatten(), ids[1:, 1:].flatten()
         faces = np.concatenate((np.stack((a,b,d),-1), np.stack((a,d,c),-1)))
         grids = self.heights.cpu().numpy()
         vertices, triangles = [], []
         for tile, h in enumerate(grids):
+            idx = np.arange(n) % (self.n - 1)
+            h = h[idx[:, None], idx[None, :]]
             vertices.append(np.stack((x+tile%5*self.size, y+tile//5*self.size, h), -1).reshape(-1,3))
-            triangles.append(faces + tile*self.n*self.n)
+            triangles.append(faces + tile*n*n)
         return np.concatenate(vertices), np.concatenate(triangles)

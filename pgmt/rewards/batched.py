@@ -78,6 +78,12 @@ def _exp(e, sigma):
     return torch.exp(-e.square() / float(sigma))
 
 
+def root_relative_body_positions(root_pos, root_quat, body_pos):
+    """Shared yaw-aligned body coordinates for tracking and termination."""
+    inv = _qconj(_yaw_quat(_yaw(root_quat)))
+    return _qrot(inv[:, None, :], body_pos - root_pos[:, None, :])
+
+
 class BatchedRewardComputer:
     """Compute Stage 1 or Stage 2 rewards for a batch of G1 states.
 
@@ -113,7 +119,7 @@ class BatchedRewardComputer:
         # yaw-only root frame, preserving the existing tracking oracle semantics
         q = _yaw_quat(_yaw(d["root_quat"]))
         inv = _qconj(q)
-        pos = _qrot(inv[:,None,:], d["body_pos"] - d["root_pos"][:,None,:])
+        pos = root_relative_body_positions(d["root_pos"], d["root_quat"], d["body_pos"])
         lin = _qrot(inv[:,None,:], d["body_lin_vel"])
         ang = _qrot(inv[:,None,:], d["body_ang_vel"])
         ori = _qmul(_qconj(q)[:,None,:], d["body_quat"])
@@ -184,9 +190,9 @@ class BatchedRewardComputer:
             ei=self._idx(("left_ankle_roll_link","right_ankle_roll_link","left_wrist_yaw_link","right_wrist_yaw_link"),self.bi)
             auxv["ee_accel_mismatch"]=(state["body_accel"][:,ei]-reference["body_accel"][:,ei]).square().sum(dim=(-1, -2))
         force = state["contact_forces"].norm(dim=-1)
-        allowed = torch.tensor([x in ("left_ankle_roll_link","right_ankle_roll_link") for x in self.body_names], device=self.device)
+        allowed = torch.tensor([x in get("A21").value.allowed_contact_bodies for x in self.body_names], device=self.device)
         threshold=float(get("A21").value.contact_force_threshold)
-        auxv["undesired_contact"]=((force-threshold).clamp_min(0).square()*~allowed[None]).sum(-1)
+        auxv["undesired_contact"]=((force > threshold) & ~allowed[None]).sum(-1).float()
         hit=torch.tensor([("head" in x or "torso" in x) for x in self.body_names], device=self.device)
         impact_threshold=float(get("A21").value.head_torso_impact_threshold)
         auxv["head_torso_impact"]=((force-impact_threshold).clamp_min(0).square()*hit[None]).sum(-1)
@@ -205,8 +211,8 @@ class BatchedRewardComputer:
     def _terrain(self,state,reference,previous_state,terrain):
         force=state.get("contact_forces"); refc=reference.get("foot_contact",terrain.get("reference_contact"))
         if force is None or refc is None: raise KeyError("Stage 2 requires state.contact_forces and reference.foot_contact")
-        fi=self._idx(("left_ankle_roll_link","right_ankle_roll_link"),self.bi); f=force[:,fi]; sim=f.norm(dim=-1)>0
-        prevf=None if previous_state is None else previous_state.get("contact_forces"); prev= torch.zeros_like(sim) if prevf is None else _t(prevf,self.device)[:,fi].norm(dim=-1)>0
+        fi=self._idx(("left_ankle_roll_link","right_ankle_roll_link"),self.bi); f=force[:,fi]; sim=f.norm(dim=-1)>1.0
+        prevf=None if previous_state is None else previous_state.get("contact_forces"); prev= torch.zeros_like(sim) if prevf is None else _t(prevf,self.device)[:,fi].norm(dim=-1)>1.0
         h=terrain.get("foot_height_samples");
         if h is None: raise KeyError("terrain.foot_height_samples is required")
         h=_t(h,self.device); q=torch.exp(-h.std(-1, unbiased=False).square()/float(get("A22").value.sigma_touchdown_quality)); td=sim & ~prev; touchdown=torch.where(td,q,torch.zeros_like(q)).sum(-1)/td.sum(-1).clamp_min(1)

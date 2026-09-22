@@ -14,6 +14,7 @@ pyyaml
 matplotlib
 pandas
 scipy
+trimesh==4.5.1       # optional reference-state reset: URDF collision mesh support
 pytest               # 服务器上也能跑 tests/（纯逻辑部分是 CPU-only，可当回归门禁）
                      # 注意: 数据管线产物 data/processed/lafan1_g1/*.npz 被 .gitignore
                      # 忽略，需在服务器上用 `python -m data.retarget_lafan1` 重新生成，

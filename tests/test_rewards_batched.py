@@ -35,6 +35,22 @@ def test_exact_match_has_max_tracking_rewards():
     assert torch.allclose(m["upper"]["link_pos"], torch.ones(2))
 
 
+def test_contact_count_ignores_force_amplitude_but_impact_retains_it():
+    from pgmt.cfg.assumptions import get
+    from pgmt.rewards.auxiliary import undesired_contact_cost
+    bodies, joints, state, ref = _fixture(3)
+    state["contact_forces"][:, bodies.index("left_ankle_roll_link"), 2] = 10000.
+    state["contact_forces"][:, bodies.index("torso_link"), 2] = torch.tensor([1., 2., 1000.])
+    _, metrics = BatchedRewardComputer(bodies, joints).compute(state, ref, action=torch.zeros(3, 29))
+    assert metrics["aux"]["undesired_contact"].tolist() == [0., 1., 1.]
+    assert metrics["aux"]["head_torso_impact"][2] > metrics["aux"]["head_torso_impact"][1]
+    cfg = get("A21").value
+    for j in range(3):
+        oracle = undesired_contact_cost(dict(zip(bodies, state["contact_forces"][j].norm(dim=-1).tolist())),
+                                        cfg.allowed_contact_bodies, cfg.contact_force_threshold)
+        assert metrics["aux"]["undesired_contact"][j].item() == oracle
+
+
 def test_body_and_joint_errors_are_batch_sensitive_and_partitioned():
     bodies, joints, state, ref = _fixture(1)
     c = BatchedRewardComputer(bodies, joints)

@@ -37,6 +37,8 @@ class RolloutStorage:
             for key, shape in shapes.items()
         }
         self.actions = torch.zeros(prefix + (action_dim,), device=self.device)
+        self.latent_actions = torch.zeros_like(self.actions)
+        self.has_latent_actions = False
         self.log_probs = torch.zeros(prefix, device=self.device)
         self.values = torch.zeros(prefix + (num_heads,), device=self.device)
         self.rewards = torch.zeros_like(self.values)
@@ -51,7 +53,7 @@ class RolloutStorage:
 
     @torch.no_grad()
     def add(self, observations, actions, log_probs, values, rewards,
-            terminated, timeouts, next_values):
+            terminated, timeouts, next_values, latent_actions=None):
         if self.step >= self.num_steps:
             raise RuntimeError("rollout is full; clear it after updating")
         if set(observations) != set(self.observations):
@@ -63,6 +65,11 @@ class RolloutStorage:
             ("rewards", rewards), ("terminated", terminated), ("timeouts", timeouts),
             ("next_values", next_values),
         )]
+        if latent_actions is not None:
+            targets.append((self.latent_actions[self.step], latent_actions, "latent_actions"))
+            self.has_latent_actions = True
+        elif self.has_latent_actions:
+            raise ValueError("latent_actions must be supplied for every rollout step")
         for target, value, key in targets:
             if target.shape != value.shape:
                 raise ValueError("%s shape %s != %s" % (key, value.shape, target.shape))
@@ -104,6 +111,8 @@ class RolloutStorage:
         fields = {key: getattr(self, key).flatten(0, 1) for key in (
             "actions", "log_probs", "values", "returns", "policy_advantages",
         )}
+        if self.has_latent_actions:
+            fields["latent_actions"] = self.latent_actions.flatten(0, 1)
         for _ in range(num_epochs):
             permutation = torch.randperm(count, device=self.device)
             for indices in torch.tensor_split(permutation, num_mini_batches):
@@ -112,5 +121,6 @@ class RolloutStorage:
                 yield batch
 
     def clear(self):
+        self.has_latent_actions = False
         self.step = 0
         self.ready = False
