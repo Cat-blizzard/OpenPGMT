@@ -11,20 +11,57 @@
 - 训练: 两阶段（Stage 1 平地 tracking 预训练 → Stage 2 感知注入），PPO
 - 数据: LAFAN1（Mixamo 骨骼 BVH）→ G1 重定向（已含 IK 精修）
 - 评估: 9600 matched episodes（5 地形族 × 10 难度 × 192 集）+ 消融对标 Table II / Fig. 3 / Fig. 4
-- 当前状态（2026-09-22）: **旧的 842-update Stage 1 已归档，不再续跑**。v4 的 16 环境 × 20 更新开/关对照，以及三个种子的 64 环境 × 200 更新均已完成。平均 KL 受控、critic 拟合改善；控制行为仍未通过验收，末段普通 episode 平均仅 1.18 秒，恢复尚未成功，且少数 recovery 状态的 KL 尾部仍需排查。后续执行器与 reset 物理对照见下文。本任务 GPU 占用已释放，最终策略评估按用户要求后置。**尚未进入正式扩规模训练**。见 [v4 实验报告](docs/curriculum_critic_20260921.md)、[v3 复验报告](docs/stability_validation_20260921.md)及[物理接口验收](docs/physics_validation_20260921.md)。
+- 当前状态（2026-09-22）: **六场站立诊断各 100 更新已完成，共 230400 transitions；尚未进入正式扩规模训练**。600 次更新 CPU 复核通过，原目标/载荷候选三种子平均训练 episode 时长约 1.251/1.403 s，均未完成 10 s，未显示一致训练内改善。匹配 initial/final 评估已完成 CPU 准备、物理运行后置，本任务 GPU 进程全部退出。独立参考 v4 显著减少支撑悬空并通过 50 Hz 几何/接触检查，但残余支撑、速度、求解和物理验证问题仍在，继续隔离。PD 80/2、奖励、网络、PPO、物理与终止规则保持；874 项回归通过、2 项跳过。旧 842-update Stage 1 继续归档。见[本轮结果](docs/standing_multiseed_20260922.md)。
 
 完整方案见 [`复现方案.md`](复现方案.md)（含每个里程碑的验收标准、假设清单、风险清单）。
 
 2026-09-22：完成 URDF/USD 执行器 CPU 审查，将新运行的默认力矩上限从统一 120 Nm
 改为资产对应的逐关节限值，接入限量异常快照和 KL 的 CPU 重放。806 项回归通过、2 项跳过。
 随后完成 8 场小规模物理对照：新上限在 PhysX 中生效，首步冲击降低，但存活与跟踪未改善。
-本任务 GPU 已释放，新的 PPO 与后置评估尚未启动。见[物理对照结果](docs/actuator_physics_20260922.md)
+见[物理对照结果](docs/actuator_physics_20260922.md)
 及[执行器与诊断记录](docs/actuator_diagnostics_20260922.md)。
 
 同日完成固定新上限的 6 场 reset 对照：参考初始化使首步冲击降低约 66%、关节 RMSE 降低
 约 25%，但平均首次时长从 1.13 s 降至 0.93 s，两组均 12/12 提前终止。保留默认 reset，
-候选以显式开关保存；813 项 CPU 回归通过、2 项跳过。本任务 GPU 已释放，尚未启动新的 PPO。
+候选以显式开关保存；813 项 CPU 回归通过、2 项跳过。
 见[reset 对照报告](docs/reset_physics_20260922.md)。
+
+随后完成固定简单片段的两场 PPO 诊断：两种 reset 各 16 环境 × 20 更新，初始策略和
+优化器/RNG 一致。平均 KL 与有效更新检查通过，但未出现一致行为收益；真实策略动作下，
+参考 reset 的首步冲击反而更大，两组还分别出现 4/12 次超速终止，保存的快照均指向左踝 roll。
+该轮维持默认 reset，随后开展物理异常与初始化目标匹配诊断。
+见[固定片段 PPO 报告](docs/fixed_clip_ppo_20260922.md)。
+
+此前七场同动作子步对照支持新工程假设 A23：TGS 每次位置迭代处理外力、速度迭代下限 4。
+固定回放的关节速度峰值从 195.42 降到 39.01 rad/s；较长的学习诊断仍有两个略超 45 的子步。
+三种子各 100 更新及 initial/final 短时检查已完成：随机动作平均存活 1.073→1.044 s，
+关节 RMSE 0.1597→0.1982 rad；确定性动作平均存活仍为 1.22 s，均未完成 5 s。
+默认 reset 仍保留；该轮之后已完成参考、静态支撑和真实学习信号审查。
+CPU 回归 836 passed、2 skipped，后续诊断检查 19 passed。见[完整结果与边界](docs/physics_learning_20260922.md)。
+
+此前静态三组共 860 transitions：基准起点固定 PD / 策略均值 / 随机动作分别存活
+1.50 / 1.48 / 1.32 s，均未完成 10 s，本轮无 >45 rad/s 子步。264 条真实随机样本的
+GAE 与一次独立 CPU PPO 更新核验通过，但辅助头与跟踪头梯度相反，不能当作行为改善。
+8 个参考片段的关节角可精确复算；离线/仿真腰部几何存在厘米级差异，参考垂直放置与
+接触平面需统一。本轮定向 CPU 检查 113 passed；下一步先建立可控的站立诊断。
+见[参考与静态控制报告](docs/reference_control_audit_20260922.md)。
+
+随后完成资产绑定的新参考与载荷候选：新增 `data.g1_kinematics`，通过
+`setup.build_asset_reference_subset` 在新目录生成原 8 片段，旧数据保留。
+新 `flat_ground_v1` 数据仅支持平地 Stage 1；旧 XML 生成路径保留作历史复算，
+不能将其当作新的资产绑定入口。新数据两种 reset 下的接触/高度一致，但足底仍悬空
+6.47–26.82 cm，暂不推广到全库。参考导数/放置契约变更拒绝静默续跑旧 checkpoint。
+见[几何、接触、候选和加速度完整记录](docs/asset_standing_validation_20260922.md)。
+
+此前有界站立学习在相同静止参考和四起点上比较两个 Actor 目标偏置；两组各 20 更新后立即停止。
+CPU 保存并复核完整 rollout、更新前后参数和 61440 个环境子步。八片段病因表定位到具体源帧/碰撞体，
+low_motion_2 的异常右肘相邻差从 0.29222 降至 0.01357 rad，但 v2 足底仍悬空 6.48–27.24 cm。
+原数据与 v1 指纹均保持；新数据仍非训练合格版本。详见[执行报告](docs/standing_learning_20260922.md)。
+
+随后完成两组各 300 步的同动作回放，完整子步记录支持接触相关瞬态的解释；PD 饱和估计发生在峰值后。
+原八片段另存 v3：三段 IK 引入的慢走腰贴限消除，仍有 9.5%–45.3% 的源支撑脚样本超出 2 cm，
+部分峰速上升和 50 Hz 插值差异均保留。参考数据继续隔离，静止参考上的有界学习可独立推进。
+见[回放和参考 v3 报告](docs/standing_replay_reference_20260922.md)。
 
 GitHub 可直接查看[实验图表与汇总数据](docs/results/README.md)；后续安排见
 [下一阶段计划](docs/next_steps_20260922.md)。原始逐步日志、检查点和完整实验源码快照保留在服务器。
@@ -34,7 +71,7 @@ GitHub 可直接查看[实验图表与汇总数据](docs/results/README.md)；�
 ```
 setup/            Linux/GPU 服务器安装与冒烟脚本
 pgmt/contracts.py 跨层维度常量唯一出处（OBS_DIM/ACT_DIM/HISTORY_LEN/REF_FRAME_DIM）
-pgmt/cfg/         assumptions.py —— 假设清单 A1–A22 的唯一出处
+pgmt/cfg/         assumptions.py —— 假设清单 A1–A23 的唯一出处
 pgmt/policy/      ✅ 全部实现并有单测: RoPE / MHCA / History Encoder / IFM /
                      Glimpse Encoder / Actor / Multi-Head Critic / rotation(6D)
 pgmt/envs/        observations.py（观测契约）✅

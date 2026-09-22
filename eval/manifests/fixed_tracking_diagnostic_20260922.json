@@ -1,0 +1,532 @@
+{
+  "schema": "pgmt_fixed_clip_diagnostic_v1",
+  "control_dt": 0.02,
+  "sim_dt": 0.005,
+  "horizon_s": 5.0,
+  "selection": {
+    "basis": "kinematics only; no physics or policy outcomes used",
+    "low_motion": "aiming sequences, mean root xy speed <=0.25 m/s, p95 per-frame joint-speed RMS <=1.0 rad/s; not stationary standing",
+    "slow_walk": "walk sequences, mean root xy speed 0.2..0.8 m/s, p95 joint-speed RMS <=1.5 rad/s",
+    "common": "max root tilt <=15 deg, root z range <=0.12 m, max absolute joint speed <=15 rad/s",
+    "ranking": "one best 5s window per sequence, score=qvel RMS p95 + root speed; start grid=1s",
+    "split": "four best distinct sequences per category; ranks 0,2 train; ranks 1,3 reserved check",
+    "future_padding_s": 0.62,
+    "scope": "engineering diagnostic subset, not paper evaluation or guaranteed dynamically feasible motion"
+  },
+  "clips": [
+    {
+      "sequence": "aiming2_subject3",
+      "start_frame": 150,
+      "horizon_s": 5.0,
+      "category": "low_motion",
+      "screening": {
+        "mean_root_speed_m_s": 0.1137881875038147,
+        "joint_speed_rms_p95_rad_s": 0.5468259274959555,
+        "max_root_tilt_deg": 11.105300903320312,
+        "root_z_range_m": 0.020107746124267578,
+        "max_joint_speed_rad_s": 3.252765417098999
+      },
+      "score": 0.6606141149997702,
+      "clip_id": "low_motion_0",
+      "split": "train"
+    },
+    {
+      "sequence": "aiming1_subject1",
+      "start_frame": 1200,
+      "horizon_s": 5.0,
+      "category": "low_motion",
+      "screening": {
+        "mean_root_speed_m_s": 0.08465453237295151,
+        "joint_speed_rms_p95_rad_s": 0.6446772217750548,
+        "max_root_tilt_deg": 8.753536224365234,
+        "root_z_range_m": 0.02229619026184082,
+        "max_joint_speed_rad_s": 3.9351680278778076
+      },
+      "score": 0.7293317541480063,
+      "clip_id": "low_motion_1",
+      "split": "check"
+    },
+    {
+      "sequence": "aiming2_subject2",
+      "start_frame": 6270,
+      "horizon_s": 5.0,
+      "category": "low_motion",
+      "screening": {
+        "mean_root_speed_m_s": 0.14538316428661346,
+        "joint_speed_rms_p95_rad_s": 0.6580766320228576,
+        "max_root_tilt_deg": 6.181107521057129,
+        "root_z_range_m": 0.03217655420303345,
+        "max_joint_speed_rad_s": 3.9031763076782227
+      },
+      "score": 0.8034597963094711,
+      "clip_id": "low_motion_2",
+      "split": "train"
+    },
+    {
+      "sequence": "aiming2_subject5",
+      "start_frame": 6480,
+      "horizon_s": 5.0,
+      "category": "low_motion",
+      "screening": {
+        "mean_root_speed_m_s": 0.24098986387252808,
+        "joint_speed_rms_p95_rad_s": 0.9001498192548751,
+        "max_root_tilt_deg": 11.836227416992188,
+        "root_z_range_m": 0.03167986869812012,
+        "max_joint_speed_rad_s": 5.9341840744018555
+      },
+      "score": 1.1411396831274032,
+      "clip_id": "low_motion_3",
+      "split": "check"
+    },
+    {
+      "sequence": "walk2_subject4",
+      "start_frame": 1380,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.25458306074142456,
+        "joint_speed_rms_p95_rad_s": 0.49399806559085835,
+        "max_root_tilt_deg": 8.532809257507324,
+        "root_z_range_m": 0.054313600063323975,
+        "max_joint_speed_rad_s": 2.2738404273986816
+      },
+      "score": 0.7485811263322829,
+      "clip_id": "slow_walk_0",
+      "split": "train"
+    },
+    {
+      "sequence": "walk1_subject1",
+      "start_frame": 5430,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.2144792228937149,
+        "joint_speed_rms_p95_rad_s": 0.8280130624771116,
+        "max_root_tilt_deg": 11.773845672607422,
+        "root_z_range_m": 0.03253781795501709,
+        "max_joint_speed_rad_s": 3.129901647567749
+      },
+      "score": 1.0424922853708265,
+      "clip_id": "slow_walk_1",
+      "split": "check"
+    },
+    {
+      "sequence": "walk3_subject4",
+      "start_frame": 5580,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.3121872842311859,
+        "joint_speed_rms_p95_rad_s": 0.7316205948591232,
+        "max_root_tilt_deg": 6.694275379180908,
+        "root_z_range_m": 0.030705928802490234,
+        "max_joint_speed_rad_s": 3.5189852714538574
+      },
+      "score": 1.0438078790903091,
+      "clip_id": "slow_walk_2",
+      "split": "train"
+    },
+    {
+      "sequence": "walk3_subject2",
+      "start_frame": 480,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.20262660086154938,
+        "joint_speed_rms_p95_rad_s": 0.8528439730405805,
+        "max_root_tilt_deg": 11.165794372558594,
+        "root_z_range_m": 0.04916626214981079,
+        "max_joint_speed_rad_s": 5.046010971069336
+      },
+      "score": 1.05547057390213,
+      "clip_id": "slow_walk_3",
+      "split": "check"
+    }
+  ],
+  "screened_sequence_candidates": [
+    {
+      "sequence": "aiming1_subject1",
+      "start_frame": 1200,
+      "horizon_s": 5.0,
+      "category": "low_motion",
+      "screening": {
+        "mean_root_speed_m_s": 0.08465453237295151,
+        "joint_speed_rms_p95_rad_s": 0.6446772217750548,
+        "max_root_tilt_deg": 8.753536224365234,
+        "root_z_range_m": 0.02229619026184082,
+        "max_joint_speed_rad_s": 3.9351680278778076
+      },
+      "score": 0.7293317541480063
+    },
+    {
+      "sequence": "aiming2_subject2",
+      "start_frame": 6270,
+      "horizon_s": 5.0,
+      "category": "low_motion",
+      "screening": {
+        "mean_root_speed_m_s": 0.14538316428661346,
+        "joint_speed_rms_p95_rad_s": 0.6580766320228576,
+        "max_root_tilt_deg": 6.181107521057129,
+        "root_z_range_m": 0.03217655420303345,
+        "max_joint_speed_rad_s": 3.9031763076782227
+      },
+      "score": 0.8034597963094711
+    },
+    {
+      "sequence": "aiming2_subject3",
+      "start_frame": 150,
+      "horizon_s": 5.0,
+      "category": "low_motion",
+      "screening": {
+        "mean_root_speed_m_s": 0.1137881875038147,
+        "joint_speed_rms_p95_rad_s": 0.5468259274959555,
+        "max_root_tilt_deg": 11.105300903320312,
+        "root_z_range_m": 0.020107746124267578,
+        "max_joint_speed_rad_s": 3.252765417098999
+      },
+      "score": 0.6606141149997702
+    },
+    {
+      "sequence": "aiming2_subject5",
+      "start_frame": 6480,
+      "horizon_s": 5.0,
+      "category": "low_motion",
+      "screening": {
+        "mean_root_speed_m_s": 0.24098986387252808,
+        "joint_speed_rms_p95_rad_s": 0.9001498192548751,
+        "max_root_tilt_deg": 11.836227416992188,
+        "root_z_range_m": 0.03167986869812012,
+        "max_joint_speed_rad_s": 5.9341840744018555
+      },
+      "score": 1.1411396831274032
+    },
+    {
+      "sequence": "walk1_subject1",
+      "start_frame": 5430,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.2144792228937149,
+        "joint_speed_rms_p95_rad_s": 0.8280130624771116,
+        "max_root_tilt_deg": 11.773845672607422,
+        "root_z_range_m": 0.03253781795501709,
+        "max_joint_speed_rad_s": 3.129901647567749
+      },
+      "score": 1.0424922853708265
+    },
+    {
+      "sequence": "walk1_subject2",
+      "start_frame": 150,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.2200884371995926,
+        "joint_speed_rms_p95_rad_s": 0.8884884029626846,
+        "max_root_tilt_deg": 7.425735950469971,
+        "root_z_range_m": 0.027621746063232422,
+        "max_joint_speed_rad_s": 5.711830139160156
+      },
+      "score": 1.1085768401622773
+    },
+    {
+      "sequence": "walk1_subject5",
+      "start_frame": 7110,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.3347916603088379,
+        "joint_speed_rms_p95_rad_s": 0.9961656063795089,
+        "max_root_tilt_deg": 7.2932586669921875,
+        "root_z_range_m": 0.05284690856933594,
+        "max_joint_speed_rad_s": 5.092428684234619
+      },
+      "score": 1.3309572666883467
+    },
+    {
+      "sequence": "walk2_subject1",
+      "start_frame": 1530,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.32099929451942444,
+        "joint_speed_rms_p95_rad_s": 1.0495509207248688,
+        "max_root_tilt_deg": 9.356874465942383,
+        "root_z_range_m": 0.04836767911911011,
+        "max_joint_speed_rad_s": 5.876025199890137
+      },
+      "score": 1.3705502152442932
+    },
+    {
+      "sequence": "walk2_subject3",
+      "start_frame": 900,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.20021402835845947,
+        "joint_speed_rms_p95_rad_s": 1.2948031544685357,
+        "max_root_tilt_deg": 12.01788330078125,
+        "root_z_range_m": 0.04515945911407471,
+        "max_joint_speed_rad_s": 10.329553604125977
+      },
+      "score": 1.4950171828269951
+    },
+    {
+      "sequence": "walk2_subject4",
+      "start_frame": 1380,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.25458306074142456,
+        "joint_speed_rms_p95_rad_s": 0.49399806559085835,
+        "max_root_tilt_deg": 8.532809257507324,
+        "root_z_range_m": 0.054313600063323975,
+        "max_joint_speed_rad_s": 2.2738404273986816
+      },
+      "score": 0.7485811263322829
+    },
+    {
+      "sequence": "walk3_subject1",
+      "start_frame": 210,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.2961224615573883,
+        "joint_speed_rms_p95_rad_s": 0.8904861867427819,
+        "max_root_tilt_deg": 8.957671165466309,
+        "root_z_range_m": 0.015596389770507812,
+        "max_joint_speed_rad_s": 4.602033615112305
+      },
+      "score": 1.18660864830017
+    },
+    {
+      "sequence": "walk3_subject2",
+      "start_frame": 480,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.20262660086154938,
+        "joint_speed_rms_p95_rad_s": 0.8528439730405805,
+        "max_root_tilt_deg": 11.165794372558594,
+        "root_z_range_m": 0.04916626214981079,
+        "max_joint_speed_rad_s": 5.046010971069336
+      },
+      "score": 1.05547057390213
+    },
+    {
+      "sequence": "walk3_subject3",
+      "start_frame": 3960,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.2013910859823227,
+        "joint_speed_rms_p95_rad_s": 0.9904474824666976,
+        "max_root_tilt_deg": 8.471296310424805,
+        "root_z_range_m": 0.0643007755279541,
+        "max_joint_speed_rad_s": 6.788852691650391
+      },
+      "score": 1.1918385684490203
+    },
+    {
+      "sequence": "walk3_subject4",
+      "start_frame": 5580,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.3121872842311859,
+        "joint_speed_rms_p95_rad_s": 0.7316205948591232,
+        "max_root_tilt_deg": 6.694275379180908,
+        "root_z_range_m": 0.030705928802490234,
+        "max_joint_speed_rad_s": 3.5189852714538574
+      },
+      "score": 1.0438078790903091
+    },
+    {
+      "sequence": "walk3_subject5",
+      "start_frame": 6960,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.43440958857536316,
+        "joint_speed_rms_p95_rad_s": 1.3950193285942076,
+        "max_root_tilt_deg": 14.192549705505371,
+        "root_z_range_m": 0.09922975301742554,
+        "max_joint_speed_rad_s": 8.542804718017578
+      },
+      "score": 1.8294289171695708
+    },
+    {
+      "sequence": "walk4_subject1",
+      "start_frame": 570,
+      "horizon_s": 5.0,
+      "category": "slow_walk",
+      "screening": {
+        "mean_root_speed_m_s": 0.20341965556144714,
+        "joint_speed_rms_p95_rad_s": 1.021617883443832,
+        "max_root_tilt_deg": 8.588719367980957,
+        "root_z_range_m": 0.03221011161804199,
+        "max_joint_speed_rad_s": 5.767274856567383
+      },
+      "score": 1.2250375390052792
+    }
+  ],
+  "reference_files": {
+    "aiming1_subject1.npz": "5da894a38a7749db619dd55df03708b34795a1e53383ef6bd2ff4767852f7b91",
+    "aiming1_subject4.npz": "5fd88550a18c375ab89f52e21a2acf9e8bee6950293458ffde725f6606f0ed66",
+    "aiming2_subject2.npz": "9760093e4cb69cd8c75e6fa0bcaf0d21094a3bc2db8b5e61d7959bef9febefca",
+    "aiming2_subject3.npz": "f772935e9bef93583a528dab7fe3d53e1ec31e384a205a84164bdbaedafa7fee",
+    "aiming2_subject5.npz": "c01d93fb758ad63718c82067befd02f681255f6b3080bd0b5d9cd80272dcf1a3",
+    "dance1_subject1.npz": "97770a50c6bfa9a7ccd8b65228d900a45edc2e68575760ca0022b117d171cec0",
+    "dance1_subject2.npz": "1e7719e2b9ef0f8c678cd92c66fba9da3d02f5ef830697508f576981fc3c9ee3",
+    "dance1_subject3.npz": "510eea0bfabb15273fadd1bc0d5621eb7169896b27292164d06f02268e82f9ec",
+    "dance2_subject1.npz": "5e6fc9ff542325199aab88d083b157771b52358b06a9bfc26051f0264b82721c",
+    "dance2_subject2.npz": "4790254043f85ebdbd878d3ddc0ed97a6d7a9374079febd531d0d39575f35d96",
+    "dance2_subject3.npz": "76397f56ad97dd7cb4aa713ba6b8eeef4438fad77f20d59ac829d321b5633fa8",
+    "dance2_subject4.npz": "24a4938802b5afcf509e9a0f3e191974f43042360005ec136a9a642d0f5e66ae",
+    "dance2_subject5.npz": "041da5f5d0ba43a9206b4713400f6a60a8f3eaf233a70072d14700cb83a8a027",
+    "fallAndGetUp1_subject1.npz": "506a54e9e601ab6e09f08a62ab911de19812067f932383d22731bc97a57faabd",
+    "fallAndGetUp1_subject4.npz": "84967832dc94fcdf50dc8d02d7f22430e8917d959342b820d5a4a2acb7943605",
+    "fallAndGetUp1_subject5.npz": "576c0ff02664d1626ad0180fe14cad049f8e12e233e088fda703e4850f893ac6",
+    "fallAndGetUp2_subject2.npz": "c649d64da06e74cacba92257374d3bdd8754bdb1ad4915a2997515f9e7a61a5b",
+    "fallAndGetUp2_subject3.npz": "aa71af92ceb3b50408b2bcec6802e7e9b0a31b9d9db61597d4143d2b43f670c6",
+    "fallAndGetUp3_subject1.npz": "96128b3aa177fb67bc80749a8a976fc28c19f6ace349dcc6dda63a37e851d02b",
+    "fight1_subject2.npz": "34cfc1318be9f938dce2a06b0b7b4c96f7a0aec29e3fc34b9c216e461d8f4b82",
+    "fight1_subject3.npz": "724af32605a85bb8593c764ee2bbfe016f68bc35786196ed7bafef470b3c506a",
+    "fight1_subject5.npz": "23c2a5eb41109c35dec1602a3bbd3d4c5f5f3de4e3ffc5ece9f16220760add69",
+    "fightAndSports1_subject1.npz": "7ebd5b00414a90cf4f297280559b6909c0e6da86f1cf0974125d0dbdda21caba",
+    "fightAndSports1_subject4.npz": "12b022540730e07ebab04641e3edd119b2b378ce6cce98191a0ff2e2b6763618",
+    "ground1_subject1.npz": "59b5977bb0013d56378c36942269016b74a466f99ccde505ebc0a682aae8e259",
+    "ground1_subject4.npz": "757b08cb355f2557f2cc17109e8e8067ec60d8d3128d12c771dfc3aedea46961",
+    "ground1_subject5.npz": "11145854319ee5ef720a7fa593c18bf625979ad7776f5a66f65caff2f4063fa9",
+    "ground2_subject2.npz": "f95a070c2a8f8ab0987a19805c98db54539b5527e44725530d7856c023998318",
+    "ground2_subject3.npz": "16c4093eed795243be617441a75e0d62aaeb08def272b6ce44369b7752d260c6",
+    "jumps1_subject1.npz": "a06842fcd4746325f177b211489b5ac76b5e48cb15978bda9125946dfa123f74",
+    "jumps1_subject2.npz": "8c669b4901cd38d98b751b2d8802377bbc28ff171599081785da428a1d189e8d",
+    "jumps1_subject5.npz": "4b726362b678aafc334a6bfffeb08939b84dd5f45af4d03f0b13e4a1e98924c2",
+    "multipleActions1_subject1.npz": "bc95bca91af89c53fd7febf58bb73c356906b127ec9177f1d1f4cd9b5458c428",
+    "multipleActions1_subject2.npz": "e75b97505e1d62e233e702a27cbd61a18116ab37182838a521c1110a0512b3d1",
+    "multipleActions1_subject3.npz": "9329f762bd486ddc24e586c359c3c9c10d688c39d3fb72d3a6f85dc07d5b385f",
+    "multipleActions1_subject4.npz": "8cb85ed605fc3d2824cb7e2e6279e859afedafa9fc8a49696482273bf355fbd6",
+    "obstacles1_subject1.npz": "d53ff2c14f33f91904c41e9244a017140da5e338114f85d193808a2337e57733",
+    "obstacles1_subject2.npz": "2f0f9f3aefb9bc72281ef858bb1bdeef82851b2da0c520d6b2184545aebd8ccc",
+    "obstacles1_subject5.npz": "67aa40f2661c8f2498fbbe302c71a0c23a7ce915564eb1c1ab8c8f227892aa77",
+    "obstacles2_subject1.npz": "2330f497c484528e58d1d0fd6540784c8f6b3914b34193ed3243053b7c14fb97",
+    "obstacles2_subject2.npz": "1bac873efc85e8e5395811aeebbf71e56748148895d00182cfd419a22fabad9a",
+    "obstacles2_subject5.npz": "af76b839609cee72bf2f438998932700ea128dd4cd275d2f3f0d2bb26b51e9fa",
+    "obstacles3_subject3.npz": "3dbd81052e58b2f2f92420e5a2d7dc5c5edf7c2dee29a0b9c75f6cbe75e658ae",
+    "obstacles3_subject4.npz": "3d8ab32706cff3e37859b700bb624d571060e29a383743f204f5d0c9b9d51b84",
+    "obstacles4_subject2.npz": "0caa1dfa7e580ee7432f83fe070eb0478a651ac0ea9a1be30ffe9552667231b6",
+    "obstacles4_subject3.npz": "fa117cb5edda2e0e2ed9dbfc5d7c7bcce6bdb2c328d32c1cff4f599c2f54fec2",
+    "obstacles4_subject4.npz": "3f2b9ff8df4aa23f2170af9912800203a00a9b6299fb44e04ffa703b7d361b28",
+    "obstacles5_subject2.npz": "9d694d705ddbcec0d08bfc9bd66b44abb7b0536fa3b498c2b61a99d9d93b1ddc",
+    "obstacles5_subject3.npz": "44cbacf40f2262a3a6e4eb2c484584d535524373f07f84a463192ae83ed96f9e",
+    "obstacles5_subject4.npz": "fc238ef00f8223e32c29867a3eda0ae9c45e263b71aaa445749505e39e1e1a25",
+    "obstacles6_subject1.npz": "ca018fa9db4c8c4d1b8c4e663cb94562c0002159c1eabba1c983b0eb211f7b53",
+    "obstacles6_subject4.npz": "ee097e2fbd14daefcbba08c31857d74f8d0ede035775534bb678c24951940a12",
+    "obstacles6_subject5.npz": "ae17b02f70a584060ff63c0ae88cef079d88c3ff17a3e9ea1aed4afe5c498dd4",
+    "push1_subject2.npz": "c5cf0c8f67d58f0edff19fcc4dda056be0097aa0931246b4471d4cecaf2b929c",
+    "pushAndFall1_subject1.npz": "0b00ff8c9549308db44e03a4848ce5496bc8f534f0534845f13f1b2e63f258e5",
+    "pushAndFall1_subject4.npz": "9676c78521552dcddaaf397c03c219ffee75411c3f3902a0b236fc1f5cf79fa2",
+    "pushAndStumble1_subject2.npz": "560c1a56c07c6b51ff75ceaee9fe676173583b5734fd5d4677e8480e46375760",
+    "pushAndStumble1_subject3.npz": "fe1e69247a5e4d43192b20e014d8fb19d78e84c18cdc43fb81ab0c2953f003df",
+    "pushAndStumble1_subject5.npz": "6425f002b35c5f9f79adfd1637baac83d6a8eca309349f0a107d73ac94b56608",
+    "run1_subject2.npz": "01651296e0ce33c9f73ce1005f6cf35ffdd5caf470d0a2e5e6ddf8cbc34ac776",
+    "run1_subject5.npz": "532a81f5d5c67d21e2903be8043a910925599fe1f40e477fa64e2ef7413c3571",
+    "run2_subject1.npz": "dac134782653ff58f7aa319abdbd51a89a7076c95fa7d1935a05bfa9895ea481",
+    "run2_subject4.npz": "34d61dc6f4224b9615ff992326e07ee4daae9536aed3dea9d190da976600f43b",
+    "sprint1_subject2.npz": "3870f9a10841e2188ea184a5882453b94796dab7fac2de83641c56aa9bcf7738",
+    "sprint1_subject4.npz": "2bb43c7a848a935cf725c8a51b1d665347e58f51bc3efaf943bb14775c6ca1bd",
+    "walk1_subject1.npz": "8e6e583daa11360f9e409f95fd1b0e50230ecd25efc2c59f53b3419bfc35a8ca",
+    "walk1_subject2.npz": "20b7bbd84c4ec34e735123d0d5cb7505fbf08452f4db1390bbacf2b3f3ea739f",
+    "walk1_subject5.npz": "161dac996aad61ba1405c752537ff746e266406f76ac66974739575e9f999ad1",
+    "walk2_subject1.npz": "d98ee69fc133e88174229e36b4edae1264742a533293f7089371d811be9db06a",
+    "walk2_subject3.npz": "c05386958dc4526c414b8816aadefc5a329fb154a76f93295b75fea117ea3ac4",
+    "walk2_subject4.npz": "fddc7b1b5419df72aae8e1bb2d64167dbfc0eefd00c969cce2887038e6604468",
+    "walk3_subject1.npz": "1308a4697a78887b32a3a2cebbf925c62b5c308e0ca73e077d85c20ac73d8c85",
+    "walk3_subject2.npz": "c59c6de32ae5c665c7d61408040affe26500c7cf1007a26ec251bbdbdd317c46",
+    "walk3_subject3.npz": "d08943e3d2f7900cb8762a4583c5aa5247bf7695efa81f0e9dbba200d4ce7ebf",
+    "walk3_subject4.npz": "9107902ef1ab4030f0f37115e168a5c2f61884f478b794282ff5dccfac8253cc",
+    "walk3_subject5.npz": "860047f6dc844c7aa2f49d58aa55cc7714d4811ed56877c6dee1fcaad94be461",
+    "walk4_subject1.npz": "9875e9e9392c57699e0150468142d3f7fdb894ededff6420fdbb58d705275301"
+  },
+  "sequence_names": [
+    "aiming1_subject1",
+    "aiming1_subject4",
+    "aiming2_subject2",
+    "aiming2_subject3",
+    "aiming2_subject5",
+    "dance1_subject1",
+    "dance1_subject2",
+    "dance1_subject3",
+    "dance2_subject1",
+    "dance2_subject2",
+    "dance2_subject3",
+    "dance2_subject4",
+    "dance2_subject5",
+    "fallAndGetUp1_subject1",
+    "fallAndGetUp1_subject4",
+    "fallAndGetUp1_subject5",
+    "fallAndGetUp2_subject2",
+    "fallAndGetUp2_subject3",
+    "fallAndGetUp3_subject1",
+    "fight1_subject2",
+    "fight1_subject3",
+    "fight1_subject5",
+    "fightAndSports1_subject1",
+    "fightAndSports1_subject4",
+    "ground1_subject1",
+    "ground1_subject4",
+    "ground1_subject5",
+    "ground2_subject2",
+    "ground2_subject3",
+    "jumps1_subject1",
+    "jumps1_subject2",
+    "jumps1_subject5",
+    "multipleActions1_subject1",
+    "multipleActions1_subject2",
+    "multipleActions1_subject3",
+    "multipleActions1_subject4",
+    "obstacles1_subject1",
+    "obstacles1_subject2",
+    "obstacles1_subject5",
+    "obstacles2_subject1",
+    "obstacles2_subject2",
+    "obstacles2_subject5",
+    "obstacles3_subject3",
+    "obstacles3_subject4",
+    "obstacles4_subject2",
+    "obstacles4_subject3",
+    "obstacles4_subject4",
+    "obstacles5_subject2",
+    "obstacles5_subject3",
+    "obstacles5_subject4",
+    "obstacles6_subject1",
+    "obstacles6_subject4",
+    "obstacles6_subject5",
+    "push1_subject2",
+    "pushAndFall1_subject1",
+    "pushAndFall1_subject4",
+    "pushAndStumble1_subject2",
+    "pushAndStumble1_subject3",
+    "pushAndStumble1_subject5",
+    "run1_subject2",
+    "run1_subject5",
+    "run2_subject1",
+    "run2_subject4",
+    "sprint1_subject2",
+    "sprint1_subject4",
+    "walk1_subject1",
+    "walk1_subject2",
+    "walk1_subject5",
+    "walk2_subject1",
+    "walk2_subject3",
+    "walk2_subject4",
+    "walk3_subject1",
+    "walk3_subject2",
+    "walk3_subject3",
+    "walk3_subject4",
+    "walk3_subject5",
+    "walk4_subject1"
+  ],
+  "asset_sha256": "ccb3de2c206fb331106c8f3931045817820b95dc541c94d3e702931db1d7e3d7",
+  "urdf_sha256": "0dc078a30278f5e51f1cdffe30e2f898e6654c60e2c25a0431891b7b45475e48"
+}

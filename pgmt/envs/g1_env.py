@@ -208,8 +208,15 @@ class G1EnvConfig:
     max_action_delay: int = 0
     # Experimental ordinary-reset ablation, not an author-disclosed setting.
     reset_mode: str = "nominal"
+    # A23: explicit, checkpointed integration settings; no velocity clipping.
+    physics_external_forces_every_iteration: bool = get("A23").value.enable_external_forces_every_iteration
+    physics_min_velocity_iterations: int = get("A23").value.min_velocity_iteration_count
 
     def __post_init__(self):
+        if (type(self.physics_external_forces_every_iteration) is not bool
+                or type(self.physics_min_velocity_iterations) is not int
+                or not 0 <= self.physics_min_velocity_iterations <= 255):
+            raise ValueError("invalid physics solver settings")
         if self.reset_mode not in ("nominal", "reference_state"):
             raise ValueError("reset_mode must be nominal or reference_state")
         if self.reset_mode == "reference_state" and (self.stage != 1 or self.terrain_family != "flat"):
@@ -458,10 +465,23 @@ class G1Env:
         self._reference_raw_root_pos = torch.zeros_like(self.root_pos)
         self._reference_raw_root_quat = self.default_root_quat.clone()
         self._reference_raw_root_lin_vel = torch.zeros_like(self.root_lin_vel)
+        self._reference_ground_z = None
         if self.reference_database is None and self.cfg.reference_data_dir:
             from pgmt.envs.reference_sampler import MotionDatabase
             self.reference_database = MotionDatabase(self.cfg.reference_data_dir)
         if self.reference_database is not None:
+            contracts = [str(s.get("reference_frame_contract", "")) for s in self.reference_database.seqs]
+            if any(contracts):
+                if any(c != "flat_ground_v1" for c in contracts):
+                    raise ValueError("cannot mix grounded and legacy reference placement contracts")
+                if self.cfg.stage != 1 or self.cfg.terrain_family != "flat":
+                    raise ValueError("flat_ground_v1 currently requires flat Stage 1")
+                import hashlib
+                fingerprint = hashlib.sha256(Path(self.cfg.reference_urdf_path).read_bytes()).hexdigest()
+                if any(str(s["kinematic_urdf_sha256"]) != fingerprint for s in self.reference_database.seqs):
+                    raise ValueError("reference geometry differs from runtime URDF")
+                self._reference_ground_z = torch.tensor(
+                    [float(s["reference_ground_z"]) for s in self.reference_database.seqs], device=self.device)
             if self.cfg.stage == 2 and self.articulation is not None:
                 if any(str(item.get("contact_source", "")) != "offline_reference_mesh_v2" for item in self.reference_database.seqs):
                     raise ValueError("physical Stage 2 requires offline reference-mesh contact labels")
@@ -815,6 +835,11 @@ class G1Env:
         desired_root[self._recovery_active[env_ids].bool()] = self.default_root_pos[env_ids][self._recovery_active[env_ids].bool()]
         desired = torch.bmm(inv_place, desired_root.unsqueeze(-1)).squeeze(-1)
         self._reference_placement_pos[env_ids] = desired - raw_pos
+        if self._reference_ground_z is not None:
+            # New, explicitly versioned references preserve height above their
+            # source ground. Map that plane to the flat world plane z=0;
+            # nominal robot root height must not translate the reference floor.
+            self._reference_placement_pos[env_ids, 2] = -self._reference_ground_z[seq]
         batch = self._reference_batch(
             seq, self.reference_frame[env_ids],
             placement_pos=self._reference_placement_pos[env_ids],
@@ -857,6 +882,8 @@ class G1Env:
             raise ValueError("reference reset joint position outside legal action interval")
         minimum = self._reset_collision_floor.min_height(batch["body_pos"][mask], batch["body_quat"][mask])
         lift = (-minimum).clamp_min(0)
+        if self._reference_ground_z is not None and float(lift.max()) > 2e-4:
+            raise ValueError("grounded reference reset penetrates the runtime collision floor")
         self._reset_height_lift[ids] = lift
         # Placement rotation is yaw-only, so world z and placement z coincide.
         self._reference_placement_pos[ids, 2] += lift
@@ -990,8 +1017,15 @@ class G1Env:
             "reference_raw_root_quat": self._reference_raw_root_quat.detach().cpu(),
             "rng_state": self._rng.bit_generator.state,
         }
-        state["protocol_version"] = 4
+        state["protocol_version"] = 5
+        state["reference_kinematics_contract"] = (
+            None if self._reference_motion is None else self._reference_motion.kinematics_contract)
+        state["reference_placement_contract"] = (
+            "legacy_root_anchor" if self._reference_ground_z is None else "flat_ground_v1")
         state["reset_mode"] = self.cfg.reset_mode
+        state["physics_settings"] = {
+            "physics_external_forces_every_iteration": self.cfg.physics_external_forces_every_iteration,
+            "physics_min_velocity_iterations": self.cfg.physics_min_velocity_iterations}
         state["reset_height_lift"] = self._reset_height_lift.detach().cpu()
         state["revised_buffers"] = {key: getattr(self, key).detach().cpu() for key in (
             "default_root_pos", "_terrain_families", "_terrain_levels", "_termination_ref_threshold", "_termination_ref_delay",
@@ -1014,6 +1048,17 @@ class G1Env:
 
     def load_state_dict(self, state: Mapping[str, Any]) -> None:
         """Restore :meth:`state_dict` after construction."""
+        contract = None if self._reference_motion is None else self._reference_motion.kinematics_contract
+        if state.get("reference_kinematics_contract") != contract:
+            raise ValueError("resume reference kinematics contract differs; old reward derivatives cannot resume silently")
+        placement = "legacy_root_anchor" if self._reference_ground_z is None else "flat_ground_v1"
+        if state.get("reference_placement_contract", "legacy_root_anchor") != placement:
+            raise ValueError("resume reference placement contract differs")
+        physics=state.get("physics_settings", {"physics_external_forces_every_iteration":False,
+                                                "physics_min_velocity_iterations":0})
+        if any(physics.get(key)!=getattr(self.cfg,key) for key in
+               ("physics_external_forces_every_iteration","physics_min_velocity_iterations")):
+            raise ValueError("resume physics settings differ; use the saved solver configuration")
         if state.get("reset_mode", "nominal") != self.cfg.reset_mode:
             raise ValueError("resume reset_mode differs")
         self._reset_height_lift.copy_(torch.as_tensor(state.get("reset_height_lift", 0.), device=self.device))
@@ -1463,6 +1508,8 @@ if _ISAACLAB_IMPORTABLE:
             cfg.sim.device = self._pgmt_cfg.device
             cfg.decimation = self._pgmt_cfg.decimation
             cfg.sim.render_interval = cfg.decimation
+            cfg.sim.physx.enable_external_forces_every_iteration = self._pgmt_cfg.physics_external_forces_every_iteration
+            cfg.sim.physx.min_velocity_iteration_count = self._pgmt_cfg.physics_min_velocity_iterations
             super().__init__(cfg, **kwargs)
             self.core = G1Env(self._pgmt_cfg, articulation=self.robot, recovery_pool=recovery_pool)
             from pgmt.envs.randomization import IsaacRandomizer

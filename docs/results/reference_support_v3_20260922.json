@@ -1,0 +1,1344 @@
+{
+  "status": "completed",
+  "training_approved": false,
+  "window_audit": {
+    "status": "completed",
+    "scope": "scored-window feasibility audit",
+    "clips": [
+      {
+        "clip_id": "low_motion_0",
+        "source_sequence": "aiming2_subject3",
+        "source_start_frame": 150,
+        "source_plane_m": 0.020720137474496254,
+        "source_support_fraction": [
+          0.94,
+          1.0
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            0,
+            894
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.06883148571392785,
+          0.030326036931004326
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.10842442512512207,
+          0.10842442512512207
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          3.252765417098999,
+          3.25276517868042
+        ],
+        "foot_clearance_quantiles_m": [
+          9.896233677864075e-06,
+          1.0016374289989471e-05,
+          0.012507467198565242
+        ],
+        "mesh_contact_fraction": [
+          0.43333333333333335,
+          0.7933333333333333
+        ],
+        "source_support_above_2cm_fraction": 0.38831615120274915,
+        "minimum_all_collision_height_m": 9.971670806407928e-06,
+        "root_z_correction_range_m": [
+          -0.014116143956754906,
+          0.1097148935937158
+        ],
+        "max_root_step_m": 0.018179278820753098,
+        "max_root_vertical_acceleration_m_s2": 2.178802013397217,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 138,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "1476b4be34cf7b4dd6d6b8517b650583dac7a8dabca607fb95d983a28cf9f872",
+        "source_bvh_sha256": "8f0bf3935998e1118dda8b01ded62d70bd3c679bdc5b5780a602924236a51cc9"
+      },
+      {
+        "clip_id": "low_motion_1",
+        "source_sequence": "aiming1_subject1",
+        "source_start_frame": 1200,
+        "source_plane_m": -0.00040096373132762325,
+        "source_support_fraction": [
+          0.84,
+          0.92
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            685,
+            1656
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.07100670170277351,
+          0.02922442195546677
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.13104543089866638,
+          0.12731090188026428
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          3.9314022064208984,
+          3.8193652629852295
+        ],
+        "foot_clearance_quantiles_m": [
+          9.896233677864075e-06,
+          4.764605761516279e-05,
+          0.009914855448402968
+        ],
+        "mesh_contact_fraction": [
+          0.58,
+          1.0
+        ],
+        "source_support_above_2cm_fraction": 0.19318181818181818,
+        "minimum_all_collision_height_m": 9.971670806407928e-06,
+        "root_z_correction_range_m": [
+          -0.03699848312734216,
+          -0.004255134010264599
+        ],
+        "max_root_step_m": 0.011046027764678001,
+        "max_root_vertical_acceleration_m_s2": 1.99056077003479,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 102,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "f92b92af6d37ab4901adbbb1499b10a5e774051cb84bcc9bb7787ffb86fdb583",
+        "source_bvh_sha256": "53c90d858221d02a623776b6bca9d4cfed17ea832fc7bd641b35549055af912c"
+      },
+      {
+        "clip_id": "low_motion_2",
+        "source_sequence": "aiming2_subject2",
+        "source_start_frame": 6270,
+        "source_plane_m": 0.01976634284995263,
+        "source_support_fraction": [
+          0.9933333333333333,
+          0.92
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            6178,
+            6807
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.07294589300693616,
+          0.02938063676937999
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.09848855435848236,
+          0.09848855435848236
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          2.954686164855957,
+          2.954686164855957
+        ],
+        "foot_clearance_quantiles_m": [
+          9.883195161819458e-06,
+          1.0034069418907166e-05,
+          0.006992408215181933
+        ],
+        "mesh_contact_fraction": [
+          0.5066666666666667,
+          0.58
+        ],
+        "source_support_above_2cm_fraction": 0.4529616724738676,
+        "minimum_all_collision_height_m": 9.964220225811005e-06,
+        "root_z_correction_range_m": [
+          0.006049549343328444,
+          0.06261446326971054
+        ],
+        "max_root_step_m": 0.016263555735349655,
+        "max_root_vertical_acceleration_m_s2": 2.3873746395111084,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 64,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "92c50481b2fd7ad5945617d0aa2cc7f7986869e37e4732c3661a6281eb9d9ed5",
+        "source_bvh_sha256": "76ddbd67bd40710f2196f732e7686823744c3fdfcd5c3410838f4c8508508d98"
+      },
+      {
+        "clip_id": "low_motion_3",
+        "source_sequence": "aiming2_subject5",
+        "source_start_frame": 6480,
+        "source_plane_m": 0.010427801315152531,
+        "source_support_fraction": [
+          0.7533333333333333,
+          0.7866666666666666
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            6283,
+            6938
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.08204860363069706,
+          0.03226063761237864
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.19780415296554565,
+          0.19780415296554565
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          5.9341840744018555,
+          5.934183597564697
+        ],
+        "foot_clearance_quantiles_m": [
+          9.872950613498688e-06,
+          0.0010104932190877196,
+          0.024173733102164474
+        ],
+        "mesh_contact_fraction": [
+          0.8733333333333333,
+          0.84
+        ],
+        "source_support_above_2cm_fraction": 0.09523809523809523,
+        "minimum_all_collision_height_m": 9.967945516109467e-06,
+        "root_z_correction_range_m": [
+          -0.0328126884996891,
+          0.014756786940713805
+        ],
+        "max_root_step_m": 0.01592174917459488,
+        "max_root_vertical_acceleration_m_s2": 2.707207679748535,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 138,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "8fc4da24927a8adba3427c3bcf11e8a86727618fc80ce7872e803248d5618e23",
+        "source_bvh_sha256": "788d43f6ecd38a937e2423bf8139cd4c562e45502924034c9c23b7a0e83a7061"
+      },
+      {
+        "clip_id": "slow_walk_0",
+        "source_sequence": "walk2_subject4",
+        "source_start_frame": 1380,
+        "source_plane_m": 0.01761739501512233,
+        "source_support_fraction": [
+          0.74,
+          0.6533333333333333
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            0,
+            2422
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          1.0,
+          0.7066666666666667
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.06548090336577463,
+          0.022907879650136614
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.07660937309265137,
+          0.07825461030006409
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          2.2983040809631348,
+          2.3476617336273193
+        ],
+        "foot_clearance_quantiles_m": [
+          9.850598871707916e-06,
+          0.000527479103722328,
+          0.007374020383861427
+        ],
+        "mesh_contact_fraction": [
+          0.7,
+          0.6066666666666667
+        ],
+        "source_support_above_2cm_fraction": 0.2583732057416268,
+        "minimum_all_collision_height_m": 9.971670806407928e-06,
+        "root_z_correction_range_m": [
+          -0.020232756210241423,
+          0.06783080802410411
+        ],
+        "max_root_step_m": 0.013584812171757221,
+        "max_root_vertical_acceleration_m_s2": 1.597931146621704,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 169,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "cede3527e2c9273090ba0a1948659d27281bfa472092511ea0a9420ea2d10386",
+        "source_bvh_sha256": "c5422fad8431ee55d11e71e06c7debc80bdb2746a4c13fd337c283717617a8ea"
+      },
+      {
+        "clip_id": "slow_walk_1",
+        "source_sequence": "walk1_subject1",
+        "source_start_frame": 5430,
+        "source_plane_m": 0.001780987245752984,
+        "source_support_fraction": [
+          0.8266666666666667,
+          0.66
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            5217,
+            6058
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.41333333333333333,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.06944423737782437,
+          0.018769360619677704
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.10452643036842346,
+          0.10519644618034363
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          3.135824203491211,
+          3.1559250354766846
+        ],
+        "foot_clearance_quantiles_m": [
+          9.872019290924072e-06,
+          0.0009665196612863355,
+          0.023872681259185395
+        ],
+        "mesh_contact_fraction": [
+          0.9666666666666667,
+          0.38
+        ],
+        "source_support_above_2cm_fraction": 0.18834080717488788,
+        "minimum_all_collision_height_m": 9.964220225811005e-06,
+        "root_z_correction_range_m": [
+          -0.0482371779212216,
+          0.02609100006520748
+        ],
+        "max_root_step_m": 0.01687653362751007,
+        "max_root_vertical_acceleration_m_s2": 3.5818934440612793,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 157,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "09cb366d04818d648b1c1e252ffddc8ea6c26248c05c763be29ca9f42bf0add5",
+        "source_bvh_sha256": "4c9d591f323ffa660d9de6ef20c5d7077e66b2102a009feedf01afa22a6fbc73"
+      },
+      {
+        "clip_id": "slow_walk_2",
+        "source_sequence": "walk3_subject4",
+        "source_start_frame": 5580,
+        "source_plane_m": 0.018778205874705543,
+        "source_support_fraction": [
+          0.7133333333333334,
+          0.7933333333333333
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            2994,
+            5857
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          1.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.08377044437893674,
+          0.03155502821769597
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.11813625693321228,
+          0.1270383596420288
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          3.5441231727600098,
+          3.8111889362335205
+        ],
+        "foot_clearance_quantiles_m": [
+          9.910669177770615e-06,
+          0.0004543810480226327,
+          0.019570587603987784
+        ],
+        "mesh_contact_fraction": [
+          0.84,
+          0.66
+        ],
+        "source_support_above_2cm_fraction": 0.2168141592920354,
+        "minimum_all_collision_height_m": 9.971670806407928e-06,
+        "root_z_correction_range_m": [
+          -0.03726584756150691,
+          0.01682148672644584
+        ],
+        "max_root_step_m": 0.021346742287278175,
+        "max_root_vertical_acceleration_m_s2": 3.9324116706848145,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 144,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "e9b68b432c4f00e46309479b1bd4d1807080183b654949e9ad75dc6c0f9676ba",
+        "source_bvh_sha256": "13451e9a5b310cf5dba1ec976d1219673257bedb483195a2d35e189e7247c81c"
+      },
+      {
+        "clip_id": "slow_walk_3",
+        "source_sequence": "walk3_subject2",
+        "source_start_frame": 480,
+        "source_plane_m": 0.02008267398423336,
+        "source_support_fraction": [
+          0.6466666666666666,
+          0.8
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            0,
+            546
+          ],
+          [
+            551,
+            1858
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.8933333333333333,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.0843872205824083,
+          0.03246168033681577
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.16940265893936157,
+          0.1905665099620819
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          5.082130432128906,
+          5.717052459716797
+        ],
+        "foot_clearance_quantiles_m": [
+          9.894371032714844e-06,
+          0.0008148457391470385,
+          0.016360205745514875
+        ],
+        "mesh_contact_fraction": [
+          0.5266666666666666,
+          0.86
+        ],
+        "source_support_above_2cm_fraction": 0.271889400921659,
+        "minimum_all_collision_height_m": 9.971670806407928e-06,
+        "root_z_correction_range_m": [
+          -0.016801303032099597,
+          0.07566282153129578
+        ],
+        "max_root_step_m": 0.022596320137381554,
+        "max_root_vertical_acceleration_m_s2": 4.15906286239624,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 182,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "1e8ceac86051ef5c690b501dd1d7b509a4d21e819a026f95b03740e696851dac",
+        "source_bvh_sha256": "8771962be56019ae9a2266f2bdf5052334f0f22c598e85f776a0af8ee3f81614"
+      }
+    ],
+    "training_approved": false,
+    "source_sha256": "1404c84e892635a641e2cde4b5d372f9fa7f4208653c591c2a2ea5f339ac3da4",
+    "algorithm_sha256": "ccb1dcb33d166d33e8b9d82c6496c4bbfa167a684fbe8317ac8e1637dde218cf",
+    "urdf_sha256": "0dc078a30278f5e51f1cdffe30e2f898e6654c60e2c25a0431891b7b45475e48",
+    "note": "new offline retarget conventions, not changed RL rewards; no claim of physical feasibility"
+  },
+  "full_sequence_export": {
+    "status": "completed",
+    "scope": "full-sequence v3 candidate",
+    "clips": [
+      {
+        "clip_id": "low_motion_0",
+        "source_sequence": "aiming2_subject3",
+        "source_start_frame": 150,
+        "source_plane_m": 0.020720137474496254,
+        "source_support_fraction": [
+          0.94,
+          1.0
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            0,
+            894
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.06883148571392785,
+          0.030326036931004326
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.10842442512512207,
+          0.10842442512512207
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          3.252765417098999,
+          3.25276517868042
+        ],
+        "foot_clearance_quantiles_m": [
+          9.896233677864075e-06,
+          1.0019168257713318e-05,
+          0.012507297588614096
+        ],
+        "mesh_contact_fraction": [
+          0.43333333333333335,
+          0.7933333333333333
+        ],
+        "source_support_above_2cm_fraction": 0.38831615120274915,
+        "minimum_all_collision_height_m": 9.95676964521408e-06,
+        "root_z_correction_range_m": [
+          -0.050959117716790715,
+          0.22678910195827484
+        ],
+        "max_root_step_m": 0.01817929372191429,
+        "max_root_vertical_acceleration_m_s2": 2.1788556575775146,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 273,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "1476b4be34cf7b4dd6d6b8517b650583dac7a8dabca607fb95d983a28cf9f872",
+        "source_bvh_sha256": "8f0bf3935998e1118dda8b01ded62d70bd3c679bdc5b5780a602924236a51cc9"
+      },
+      {
+        "clip_id": "low_motion_1",
+        "source_sequence": "aiming1_subject1",
+        "source_start_frame": 1200,
+        "source_plane_m": -0.00040096373132762325,
+        "source_support_fraction": [
+          0.84,
+          0.92
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            685,
+            1656
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.07100670170277351,
+          0.02922442195546677
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.13104543089866638,
+          0.12731090188026428
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          3.9314022064208984,
+          3.8193652629852295
+        ],
+        "foot_clearance_quantiles_m": [
+          9.896233677864075e-06,
+          5.8462076191995865e-05,
+          0.009914853669835213
+        ],
+        "mesh_contact_fraction": [
+          0.58,
+          1.0
+        ],
+        "source_support_above_2cm_fraction": 0.19318181818181818,
+        "minimum_all_collision_height_m": 9.964220225811005e-06,
+        "root_z_correction_range_m": [
+          -0.051995093607817455,
+          0.14437758922576904
+        ],
+        "max_root_step_m": 0.011046027764678001,
+        "max_root_vertical_acceleration_m_s2": 1.9905071258544922,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 282,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "f92b92af6d37ab4901adbbb1499b10a5e774051cb84bcc9bb7787ffb86fdb583",
+        "source_bvh_sha256": "53c90d858221d02a623776b6bca9d4cfed17ea832fc7bd641b35549055af912c"
+      },
+      {
+        "clip_id": "low_motion_2",
+        "source_sequence": "aiming2_subject2",
+        "source_start_frame": 6270,
+        "source_plane_m": 0.01976634284995263,
+        "source_support_fraction": [
+          0.9933333333333333,
+          0.92
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            6178,
+            6807
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.07294589300693616,
+          0.02938063676937999
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.09848855435848236,
+          0.09848855435848236
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          2.954686164855957,
+          2.954686164855957
+        ],
+        "foot_clearance_quantiles_m": [
+          9.883195161819458e-06,
+          1.0034069418907166e-05,
+          0.006992087955104843
+        ],
+        "mesh_contact_fraction": [
+          0.5066666666666667,
+          0.58
+        ],
+        "source_support_above_2cm_fraction": 0.4529616724738676,
+        "minimum_all_collision_height_m": 9.95676964521408e-06,
+        "root_z_correction_range_m": [
+          -0.03707907629091975,
+          0.15292072296142578
+        ],
+        "max_root_step_m": 0.016263553872704506,
+        "max_root_vertical_acceleration_m_s2": 2.3874282836914062,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 499,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "92c50481b2fd7ad5945617d0aa2cc7f7986869e37e4732c3661a6281eb9d9ed5",
+        "source_bvh_sha256": "76ddbd67bd40710f2196f732e7686823744c3fdfcd5c3410838f4c8508508d98"
+      },
+      {
+        "clip_id": "low_motion_3",
+        "source_sequence": "aiming2_subject5",
+        "source_start_frame": 6480,
+        "source_plane_m": 0.010427801315152531,
+        "source_support_fraction": [
+          0.7533333333333333,
+          0.7866666666666666
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            6283,
+            6938
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.08204860363069706,
+          0.03226063761237864
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.19780415296554565,
+          0.19780415296554565
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          5.9341840744018555,
+          5.934183597564697
+        ],
+        "foot_clearance_quantiles_m": [
+          9.872950613498688e-06,
+          0.0010451772010904672,
+          0.02417283232075755
+        ],
+        "mesh_contact_fraction": [
+          0.8733333333333333,
+          0.84
+        ],
+        "source_support_above_2cm_fraction": 0.09523809523809523,
+        "minimum_all_collision_height_m": 9.95676964521408e-06,
+        "root_z_correction_range_m": [
+          -0.05615267682754377,
+          0.1779060810804367
+        ],
+        "max_root_step_m": 0.01592174917459488,
+        "max_root_vertical_acceleration_m_s2": 2.707207679748535,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 271,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "8fc4da24927a8adba3427c3bcf11e8a86727618fc80ce7872e803248d5618e23",
+        "source_bvh_sha256": "788d43f6ecd38a937e2423bf8139cd4c562e45502924034c9c23b7a0e83a7061"
+      },
+      {
+        "clip_id": "slow_walk_0",
+        "source_sequence": "walk2_subject4",
+        "source_start_frame": 1380,
+        "source_plane_m": 0.01761739501512233,
+        "source_support_fraction": [
+          0.74,
+          0.6533333333333333
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            0,
+            2422
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          1.0,
+          0.7066666666666667
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.06548090336577463,
+          0.022907879650136614
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.07660937309265137,
+          0.07825461030006409
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          2.2983040809631348,
+          2.3476617336273193
+        ],
+        "foot_clearance_quantiles_m": [
+          9.850598871707916e-06,
+          0.0005122145644436541,
+          0.007374089563535222
+        ],
+        "mesh_contact_fraction": [
+          0.7,
+          0.6066666666666667
+        ],
+        "source_support_above_2cm_fraction": 0.2583732057416268,
+        "minimum_all_collision_height_m": 9.95676964521408e-06,
+        "root_z_correction_range_m": [
+          -0.09249734771823981,
+          0.16447719931602478
+        ],
+        "max_root_step_m": 0.013584812171757221,
+        "max_root_vertical_acceleration_m_s2": 1.597931146621704,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 301,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "cede3527e2c9273090ba0a1948659d27281bfa472092511ea0a9420ea2d10386",
+        "source_bvh_sha256": "c5422fad8431ee55d11e71e06c7debc80bdb2746a4c13fd337c283717617a8ea"
+      },
+      {
+        "clip_id": "slow_walk_1",
+        "source_sequence": "walk1_subject1",
+        "source_start_frame": 5430,
+        "source_plane_m": 0.001780987245752984,
+        "source_support_fraction": [
+          0.8266666666666667,
+          0.66
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            5217,
+            6058
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.41333333333333333,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.06944423737782437,
+          0.018769360619677704
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.10452643036842346,
+          0.10519644618034363
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          3.135824203491211,
+          3.1559250354766846
+        ],
+        "foot_clearance_quantiles_m": [
+          9.872019290924072e-06,
+          0.0011142067692657019,
+          0.026830837293711017
+        ],
+        "mesh_contact_fraction": [
+          0.9466666666666667,
+          0.37333333333333335
+        ],
+        "source_support_above_2cm_fraction": 0.19730941704035873,
+        "minimum_all_collision_height_m": 9.964220225811005e-06,
+        "root_z_correction_range_m": [
+          -0.0635040600175963,
+          0.12513945996761322
+        ],
+        "max_root_step_m": 0.016876529902219772,
+        "max_root_vertical_acceleration_m_s2": 3.5818934440612793,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 250,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "09cb366d04818d648b1c1e252ffddc8ea6c26248c05c763be29ca9f42bf0add5",
+        "source_bvh_sha256": "4c9d591f323ffa660d9de6ef20c5d7077e66b2102a009feedf01afa22a6fbc73"
+      },
+      {
+        "clip_id": "slow_walk_2",
+        "source_sequence": "walk3_subject4",
+        "source_start_frame": 5580,
+        "source_plane_m": 0.018778205874705543,
+        "source_support_fraction": [
+          0.7133333333333334,
+          0.7933333333333333
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            2994,
+            5857
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          1.0,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.08377044437893674,
+          0.03155502821769597
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.11813625693321228,
+          0.1270383596420288
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          3.5441231727600098,
+          3.8111889362335205
+        ],
+        "foot_clearance_quantiles_m": [
+          9.910669177770615e-06,
+          0.00045441119039821856,
+          0.020232709735369073
+        ],
+        "mesh_contact_fraction": [
+          0.8333333333333334,
+          0.6533333333333333
+        ],
+        "source_support_above_2cm_fraction": 0.22123893805309736,
+        "minimum_all_collision_height_m": 9.964220225811005e-06,
+        "root_z_correction_range_m": [
+          -0.04363601330280922,
+          0.2688489556312561
+        ],
+        "max_root_step_m": 0.021346742287278175,
+        "max_root_vertical_acceleration_m_s2": 3.9324116706848145,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 1214,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "e9b68b432c4f00e46309479b1bd4d1807080183b654949e9ad75dc6c0f9676ba",
+        "source_bvh_sha256": "13451e9a5b310cf5dba1ec976d1219673257bedb483195a2d35e189e7247c81c"
+      },
+      {
+        "clip_id": "slow_walk_3",
+        "source_sequence": "walk3_subject2",
+        "source_start_frame": 480,
+        "source_plane_m": 0.02008267398423336,
+        "source_support_fraction": [
+          0.6466666666666666,
+          0.8
+        ],
+        "source_bouts_intersecting_clip": [
+          [
+            0,
+            546
+          ],
+          [
+            551,
+            1858
+          ]
+        ],
+        "waist_limit_v2_v3": [
+          0.8933333333333333,
+          0.0
+        ],
+        "anatomical_target_error_v2_v3_m": [
+          0.0843872205824083,
+          0.03246168033681577
+        ],
+        "max_joint_step_v2_v3_rad": [
+          0.16940265893936157,
+          0.1905665099620819
+        ],
+        "max_joint_speed_v2_v3_rad_s": [
+          5.082130432128906,
+          5.717052459716797
+        ],
+        "foot_clearance_quantiles_m": [
+          9.894371032714844e-06,
+          0.0008378632502468192,
+          0.01636009454547982
+        ],
+        "mesh_contact_fraction": [
+          0.5266666666666666,
+          0.86
+        ],
+        "source_support_above_2cm_fraction": 0.271889400921659,
+        "minimum_all_collision_height_m": 9.964220225811005e-06,
+        "root_z_correction_range_m": [
+          -0.04734719829787057,
+          0.13145493291218022
+        ],
+        "max_root_step_m": 0.022596325725317,
+        "max_root_vertical_acceleration_m_s2": 4.159116268157959,
+        "root_solve": {
+          "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+          "iterations": 253,
+          "root_prior_weight": 0.01,
+          "velocity_weight_s2": 0.01,
+          "acceleration_weight_s4": 0.0001,
+          "nonpenetration_margin_m": 1e-05
+        },
+        "old_npz_sha256": "1e8ceac86051ef5c690b501dd1d7b509a4d21e819a026f95b03740e696851dac",
+        "source_bvh_sha256": "8771962be56019ae9a2266f2bdf5052334f0f22c598e85f776a0af8ee3f81614"
+      }
+    ],
+    "training_approved": false,
+    "source_sha256": "1404c84e892635a641e2cde4b5d372f9fa7f4208653c591c2a2ea5f339ac3da4",
+    "algorithm_sha256": "ccb1dcb33d166d33e8b9d82c6496c4bbfa167a684fbe8317ac8e1637dde218cf",
+    "urdf_sha256": "0dc078a30278f5e51f1cdffe30e2f898e6654c60e2c25a0431891b7b45475e48",
+    "note": "new offline retarget conventions, not changed RL rewards; no claim of physical feasibility"
+  },
+  "runtime_audit": {
+    "status": "completed",
+    "clips": [
+      {
+        "clip_id": "low_motion_0",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "root_only_infeasible_support_frame_fraction": 0.7466666666666667,
+        "root_vertical_acceleration_v2_v3_m_s2": [
+          1.218069076538086,
+          2.1788556575775146
+        ],
+        "root_step_v2_v3_m": [
+          0.01755969412624836,
+          0.01817929372191429
+        ],
+        "max_qvel_difference_error_rad_s": 2.384185791015625e-07,
+        "max_root_rotation_step_rad": 0.062452927231788635,
+        "foot_clearance_per_side_min_median_max_m": [
+          [
+            9.924173355102539e-06,
+            0.02245452540924467,
+            0.0345263397321105
+          ],
+          [
+            9.896233677864075e-06,
+            1.0058749467134476e-05,
+            0.06424117740243673
+          ]
+        ],
+        "interpolated_50hz": {
+          "minimum_collision_height_m": -4.5095570385456085e-05,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_interpolated_label_mismatch_fraction": 0.002,
+          "scope": "continuous pose interpolation and majority-interpolated binary labels; no automatic repair"
+        }
+      },
+      {
+        "clip_id": "low_motion_1",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "root_only_infeasible_support_frame_fraction": 0.34,
+        "root_vertical_acceleration_v2_v3_m_s2": [
+          3.119095802307129,
+          1.9905071258544922
+        ],
+        "root_step_v2_v3_m": [
+          0.01106934156268835,
+          0.011046027764678001
+        ],
+        "max_qvel_difference_error_rad_s": 4.76837158203125e-07,
+        "max_root_rotation_step_rad": 0.08743248879909515,
+        "foot_clearance_per_side_min_median_max_m": [
+          [
+            9.928829967975616e-06,
+            0.018807321786880493,
+            0.03617424917093431
+          ],
+          [
+            9.896233677864075e-06,
+            7.618812931250649e-05,
+            0.012994049690367066
+          ]
+        ],
+        "interpolated_50hz": {
+          "minimum_collision_height_m": -5.650985985994339e-05,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_interpolated_label_mismatch_fraction": 0.002,
+          "scope": "continuous pose interpolation and majority-interpolated binary labels; no automatic repair"
+        }
+      },
+      {
+        "clip_id": "low_motion_2",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "root_only_infeasible_support_frame_fraction": 0.8666666666666667,
+        "root_vertical_acceleration_v2_v3_m_s2": [
+          2.8908352851867676,
+          2.3874282836914062
+        ],
+        "root_step_v2_v3_m": [
+          0.01624627597630024,
+          0.016263553872704506
+        ],
+        "max_qvel_difference_error_rad_s": 2.384185791015625e-07,
+        "max_root_rotation_step_rad": 0.13121408224105835,
+        "foot_clearance_per_side_min_median_max_m": [
+          [
+            9.883195161819458e-06,
+            0.01635845801029417,
+            0.05776389315724373
+          ],
+          [
+            9.890645742416382e-06,
+            0.0020862997142182364,
+            0.06455624755471945
+          ]
+        ],
+        "interpolated_50hz": {
+          "minimum_collision_height_m": -0.00013353396207094193,
+          "penetrating_more_than_0_1mm_fraction": 0.004,
+          "mesh_vs_interpolated_label_mismatch_fraction": 0.004,
+          "scope": "continuous pose interpolation and majority-interpolated binary labels; no automatic repair"
+        }
+      },
+      {
+        "clip_id": "low_motion_3",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "root_only_infeasible_support_frame_fraction": 0.08666666666666667,
+        "root_vertical_acceleration_v2_v3_m_s2": [
+          2.7926645278930664,
+          2.707207679748535
+        ],
+        "root_step_v2_v3_m": [
+          0.015554789453744888,
+          0.01592174917459488
+        ],
+        "max_qvel_difference_error_rad_s": 4.76837158203125e-07,
+        "max_root_rotation_step_rad": 0.10146063566207886,
+        "foot_clearance_per_side_min_median_max_m": [
+          [
+            9.872950613498688e-06,
+            0.007392872037693271,
+            0.03585309588012137
+          ],
+          [
+            9.94047150015831e-06,
+            0.003995103128846042,
+            0.049432279828917985
+          ]
+        ],
+        "interpolated_50hz": {
+          "minimum_collision_height_m": -0.00011571589857339859,
+          "penetrating_more_than_0_1mm_fraction": 0.004,
+          "mesh_vs_interpolated_label_mismatch_fraction": 0.002,
+          "scope": "continuous pose interpolation and majority-interpolated binary labels; no automatic repair"
+        }
+      },
+      {
+        "clip_id": "slow_walk_0",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "root_only_infeasible_support_frame_fraction": 0.3466666666666667,
+        "root_vertical_acceleration_v2_v3_m_s2": [
+          1.1440386772155762,
+          1.597931146621704
+        ],
+        "root_step_v2_v3_m": [
+          0.014586973935365677,
+          0.013584812171757221
+        ],
+        "max_qvel_difference_error_rad_s": 2.384185791015625e-07,
+        "max_root_rotation_step_rad": 0.021989036351442337,
+        "foot_clearance_per_side_min_median_max_m": [
+          [
+            9.909272193908691e-06,
+            0.007225514547459965,
+            0.04048682376698062
+          ],
+          [
+            9.850598871707916e-06,
+            0.0048120907166144845,
+            0.08955063298344612
+          ]
+        ],
+        "interpolated_50hz": {
+          "minimum_collision_height_m": -3.757048398256302e-05,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_interpolated_label_mismatch_fraction": 0.002,
+          "scope": "continuous pose interpolation and majority-interpolated binary labels; no automatic repair"
+        }
+      },
+      {
+        "clip_id": "slow_walk_1",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "root_only_infeasible_support_frame_fraction": 0.24666666666666667,
+        "root_vertical_acceleration_v2_v3_m_s2": [
+          3.6165482997894287,
+          3.5818934440612793
+        ],
+        "root_step_v2_v3_m": [
+          0.017200829461216927,
+          0.016876529902219772
+        ],
+        "max_qvel_difference_error_rad_s": 2.384185791015625e-07,
+        "max_root_rotation_step_rad": 0.029507972300052643,
+        "foot_clearance_per_side_min_median_max_m": [
+          [
+            9.872019290924072e-06,
+            0.0011142067692657019,
+            0.03392977426500042
+          ],
+          [
+            0.0018746234378706553,
+            0.029576648722766156,
+            0.06464759914974567
+          ]
+        ],
+        "interpolated_50hz": {
+          "minimum_collision_height_m": -0.0002859281376004219,
+          "penetrating_more_than_0_1mm_fraction": 0.008,
+          "mesh_vs_interpolated_label_mismatch_fraction": 0.012,
+          "scope": "continuous pose interpolation and majority-interpolated binary labels; no automatic repair"
+        }
+      },
+      {
+        "clip_id": "slow_walk_2",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "root_only_infeasible_support_frame_fraction": 0.2733333333333333,
+        "root_vertical_acceleration_v2_v3_m_s2": [
+          4.299023151397705,
+          3.9324116706848145
+        ],
+        "root_step_v2_v3_m": [
+          0.021580882370471954,
+          0.021346742287278175
+        ],
+        "max_qvel_difference_error_rad_s": 2.384185791015625e-07,
+        "max_root_rotation_step_rad": 0.045387495309114456,
+        "foot_clearance_per_side_min_median_max_m": [
+          [
+            9.910669177770615e-06,
+            0.0013618436945253827,
+            0.04723867095389914
+          ],
+          [
+            9.947456419467926e-06,
+            0.014125616848368265,
+            0.05055638367495645
+          ]
+        ],
+        "interpolated_50hz": {
+          "minimum_collision_height_m": -0.0005830423906445503,
+          "penetrating_more_than_0_1mm_fraction": 0.016,
+          "mesh_vs_interpolated_label_mismatch_fraction": 0.014,
+          "scope": "continuous pose interpolation and majority-interpolated binary labels; no automatic repair"
+        }
+      },
+      {
+        "clip_id": "slow_walk_3",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "root_only_infeasible_support_frame_fraction": 0.36551724137931035,
+        "root_vertical_acceleration_v2_v3_m_s2": [
+          3.7670233249664307,
+          4.159116268157959
+        ],
+        "root_step_v2_v3_m": [
+          0.022529762238264084,
+          0.022596325725317
+        ],
+        "max_qvel_difference_error_rad_s": 2.384185791015625e-07,
+        "max_root_rotation_step_rad": 0.09092260152101517,
+        "foot_clearance_per_side_min_median_max_m": [
+          [
+            9.937211871147156e-06,
+            0.017587604942718604,
+            0.06402300428545253
+          ],
+          [
+            9.894371032714844e-06,
+            0.0015243162097856987,
+            0.05064675025641918
+          ]
+        ],
+        "interpolated_50hz": {
+          "minimum_collision_height_m": -0.0001634778454899788,
+          "penetrating_more_than_0_1mm_fraction": 0.008,
+          "mesh_vs_interpolated_label_mismatch_fraction": 0.006,
+          "scope": "continuous pose interpolation and majority-interpolated binary labels; no automatic repair"
+        }
+      }
+    ],
+    "training_approved": false,
+    "source_sha256": "ae9378ccae5ecff44476dd9435af6db27dab68d969476d722323a172efd5a53f",
+    "manifest_sha256": "0a32281b0953df15297cc0fdbb9ac67b605d2ef87df85cf378383b3ac99eff35",
+    "scope": "CPU runtime geometry, not dynamic reference tracking"
+  },
+  "source_sha256": {
+    "reference_audit_v1/summary.json": "e8250e68500091c9974b5d34c6982a76b4b74c3597648a428af3e044c71e5d0e",
+    "reference_v3/summary.json": "d6f2f6713b4527b210a11214c5a95079a85ae5d931614e7745a682dde665c7cd",
+    "reference_v3_runtime_audit.json": "630beb3be35672e2d692a1016530c84d5bde299ea6c2935a6ba0ceacf031bd69"
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "status": "completed",
+  "datasets": {
+    "lafan1_g1_mesh_v2": {
+      "files_verified": 77,
+      "all_hashes_match": true
+    },
+    "lafan1_g1_asset_grounded8_v1": {
+      "files_verified": 8,
+      "all_hashes_match": true
+    },
+    "lafan1_g1_asset_grounded8_v2": {
+      "files_verified": 8,
+      "all_hashes_match": true
+    },
+    "lafan1_g1_asset_grounded8_v3": {
+      "files_verified": 8,
+      "all_hashes_match": true
+    }
+  },
+  "original_runtime_and_retarget_sources_unchanged": {
+    "pgmt/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pgmt/contracts.py": "4078ae0bb206aa9a08e793f66face3ee5fc299bd93630988b927932f64036819",
+    "pgmt/train/__init__.py": "fe010a2bbd30a2d3dc5f6dd1e95848b54ad73d663bf466b8524de77103561847",
+    "pgmt/train/diagnostics.py": "2ad0d75088547fcf5ab394bad34106e28906a17fdfdd2dd15ac3db2de6250682",
+    "pgmt/train/fixed_clip_diagnostic.py": "44a645b138dfbeb6f8075024da5504c221a931f159ca6f9cef11e6db20cee20f",
+    "pgmt/train/train_stage2.py": "f68d46a957c3e9917a6667a2a6bcc891c9143e0dc5dc5b200dd7706c02005c84",
+    "pgmt/train/stage1.py": "4693c039f275f73964ab60f5439c9e1f7d67ee3d1cb906a3cc950c29cc00899c",
+    "pgmt/train/standing_diagnostic.py": "1e507910955f12aec47d011ed9305ff5076a27b03d5313c492a724d4e0623f57",
+    "pgmt/train/storage.py": "28d96dadbb95d2833af47e4d5de91ad5b900e1e4c620593de39643d6ab56573f",
+    "pgmt/train/ppo.py": "5d2e64e696f5ab020fd69cd07b3d96fa908f3d823c2057dc5ec80387edc49cb5",
+    "pgmt/train/collect_fall_pool.py": "20a21b456e2026cbcc929379f03b50d23442752bcfd84275ac265e57c34279d6",
+    "pgmt/train/policy.py": "a1e97a9e1cd4eabc0f17eb3b3874958bc7c674d0a74f5c37118a9d851d3d8037",
+    "pgmt/train/train_stage1.py": "a84ff703921c8e155cdb5d3f681c5de50b248233887a82868c733c222b76b0fa",
+    "pgmt/envs/reference_motion.py": "176e5ad932827ff4f757f9c0a8b7fa44316e3dae26b82cbac654aa530f4f6a29",
+    "pgmt/envs/__init__.py": "c12d4b096dbe8687cdac0ca5dcf3f742475b34fc3458eade42bf5fd7b073997e",
+    "pgmt/envs/reset_geometry.py": "b55d4c0eed03dee1f3509a8997c80da18f1cb7e9e34594e4137ce33d4237b4ec",
+    "pgmt/envs/randomization.py": "de070529a0b16885c56c9a0e2a4ee031de968256b19256eb0e46a04faddd2fed",
+    "pgmt/envs/actuators.py": "bd394753b279c0ec59523cf4f56072962766a39ae6fd285ef17419a69f327266",
+    "pgmt/envs/reference_sampler.py": "1e1b279b5dcfcdc753bf184dc7b8d61eca57fb04f5d5cc416586331c6c500a68",
+    "pgmt/envs/recovery.py": "5fcf205a87444ca14e371ad41386f37e24e01234ef54488f4005d725d4a1d1ee",
+    "pgmt/envs/termination.py": "2b6fb8fe7f993121ac434c8ba9b616bc86a82beb1250d4472d90cb34d5935001",
+    "pgmt/envs/isaac_app.py": "ca8410c7718ce87de747cac459833378455af9243c1cde19d035b562ca5cd8d0",
+    "pgmt/envs/g1_env.py": "010084a6cd44f878745333567eca6766c0682f5efd5062bffebe21df8bd07142",
+    "pgmt/envs/observations.py": "69abd474449b7b0810a5dac0ac22d0b0a0a3cfd7c2e971efca5d5aae14253a40",
+    "pgmt/envs/terrain/batched.py": "17f3690dd137c758696b1c0457322333bd35168a9a122a3638cdd884876b1a98",
+    "pgmt/envs/terrain/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pgmt/envs/terrain/elevation_map.py": "bf779fd8a117d5eee35802c81bc03931ef9fc0301dfadae1b23594c5a90686de",
+    "pgmt/envs/terrain/curriculum.py": "fc64058bf5fc6663e6fe6a7821eed0d7e67e7dbb9210dbe75f43078f9b1475c6",
+    "pgmt/envs/terrain/generators.py": "fc8d89223efa9a993e9bf3f26912d7935c660d330c84a16689278bee6ea87e8e",
+    "pgmt/policy/rotation.py": "a6f888421cbf451db7c68c0fb0f4c3dcbf4721e9eb0ddd58f927889426075b63",
+    "pgmt/policy/multi_head_critic.py": "ca7f50c515c9d8e7554f5198760a5d673e4a7cd636539e878a4e65b105c3673b",
+    "pgmt/policy/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pgmt/policy/glimpse_encoder.py": "d57f0fc8a762953503c2da43aac03e340a14f0f989f04ad22d748c90b9a54b24",
+    "pgmt/policy/ifm.py": "72b4e39b1ddd98138a17dd8cfd6c5134e8b9457055b2666f7e7b680849ec441b",
+    "pgmt/policy/mhca.py": "0fd518d0e2e1a2333e192bbc0e326cc0c7433eafee770be5b6b14055d370670d",
+    "pgmt/policy/rope.py": "b3fc7ff11b8559e69e14e1815e4b5c299751ef2212c610ae68b97e97b64dde24",
+    "pgmt/policy/actor.py": "33574fd9a97bd223636cb4f6cc9299b4e743c65615cbe74a58203a9691d829b1",
+    "pgmt/policy/history_encoder.py": "9eeff3187fa0020c0cee49f30ad4714ff45ecfc18bf6555e1594683593a34ef6",
+    "pgmt/policy/mlp.py": "f6c22a9bdc364ebcaf36a2751402b5c88935e0c8da70704369e8e0e33e92cfbd",
+    "pgmt/cfg/assumptions.py": "2b2bdad59c05ad88e8bcd4c8e5699952e3c62aa701724c40c998badc351e156e",
+    "pgmt/cfg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pgmt/rewards/semantics.py": "c8907cf31b38a9fe7c7997f9f6f893371d701cbab50e52d85a31e6d78e070806",
+    "pgmt/rewards/batched.py": "216d50d4e6edf1afac1abd096d872104d234536ae8000c72be49ed93007b389c",
+    "pgmt/rewards/auxiliary.py": "5cc90004e609b61ca05fd15e42f2d7b5cabe467cfd1d4366181ed5e5eed62691",
+    "pgmt/rewards/spec.py": "fc7de3e5c0d14bac5f2c68f5eeb0e4be3dd76fc823d251c09663ee571320792c",
+    "pgmt/rewards/__init__.py": "94797a34e98a0557ad448742410ba4fa86b6f800619dba97a245c49528b93e9f",
+    "pgmt/rewards/tracking.py": "42006245fd96ccb94e89ec6cdf288accb494cbf3469bc6e3460ffaf9d82b56b6",
+    "pgmt/rewards/terrain_contact.py": "0b8ea6ae03bd421322c8b5180811076f6799fe74601bbd4cd7c0bb414d336c7c",
+    "pgmt/utils/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pgmt/eval/__init__.py": "16b7158da6672dfe606e863a314464c11654750584ad80a7ba6126fb0c3435d2",
+    "pgmt/eval/run.py": "0ec0b081fe3ebcc4db287eea965363630e70dc4afe857122a64d1b867f7a1e79",
+    "pgmt/eval/manifest.py": "95d7c03c29ec62b0436be37d88b4a2d0b964ea4db28de90b84885900f8e58f32",
+    "data/viz_terrain.py": "02a04467d1c5b3d73a8f12c1f4b09ca465b82ec455353e050c13cf1b2ac22a0f",
+    "data/eval_retarget.py": "cc0978149b4b8044f2fe9b1760b219f353dba902d51062c761ff4b4382acb45c",
+    "data/probe_reward_scales.py": "436b67594b6aa761f96c314f04883a06857b42d53037bb2ab6b49308a2ed69fa",
+    "data/probe_heights.py": "6af756f2c97529456b6dcf3a0a1f15762002abf541c93998696ec484e0366323",
+    "data/bvh.py": "1ee8ebe59f5414529f0b6064d779033187afb4151c5794369a05576dcee4ba2d",
+    "data/build_mesh_contacts.py": "535b13c60187670abd0f48e15b2da555deb00052da99cd2724f0ae571e95ebe2",
+    "data/g1_kinematics.py": "2468deff8fb409253252507a4030fbffb5eae61dce3e4626f53ef1537b141541",
+    "data/ik_refine.py": "e9f981f3b16b3c21e173a7757fa4a5fca70e48894dd6ffda597ec5d59e7dd3fe",
+    "data/viz_retarget.py": "4d0eda499004fea08bf4624bef930d423887498b1b51af1e59c6b87690755371",
+    "data/validate_retarget.py": "b3f3e120327e929906a6412dfc09b3b1e82357eb01581f5a8b43cc11f7e3820b",
+    "data/retarget_lafan1.py": "a983be690ef8bb48bf2b2c1362f5d5b4164481cf17d57cfce2f7432390a0f70c"
+  },
+  "execution_ledger": {
+    "maximum_transitions": 9600,
+    "ppo_updates": 0,
+    "runs": [
+      {
+        "condition": "control",
+        "command": [
+          "/data/jxc/envs/pbfm_isaaclab/bin/python",
+          "-m",
+          "setup.replay_standing_events",
+          "--original",
+          "runs/standing_learning_20260922/physics_v1/control",
+          "--fixture",
+          "runs/standing_learning_20260922/fixture",
+          "--tape",
+          "runs/standing_replay_reference_20260922/cpu_events_v1/control.pt",
+          "--output",
+          "runs/standing_replay_reference_20260922/physics_v1/control"
+        ],
+        "started_unix": 1790080177.918367,
+        "pid": 3802203,
+        "exit_code": 0,
+        "status": "completed",
+        "transitions": 4800,
+        "finished_unix": 1790080282.9471638
+      },
+      {
+        "condition": "candidate",
+        "command": [
+          "/data/jxc/envs/pbfm_isaaclab/bin/python",
+          "-m",
+          "setup.replay_standing_events",
+          "--original",
+          "runs/standing_learning_20260922/physics_v1/candidate",
+          "--fixture",
+          "runs/standing_learning_20260922/fixture",
+          "--tape",
+          "runs/standing_replay_reference_20260922/cpu_events_v1/candidate.pt",
+          "--output",
+          "runs/standing_replay_reference_20260922/physics_v1/candidate"
+        ],
+        "started_unix": 1790080283.0374014,
+        "pid": 3804292,
+        "exit_code": 0,
+        "status": "completed",
+        "transitions": 4800,
+        "finished_unix": 1790080376.1624153
+      }
+    ],
+    "actual_transitions": 9600
+  },
+  "gpu_release": {
+    "task_pids_alive": [],
+    "compute_apps": "[N/A], GPU-1f8a72b4-0821-9275-e36f-49ab74f13572, [N/A]\n3763678, GPU-f7101fde-c01f-7cbd-e2ee-b05831d2f988, 4042 MiB\n",
+    "gpu_uuid": "GPU-d86528b1-67d4-d67f-db2c-ccae580a1267",
+    "checked_unix": 1790080376.2701323
+  },
+  "full_tests": {
+    "passed": 858,
+    "skipped": 2,
+    "log_sha256": "fd1e283dbe8a5974f12c168b742f0e7c49c12404620be3d08f3700317b8ba81d"
+  },
+  "reference_training_approved": false,
+  "no_additional_learning": true
+}

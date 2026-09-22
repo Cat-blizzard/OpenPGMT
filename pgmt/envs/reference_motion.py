@@ -103,6 +103,8 @@ def _matrix_delta_angular(a: torch.Tensor, b: torch.Tensor, dt: float | torch.Te
 class ReferenceMotion:
     """URDF FK view over a :class:`MotionDatabase` or TorchMotionDatabase."""
 
+    kinematics_contract = "reference_linear_derivatives_v3"
+
     def __init__(self, database: Any, urdf_path: str | Path, device="cpu", control_dt: float = .02):
         self.device = torch.device(device)
         self.control_dt = float(control_dt)
@@ -232,6 +234,45 @@ class ReferenceMotion:
                     body_accel=torch.zeros_like(body_pos),
                     root_lin_vel=rv, root_ang_vel=rw)
 
+    def _linear_velocity_pair(self, seq_ids, frames):
+        """Instantaneous velocity estimates at t and max(t-dt,0).
+
+        Quadratic three-point derivatives use source-frame nodes internally and
+        one-sided nodes at sequence endpoints. Both times share one batched FK.
+        The acceleration then uses the same backward control interval as the
+        simulator's velocity difference, instead of inventing zero start speed.
+        """
+        limit = (self.db.lengths[seq_ids]-1).float()
+        source_dt = self.db.frame_time[seq_ids]
+        step = self.control_dt/source_dt
+        previous = (frames-step).clamp_min(0)
+        # Differentiate original samples rather than sub-frame linear
+        # interpolation: 30 Hz source data and 50 Hz control must not invent
+        # acceleration from the interpolation's changing piecewise slope.
+        h = torch.minimum(torch.ones_like(limit), limit/2)
+        times = torch.stack((frames, previous))
+        centers = times.round().maximum(h).minimum(limit-h)
+        nodes = centers[:, None]+torch.tensor([-1.,0.,1.],device=self.device)[None,:,None]*h
+        ids = seq_ids.expand(2,3,-1).reshape(-1)
+        q, _, rp, rr = self.db.ref_at(ids, nodes.reshape(-1))
+        local, _ = self._fk(q)
+        world = rp[:,None]+torch.einsum('bij,bnj->bni',_qmat(rr),local)
+        roots = rp.reshape(2,3,len(frames),3)
+        bodies = world.reshape(2,3,len(frames),len(self._body_order),3)
+        h_sec = (h*source_dt).clamp_min(1e-8)
+        offset = (times-centers)*source_dt
+        def derivative(points):
+            shape = (1,len(frames))+tuple(1 for _ in points.shape[3:])
+            dt = h_sec.reshape(shape)
+            delta = offset.reshape(2,len(frames),*([1]*(points.ndim-3)))
+            return ((points[:,2]-points[:,0])/(2*dt)
+                    + delta*(points[:,2]-2*points[:,1]+points[:,0])/dt.square())
+        root_v, body_v = derivative(roots), derivative(bodies)
+        interval = ((frames-previous)*source_dt).clamp_min(1e-8)
+        root_a = (root_v[0]-root_v[1])/interval[:,None]
+        body_a = (body_v[0]-body_v[1])/interval[:,None,None]
+        return root_v[0], body_v[0], root_a, body_a
+
     def sample(self, seq_ids: torch.Tensor, frames: torch.Tensor, *, placement_pos=None, placement_quat=None, robot_root_pos=None):
         seq_ids, frames = seq_ids.to(self.device).long().reshape(-1), frames.to(self.device).float().reshape(-1)
         max_frame = (self.db.lengths[seq_ids] - 1).float()
@@ -250,27 +291,15 @@ class ReferenceMotion:
                                    torch.full_like(next_dt, self.control_dt), next_dt)
         qn, _, rpn, rrn = self.db.ref_at(seq_ids, nxt)
         body_local_p_n, body_local_q_n = self._fk(qn)
-        prev = (frames - step).clamp_min(0).minimum(max_frame)
-        prev_dt = (frames - prev) * self.db.frame_time[seq_ids]
-        prev_dt_safe = prev_dt.clamp_min(1e-8)
-        qp, _, rpp, rrp = self.db.ref_at(seq_ids, prev)
-        body_local_p_p, _ = self._fk(qp)
         root_R, root_Rn = _qmat(rr), _qmat(rrn)
         body_p = rp[:,None] + torch.einsum("bij,bnj->bni", root_R, body_local_p)
-        bp_n = rpn[:,None] + torch.einsum("bij,bnj->bni", root_Rn, body_local_p_n)
         body_rot = root_R[:,None] @ _qmat(body_local_q)
         body_rot_n = root_Rn[:,None] @ _qmat(body_local_q_n)
         body_q = _matq(body_rot)
         bq_n = _matq(body_rot_n)
-        root_lin = (rpn-rp) / next_dt_safe[:, None]
         root_ang = _quat_delta(rr, rrn, next_dt_safe)
-        body_lin = (bp_n-body_p) / next_dt_safe[:, None, None]
         body_ang = _matrix_delta_angular(body_rot, body_rot_n, next_dt_safe)
-        body_p_p = rpp[:, None] + torch.einsum("bij,bnj->bni", _qmat(rrp), body_local_p_p)
-        body_lin_p = (body_p - body_p_p) / prev_dt_safe[:, None, None]
-        body_accel = (body_lin - body_lin_p) / self.control_dt
-        root_lin_p = (rp - rpp) / prev_dt_safe[:, None]
-        root_accel = (root_lin - root_lin_p) / self.control_dt
+        root_lin, body_lin, root_accel, body_accel = self._linear_velocity_pair(seq_ids, frames)
         position_error = None
         if robot_root_pos is not None:
             # This is the global-position-correction signal, not a reset-time

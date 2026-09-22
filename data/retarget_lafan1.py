@@ -350,7 +350,7 @@ def contact_labels(foot_pos: np.ndarray, frame_time: float,
     return out
 
 
-def _estimate_scale(gpos_cm: np.ndarray, bvh: BVH) -> float:
+def _estimate_scale(gpos_cm: np.ndarray, bvh: BVH, pelvis_height=G1_PELVIS_HEIGHT) -> float:
     """骨骼缩放：G1 骨盆高 / P90 源腿骨链长（大腿 + 小腿，cm）。
 
     骨链长是刚体量，与姿态无关；旧版用"髋高 − 足底高度"（世界竖直
@@ -368,7 +368,7 @@ def _estimate_scale(gpos_cm: np.ndarray, bvh: BVH) -> float:
     leg_cm = np.percentile(np.minimum(chains[0], chains[1]), 90)
     if leg_cm < 1e-6:
         raise ValueError("腿长估计异常")
-    return G1_PELVIS_HEIGHT / leg_cm  # m/cm
+    return pelvis_height / leg_cm  # m/cm
 
 
 # ---------------------------------------------------------------------------
@@ -444,7 +444,7 @@ def _repair_principal_angle_jumps(qpos: np.ndarray, branch_margin: float = 0.5) 
     return values
 
 
-def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
+def retarget(bvh: BVH, *, kinematics=None) -> Dict[str, np.ndarray]:
     """LAFAN1 BVH → G1 29-DoF（固定 rig 对齐与数据均值去偏移）。"""
     for name in ("Hips", "LeftUpLeg", "LeftLeg", "LeftFoot", "LeftToe",
                  "RightUpLeg", "RightLeg", "RightFoot", "RightToe",
@@ -461,7 +461,8 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
     # →0 → 尺度爆炸（实测 ground1 scale=0.0318 vs walk 0.0094，源骨架
     # 被放大 3.4 倍）。骨长是刚体量，任何姿态下不变。
     gpos_cm, grot = bvh.fk(unit_scale=1.0)  # 世界位置（cm）/ 朝向
-    scale = _estimate_scale(gpos_cm, bvh)
+    scale = (_estimate_scale(gpos_cm, bvh) if kinematics is None else
+             _estimate_scale(gpos_cm, bvh, kinematics.neutral_height))
 
     # ---- 世界 → G1 系 ----
     gpos = gpos_cm @ W.T * scale  # (T,J,3) G1 系，米
@@ -505,7 +506,7 @@ def retarget(bvh: BVH) -> Dict[str, np.ndarray]:
     qpos = np.zeros((T, 29))
     for chain, (sources, rel_parent) in _MAPPING.items():
         _, base_body = _chain_dir_g1(chain)
-        q_base = _G1_REST[base_body][1]
+        q_base = (_G1_REST if kinematics is None else kinematics.rest)[base_body][1]
         R_align = _mat(q_base) @ M_RIG
         if chain == "waist":
             # 复合脊柱：R_src = R_hips⁻¹·R_chest（最后一个 Spine 关节）
@@ -687,11 +688,14 @@ def _decompose_chain(R: np.ndarray, chain: str) -> List[np.ndarray]:
 
 def g1_forward_kinematics(qpos: np.ndarray, root_pos: Optional[np.ndarray] = None,
                           root_quat: Optional[np.ndarray] = None,
-                          return_quats: bool = False) -> Dict[str, np.ndarray]:
+                          return_quats: bool = False, *, kinematics=None) -> Dict[str, np.ndarray]:
     """G1 前向运动学：qpos (T,29) → {body: (T,3) 世界位置}。
 
     return_quats=True 时返回 (pos, quat) 两字典（IK 雅可比需要世界朝向）。
     """
+    if kinematics is not None:
+        pos, quat = kinematics.forward(qpos, root_pos, root_quat)
+        return (pos, quat) if return_quats else pos
     T = qpos.shape[0]
     if root_pos is None:
         root_pos = np.zeros((T, 3))

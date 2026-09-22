@@ -1,0 +1,76 @@
+[
+  {
+    "clip_id": "low_motion_0",
+    "original_split": "train",
+    "source": "aiming2_subject3",
+    "start_frame": 150,
+    "near_limit_fraction_by_joint": {
+      "left_ankle_roll": 0.05333333333333334,
+      "right_ankle_roll": 0.06666666666666667
+    }
+  },
+  {
+    "clip_id": "low_motion_1",
+    "original_split": "check",
+    "source": "aiming1_subject1",
+    "start_frame": 1200,
+    "near_limit_fraction_by_joint": {}
+  },
+  {
+    "clip_id": "low_motion_2",
+    "original_split": "train",
+    "source": "aiming2_subject2",
+    "start_frame": 6270,
+    "near_limit_fraction_by_joint": {
+      "left_ankle_roll": 0.1
+    }
+  },
+  {
+    "clip_id": "low_motion_3",
+    "original_split": "check",
+    "source": "aiming2_subject5",
+    "start_frame": 6480,
+    "near_limit_fraction_by_joint": {
+      "left_ankle_roll": 0.013333333333333334,
+      "right_ankle_roll": 0.02666666666666667
+    }
+  },
+  {
+    "clip_id": "slow_walk_0",
+    "original_split": "train",
+    "source": "walk2_subject4",
+    "start_frame": 1380,
+    "near_limit_fraction_by_joint": {
+      "waist_pitch": 1.0
+    }
+  },
+  {
+    "clip_id": "slow_walk_1",
+    "original_split": "check",
+    "source": "walk1_subject1",
+    "start_frame": 5430,
+    "near_limit_fraction_by_joint": {
+      "waist_pitch": 0.4066666666666667
+    }
+  },
+  {
+    "clip_id": "slow_walk_2",
+    "original_split": "train",
+    "source": "walk3_subject4",
+    "start_frame": 5580,
+    "near_limit_fraction_by_joint": {
+      "left_ankle_roll": 0.013333333333333334,
+      "waist_pitch": 1.0
+    }
+  },
+  {
+    "clip_id": "slow_walk_3",
+    "original_split": "check",
+    "source": "walk3_subject2",
+    "start_frame": 480,
+    "near_limit_fraction_by_joint": {
+      "left_ankle_roll": 0.09333333333333334,
+      "waist_pitch": 0.86
+    }
+  }
+]

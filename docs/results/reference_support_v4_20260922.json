@@ -1,0 +1,1247 @@
+{
+  "status": "completed",
+  "training_approved": false,
+  "clips": [
+    {
+      "clip_id": "low_motion_0",
+      "source_start_frame": 150,
+      "frame_time": 0.02,
+      "context_frames_before_after": [
+        25,
+        25
+      ],
+      "source_support_above_2cm_v3_v4": [
+        0.38762886597938145,
+        0.0
+      ],
+      "source_support_clearance_p50_p95_max_v3_v4_m": [
+        [
+          0.01122629176825285,
+          0.059985881298780436,
+          0.06424068659543991
+        ],
+        [
+          0.0021967096254229546,
+          0.01146112736314535,
+          0.019017010927200317
+        ]
+      ],
+      "mesh_contact_fraction_v3_v4": [
+        [
+          0.432,
+          0.792
+        ],
+        [
+          0.984,
+          1.0
+        ]
+      ],
+      "swing_clearance_p50_p95_v3_v4_m": [
+        [
+          0.01589376851916313,
+          0.03201865591108799
+        ],
+        [
+          0.013676847331225872,
+          0.025497651100158683
+        ]
+      ],
+      "max_joint_speed_v3_v4_rad_s": [
+        3.2527670860290527,
+        3.076665163040161
+      ],
+      "max_joint_acceleration_v3_v4_rad_s2": [
+        58.49018859863281,
+        59.0062141418457
+      ],
+      "max_root_acceleration_v3_v4_m_s2": [
+        3.943437099456787,
+        3.4119788824378166
+      ],
+      "root_z_change_p50_max_m": [
+        0.011062549244261644,
+        0.03604615802220301
+      ],
+      "body_displacement_from_v3_mean_max_m": [
+        0.015242778554642877,
+        0.06453023284786485
+      ],
+      "waist_at_upper_limit_v3_v4": [
+        0.0,
+        0.0
+      ],
+      "joint_limit_violations": 0,
+      "minimum_all_collision_height_m": 0.0004999889060854912,
+      "uniform_margin_added_m": 0.0004900059774518013,
+      "joint_fit": {
+        "converged": true,
+        "message": "`ftol` termination condition is satisfied.",
+        "function_evaluations": 52,
+        "initial_cost": 1.423315681449266,
+        "final_cost": 0.2295508545252898,
+        "optimality": 0.0010951774256951089,
+        "maximum_joint_change_rad": 0.29042852908366035,
+        "maximum_root_change_m": 0.0358063162320128,
+        "stance_target_m": 0.003,
+        "foot_margin_m": 0.001,
+        "pose_weight_m2_per_rad2": 0.02,
+        "root_weight": 0.05,
+        "stance_weight": 10.0,
+        "foot_penetration_weight": 100.0,
+        "temporal_velocity_weight_s2": 0.01,
+        "temporal_acceleration_weight_s4": 0.0001,
+        "leg_temporal_conversion_m_per_rad": 0.1
+      },
+      "height_fit": {
+        "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "iterations": 229,
+        "root_prior_weight": 0.01,
+        "velocity_weight_s2": 0.01,
+        "acceleration_weight_s4": 0.0001,
+        "nonpenetration_margin_m": 1e-05
+      },
+      "v3_full_sha256": "baf8231df5ddcd192bc7ac962530786d5d81cab16c29d339e84494f795a6da13"
+    },
+    {
+      "clip_id": "low_motion_1",
+      "source_start_frame": 1200,
+      "frame_time": 0.02,
+      "context_frames_before_after": [
+        25,
+        25
+      ],
+      "source_support_above_2cm_v3_v4": [
+        0.19318181818181818,
+        0.0
+      ],
+      "source_support_clearance_p50_p95_max_v3_v4_m": [
+        [
+          0.007368232123553753,
+          0.031937024183571326,
+          0.036015864461660385
+        ],
+        [
+          0.0021639475598931313,
+          0.005556833185255525,
+          0.013935784809291363
+        ]
+      ],
+      "mesh_contact_fraction_v3_v4": [
+        [
+          0.58,
+          1.0
+        ],
+        [
+          0.952,
+          1.0
+        ]
+      ],
+      "swing_clearance_p50_p95_v3_v4_m": [
+        [
+          0.006052485667169094,
+          0.03515815455466509
+        ],
+        [
+          0.006295940838754177,
+          0.02828309070318937
+        ]
+      ],
+      "max_joint_speed_v3_v4_rad_s": [
+        3.819171905517578,
+        3.801086664199829
+      ],
+      "max_joint_acceleration_v3_v4_rad_s2": [
+        163.72666931152344,
+        163.52981567382812
+      ],
+      "max_root_acceleration_v3_v4_m_s2": [
+        3.5601232051849365,
+        3.5734591554016926
+      ],
+      "root_z_change_p50_max_m": [
+        0.005431294140484988,
+        0.009279749149563754
+      ],
+      "body_displacement_from_v3_mean_max_m": [
+        0.005338059489507295,
+        0.023541107561913396
+      ],
+      "waist_at_upper_limit_v3_v4": [
+        0.0,
+        0.0
+      ],
+      "joint_limit_violations": 0,
+      "minimum_all_collision_height_m": 0.0004999963566660881,
+      "uniform_margin_added_m": 0.0004900059774518013,
+      "joint_fit": {
+        "converged": true,
+        "message": "`ftol` termination condition is satisfied.",
+        "function_evaluations": 22,
+        "initial_cost": 0.4944003857514402,
+        "final_cost": 0.0547965181425175,
+        "optimality": 0.0007633587641556482,
+        "maximum_joint_change_rad": 0.15159061062531345,
+        "maximum_root_change_m": 0.008528462015358063,
+        "stance_target_m": 0.003,
+        "foot_margin_m": 0.001,
+        "pose_weight_m2_per_rad2": 0.02,
+        "root_weight": 0.05,
+        "stance_weight": 10.0,
+        "foot_penetration_weight": 100.0,
+        "temporal_velocity_weight_s2": 0.01,
+        "temporal_acceleration_weight_s4": 0.0001,
+        "leg_temporal_conversion_m_per_rad": 0.1
+      },
+      "height_fit": {
+        "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "iterations": 324,
+        "root_prior_weight": 0.01,
+        "velocity_weight_s2": 0.01,
+        "acceleration_weight_s4": 0.0001,
+        "nonpenetration_margin_m": 1e-05
+      },
+      "v3_full_sha256": "fa4324afd1108c4ab81e607a7b42c9155ae8eaf94bb33d3b2e1d0dd2f86796c4"
+    },
+    {
+      "clip_id": "low_motion_2",
+      "source_start_frame": 6270,
+      "frame_time": 0.02,
+      "context_frames_before_after": [
+        25,
+        25
+      ],
+      "source_support_above_2cm_v3_v4": [
+        0.45188284518828453,
+        0.0020920502092050207
+      ],
+      "source_support_clearance_p50_p95_max_v3_v4_m": [
+        [
+          0.004019339568912983,
+          0.061154110729694365,
+          0.0645555928349495
+        ],
+        [
+          0.0014315685257315636,
+          0.012070037983357904,
+          0.022024787962436676
+        ]
+      ],
+      "mesh_contact_fraction_v3_v4": [
+        [
+          0.508,
+          0.584
+        ],
+        [
+          1.0,
+          0.952
+        ]
+      ],
+      "swing_clearance_p50_p95_v3_v4_m": [
+        [
+          0.02038336917757988,
+          0.05184107180684805
+        ],
+        [
+          0.016998618375509977,
+          0.04527993239462375
+        ]
+      ],
+      "max_joint_speed_v3_v4_rad_s": [
+        2.9551377296447754,
+        2.947761297225952
+      ],
+      "max_joint_acceleration_v3_v4_rad_s2": [
+        111.80423736572266,
+        111.60210418701172
+      ],
+      "max_root_acceleration_v3_v4_m_s2": [
+        5.234409809112549,
+        5.343826780401189
+      ],
+      "root_z_change_p50_max_m": [
+        0.02408035295229688,
+        0.04018587289175235
+      ],
+      "body_displacement_from_v3_mean_max_m": [
+        0.022101847331410816,
+        0.07472318245414884
+      ],
+      "waist_at_upper_limit_v3_v4": [
+        0.0,
+        0.0
+      ],
+      "joint_limit_violations": 0,
+      "minimum_all_collision_height_m": 0.0004999963566660881,
+      "uniform_margin_added_m": 0.0004900059774518013,
+      "joint_fit": {
+        "converged": false,
+        "message": "The maximum number of function evaluations is exceeded.",
+        "function_evaluations": 200,
+        "initial_cost": 3.260076525621086,
+        "final_cost": 0.5163973725688319,
+        "optimality": 0.0005069126720241687,
+        "maximum_joint_change_rad": 0.28363480777383804,
+        "maximum_root_change_m": 0.03991474852454602,
+        "stance_target_m": 0.003,
+        "foot_margin_m": 0.001,
+        "pose_weight_m2_per_rad2": 0.02,
+        "root_weight": 0.05,
+        "stance_weight": 10.0,
+        "foot_penetration_weight": 100.0,
+        "temporal_velocity_weight_s2": 0.01,
+        "temporal_acceleration_weight_s4": 0.0001,
+        "leg_temporal_conversion_m_per_rad": 0.1
+      },
+      "height_fit": {
+        "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "iterations": 128,
+        "root_prior_weight": 0.01,
+        "velocity_weight_s2": 0.01,
+        "acceleration_weight_s4": 0.0001,
+        "nonpenetration_margin_m": 1e-05
+      },
+      "v3_full_sha256": "12043034e94495e0c8c0584a387036fa01ef7d123721a8dfd16ce03064af6a29"
+    },
+    {
+      "clip_id": "low_motion_3",
+      "source_start_frame": 6480,
+      "frame_time": 0.02,
+      "context_frames_before_after": [
+        25,
+        25
+      ],
+      "source_support_above_2cm_v3_v4": [
+        0.09350649350649351,
+        0.0
+      ],
+      "source_support_clearance_p50_p95_max_v3_v4_m": [
+        [
+          0.003519105724990368,
+          0.02625762820243832,
+          0.04593024030327797
+        ],
+        [
+          0.0016010953113436699,
+          0.005577511899173253,
+          0.012004139833152294
+        ]
+      ],
+      "mesh_contact_fraction_v3_v4": [
+        [
+          0.876,
+          0.844
+        ],
+        [
+          0.944,
+          0.932
+        ]
+      ],
+      "swing_clearance_p50_p95_v3_v4_m": [
+        [
+          0.014395485632121563,
+          0.035805519297719
+        ],
+        [
+          0.012349885888397694,
+          0.03455309607088566
+        ]
+      ],
+      "max_joint_speed_v3_v4_rad_s": [
+        5.931319236755371,
+        5.9196672439575195
+      ],
+      "max_joint_acceleration_v3_v4_rad_s2": [
+        231.54879760742188,
+        231.6038055419922
+      ],
+      "max_root_acceleration_v3_v4_m_s2": [
+        5.153816223144531,
+        5.026638874087309
+      ],
+      "root_z_change_p50_max_m": [
+        0.00261644907463332,
+        0.010420985565318452
+      ],
+      "body_displacement_from_v3_mean_max_m": [
+        0.0035131694065728427,
+        0.028751053251415068
+      ],
+      "waist_at_upper_limit_v3_v4": [
+        0.0,
+        0.0
+      ],
+      "joint_limit_violations": 0,
+      "minimum_all_collision_height_m": 0.0005000000819563866,
+      "uniform_margin_added_m": 0.0004900059774518013,
+      "joint_fit": {
+        "converged": false,
+        "message": "The maximum number of function evaluations is exceeded.",
+        "function_evaluations": 200,
+        "initial_cost": 0.39438428989889895,
+        "final_cost": 0.047457063363410296,
+        "optimality": 0.0003380070163271408,
+        "maximum_joint_change_rad": 0.1870928379118389,
+        "maximum_root_change_m": 0.010099770957854304,
+        "stance_target_m": 0.003,
+        "foot_margin_m": 0.001,
+        "pose_weight_m2_per_rad2": 0.02,
+        "root_weight": 0.05,
+        "stance_weight": 10.0,
+        "foot_penetration_weight": 100.0,
+        "temporal_velocity_weight_s2": 0.01,
+        "temporal_acceleration_weight_s4": 0.0001,
+        "leg_temporal_conversion_m_per_rad": 0.1
+      },
+      "height_fit": {
+        "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "iterations": 325,
+        "root_prior_weight": 0.01,
+        "velocity_weight_s2": 0.01,
+        "acceleration_weight_s4": 0.0001,
+        "nonpenetration_margin_m": 1e-05
+      },
+      "v3_full_sha256": "24e2d1794ebaf630ff797f573265e221b689ec6e64c781a75c0e70916cdac008"
+    },
+    {
+      "clip_id": "slow_walk_0",
+      "source_start_frame": 1380,
+      "frame_time": 0.02,
+      "context_frames_before_after": [
+        25,
+        25
+      ],
+      "source_support_above_2cm_v3_v4": [
+        0.25787965616045844,
+        0.011461318051575931
+      ],
+      "source_support_clearance_p50_p95_max_v3_v4_m": [
+        [
+          0.0029036356136202812,
+          0.05208045840263365,
+          0.0735311210155487
+        ],
+        [
+          0.0013358024880290031,
+          0.011858248524367804,
+          0.03657811880111694
+        ]
+      ],
+      "mesh_contact_fraction_v3_v4": [
+        [
+          0.7,
+          0.608
+        ],
+        [
+          0.876,
+          0.788
+        ]
+      ],
+      "swing_clearance_p50_p95_v3_v4_m": [
+        [
+          0.02971816435456276,
+          0.08358075097203255
+        ],
+        [
+          0.023679174482822418,
+          0.07671487703919411
+        ]
+      ],
+      "max_joint_speed_v3_v4_rad_s": [
+        2.3480207920074463,
+        2.4855449199676514
+      ],
+      "max_joint_acceleration_v3_v4_rad_s2": [
+        88.65409088134766,
+        89.46143341064453
+      ],
+      "max_root_acceleration_v3_v4_m_s2": [
+        2.7898998260498047,
+        2.467626640171982
+      ],
+      "root_z_change_p50_max_m": [
+        0.005669767257284242,
+        0.028269776458120344
+      ],
+      "body_displacement_from_v3_mean_max_m": [
+        0.009381355130455862,
+        0.05925030647188208
+      ],
+      "waist_at_upper_limit_v3_v4": [
+        0.688,
+        0.688
+      ],
+      "joint_limit_violations": 0,
+      "minimum_all_collision_height_m": 0.0004999963566660881,
+      "uniform_margin_added_m": 0.0004900059774518013,
+      "joint_fit": {
+        "converged": true,
+        "message": "`ftol` termination condition is satisfied.",
+        "function_evaluations": 64,
+        "initial_cost": 0.8175473289563472,
+        "final_cost": 0.1843028731280938,
+        "optimality": 0.0007819896150309403,
+        "maximum_joint_change_rad": 0.26547975341503677,
+        "maximum_root_change_m": 0.028025133482234343,
+        "stance_target_m": 0.003,
+        "foot_margin_m": 0.001,
+        "pose_weight_m2_per_rad2": 0.02,
+        "root_weight": 0.05,
+        "stance_weight": 10.0,
+        "foot_penetration_weight": 100.0,
+        "temporal_velocity_weight_s2": 0.01,
+        "temporal_acceleration_weight_s4": 0.0001,
+        "leg_temporal_conversion_m_per_rad": 0.1
+      },
+      "height_fit": {
+        "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "iterations": 349,
+        "root_prior_weight": 0.01,
+        "velocity_weight_s2": 0.01,
+        "acceleration_weight_s4": 0.0001,
+        "nonpenetration_margin_m": 1e-05
+      },
+      "v3_full_sha256": "d323948468a5035faaad4bce6b70dc4cf41e9cc03983d6fc8deddfc4bc930913"
+    },
+    {
+      "clip_id": "slow_walk_1",
+      "source_start_frame": 5430,
+      "frame_time": 0.02,
+      "context_frames_before_after": [
+        25,
+        25
+      ],
+      "source_support_above_2cm_v3_v4": [
+        0.20430107526881722,
+        0.051075268817204304
+      ],
+      "source_support_clearance_p50_p95_max_v3_v4_m": [
+        [
+          0.005375788547098637,
+          0.05626062657684087,
+          0.06449750810861588
+        ],
+        [
+          0.0016056476160883904,
+          0.019940016418695444,
+          0.028416328132152557
+        ]
+      ],
+      "mesh_contact_fraction_v3_v4": [
+        [
+          0.948,
+          0.368
+        ],
+        [
+          0.992,
+          0.604
+        ]
+      ],
+      "swing_clearance_p50_p95_v3_v4_m": [
+        [
+          0.03679925017058849,
+          0.05770014822483061
+        ],
+        [
+          0.030682414770126343,
+          0.050388527102768414
+        ]
+      ],
+      "max_joint_speed_v3_v4_rad_s": [
+        3.1514153480529785,
+        3.532006025314331
+      ],
+      "max_joint_acceleration_v3_v4_rad_s2": [
+        117.12499237060547,
+        114.28304290771484
+      ],
+      "max_root_acceleration_v3_v4_m_s2": [
+        6.036686420440674,
+        6.155137900219945
+      ],
+      "root_z_change_p50_max_m": [
+        0.00733510395946807,
+        0.024365677590716395
+      ],
+      "body_displacement_from_v3_mean_max_m": [
+        0.009298416738446065,
+        0.054199692113805556
+      ],
+      "waist_at_upper_limit_v3_v4": [
+        0.0,
+        0.0
+      ],
+      "joint_limit_violations": 0,
+      "minimum_all_collision_height_m": 0.0004999963566660881,
+      "uniform_margin_added_m": 0.0004900059774518013,
+      "joint_fit": {
+        "converged": true,
+        "message": "`ftol` termination condition is satisfied.",
+        "function_evaluations": 161,
+        "initial_cost": 1.0066819231303321,
+        "final_cost": 0.2863262434265777,
+        "optimality": 0.000173597992697004,
+        "maximum_joint_change_rad": 0.24292446515099875,
+        "maximum_root_change_m": 0.026193347281204038,
+        "stance_target_m": 0.003,
+        "foot_margin_m": 0.001,
+        "pose_weight_m2_per_rad2": 0.02,
+        "root_weight": 0.05,
+        "stance_weight": 10.0,
+        "foot_penetration_weight": 100.0,
+        "temporal_velocity_weight_s2": 0.01,
+        "temporal_acceleration_weight_s4": 0.0001,
+        "leg_temporal_conversion_m_per_rad": 0.1
+      },
+      "height_fit": {
+        "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "iterations": 332,
+        "root_prior_weight": 0.01,
+        "velocity_weight_s2": 0.01,
+        "acceleration_weight_s4": 0.0001,
+        "nonpenetration_margin_m": 1e-05
+      },
+      "v3_full_sha256": "e1e3e3039557b293feccd00379f9696807748767f0928164940eaa81e8002cdb"
+    },
+    {
+      "clip_id": "slow_walk_2",
+      "source_start_frame": 5580,
+      "frame_time": 0.02,
+      "context_frames_before_after": [
+        25,
+        25
+      ],
+      "source_support_above_2cm_v3_v4": [
+        0.22015915119363394,
+        0.0
+      ],
+      "source_support_clearance_p50_p95_max_v3_v4_m": [
+        [
+          0.008175450377166271,
+          0.03609641268849372,
+          0.05055613070726395
+        ],
+        [
+          0.002192090265452862,
+          0.010527845285832881,
+          0.018319368362426758
+        ]
+      ],
+      "mesh_contact_fraction_v3_v4": [
+        [
+          0.844,
+          0.656
+        ],
+        [
+          0.932,
+          0.932
+        ]
+      ],
+      "swing_clearance_p50_p95_v3_v4_m": [
+        [
+          0.013789272867143154,
+          0.04590211324393749
+        ],
+        [
+          0.008399668149650097,
+          0.04151945076882839
+        ]
+      ],
+      "max_joint_speed_v3_v4_rad_s": [
+        3.808671236038208,
+        3.824456214904785
+      ],
+      "max_joint_acceleration_v3_v4_rad_s2": [
+        166.4041748046875,
+        166.02474975585938
+      ],
+      "max_root_acceleration_v3_v4_m_s2": [
+        4.368377685546875,
+        4.197400774236396
+      ],
+      "root_z_change_p50_max_m": [
+        0.004010665964594318,
+        0.024822376037244687
+      ],
+      "body_displacement_from_v3_mean_max_m": [
+        0.006459964731968765,
+        0.044366349535014137
+      ],
+      "waist_at_upper_limit_v3_v4": [
+        0.0,
+        0.0
+      ],
+      "joint_limit_violations": 0,
+      "minimum_all_collision_height_m": 0.0004999963566660881,
+      "uniform_margin_added_m": 0.0004900059774518013,
+      "joint_fit": {
+        "converged": true,
+        "message": "`ftol` termination condition is satisfied.",
+        "function_evaluations": 151,
+        "initial_cost": 0.5367524197428151,
+        "final_cost": 0.09311805071206908,
+        "optimality": 0.0005054250861383234,
+        "maximum_joint_change_rad": 0.23461674382022185,
+        "maximum_root_change_m": 0.02469710939832248,
+        "stance_target_m": 0.003,
+        "foot_margin_m": 0.001,
+        "pose_weight_m2_per_rad2": 0.02,
+        "root_weight": 0.05,
+        "stance_weight": 10.0,
+        "foot_penetration_weight": 100.0,
+        "temporal_velocity_weight_s2": 0.01,
+        "temporal_acceleration_weight_s4": 0.0001,
+        "leg_temporal_conversion_m_per_rad": 0.1
+      },
+      "height_fit": {
+        "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "iterations": 369,
+        "root_prior_weight": 0.01,
+        "velocity_weight_s2": 0.01,
+        "acceleration_weight_s4": 0.0001,
+        "nonpenetration_margin_m": 1e-05
+      },
+      "v3_full_sha256": "ae7523a8c1d2da71f8da0b1fe8ffe42001bb11739d1e4f328fe588603823592a"
+    },
+    {
+      "clip_id": "slow_walk_3",
+      "source_start_frame": 480,
+      "frame_time": 0.02,
+      "context_frames_before_after": [
+        25,
+        25
+      ],
+      "source_support_above_2cm_v3_v4": [
+        0.27348066298342544,
+        0.0027624309392265192
+      ],
+      "source_support_clearance_p50_p95_max_v3_v4_m": [
+        [
+          0.0073342090472579,
+          0.04325162656605242,
+          0.06139078363776207
+        ],
+        [
+          0.0021939920261502266,
+          0.009355172142386436,
+          0.023191500455141068
+        ]
+      ],
+      "mesh_contact_fraction_v3_v4": [
+        [
+          0.524,
+          0.86
+        ],
+        [
+          0.856,
+          0.948
+        ]
+      ],
+      "swing_clearance_p50_p95_v3_v4_m": [
+        [
+          0.009957958944141865,
+          0.05403113663196564
+        ],
+        [
+          0.007961112074553967,
+          0.052243715897202496
+        ]
+      ],
+      "max_joint_speed_v3_v4_rad_s": [
+        5.708603858947754,
+        5.899569511413574
+      ],
+      "max_joint_acceleration_v3_v4_rad_s2": [
+        225.68099975585938,
+        222.0409393310547
+      ],
+      "max_root_acceleration_v3_v4_m_s2": [
+        7.711931228637695,
+        7.3589584605818965
+      ],
+      "root_z_change_p50_max_m": [
+        0.005147175684877603,
+        0.021391814100640727
+      ],
+      "body_displacement_from_v3_mean_max_m": [
+        0.007879065577050115,
+        0.052768657011980045
+      ],
+      "waist_at_upper_limit_v3_v4": [
+        0.0,
+        0.0
+      ],
+      "joint_limit_violations": 0,
+      "minimum_all_collision_height_m": 0.0005000000819563866,
+      "uniform_margin_added_m": 0.0004900059774518013,
+      "joint_fit": {
+        "converged": true,
+        "message": "`ftol` termination condition is satisfied.",
+        "function_evaluations": 76,
+        "initial_cost": 0.8620152138886487,
+        "final_cost": 0.12258001093285122,
+        "optimality": 0.001790577150720927,
+        "maximum_joint_change_rad": 0.21572982559711484,
+        "maximum_root_change_m": 0.021855833173007766,
+        "stance_target_m": 0.003,
+        "foot_margin_m": 0.001,
+        "pose_weight_m2_per_rad2": 0.02,
+        "root_weight": 0.05,
+        "stance_weight": 10.0,
+        "foot_penetration_weight": 100.0,
+        "temporal_velocity_weight_s2": 0.01,
+        "temporal_acceleration_weight_s4": 0.0001,
+        "leg_temporal_conversion_m_per_rad": 0.1
+      },
+      "height_fit": {
+        "status": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "iterations": 391,
+        "root_prior_weight": 0.01,
+        "velocity_weight_s2": 0.01,
+        "acceleration_weight_s4": 0.0001,
+        "nonpenetration_margin_m": 1e-05
+      },
+      "v3_full_sha256": "6a9041e39361c913735e4cfe1c28a66e13a0960e179337551e76e0a80bdae0f7"
+    }
+  ],
+  "scope": "joint root/leg correction of original eight windows with real context; CPU geometric candidate",
+  "source_sha256": "298d71e4fc1348e4207519d88261412f2667f0f263882d3d7e41b71801bb77e0",
+  "algorithm_sha256": "1042481b0a0bbcbb781a26d123fc165ade5005b778744a82bbc4f9e512e01bde",
+  "runtime_audit": {
+    "status": "completed",
+    "clips": [
+      {
+        "clip_id": "low_motion_0",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "same_anatomical_target_torso_relative_error_v3_v4_m": [
+          0.030329380033727673,
+          0.03337201306536673
+        ],
+        "same_anatomical_shank_direction_error_v3_v4_deg": [
+          3.3990539187619926,
+          4.2514929790532126
+        ],
+        "qvel_export_difference_error_rad_s": 1.1920928955078125e-07,
+        "maximum_stored_joint_step_rad": 0.06975841522216797,
+        "query_50hz": {
+          "minimum_collision_height_m": 0.0004999665543437004,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.0
+        },
+        "query_100hz": {
+          "minimum_collision_height_m": 0.00045563559979200363,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.003
+        },
+        "all_exported_frames_minimum_collision_height_m": 0.0004999814555048943
+      },
+      {
+        "clip_id": "low_motion_1",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "same_anatomical_target_torso_relative_error_v3_v4_m": [
+          0.029209093150211796,
+          0.029529721885074186
+        ],
+        "same_anatomical_shank_direction_error_v3_v4_deg": [
+          5.793229910423321,
+          5.82390387028363
+        ],
+        "qvel_export_difference_error_rad_s": 1.1920928955078125e-07,
+        "maximum_stored_joint_step_rad": 0.08385447412729263,
+        "query_50hz": {
+          "minimum_collision_height_m": 0.0004999777302145958,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.0
+        },
+        "query_100hz": {
+          "minimum_collision_height_m": 0.0004298267886042595,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.002
+        },
+        "all_exported_frames_minimum_collision_height_m": 0.0004999740049242973
+      },
+      {
+        "clip_id": "low_motion_2",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "same_anatomical_target_torso_relative_error_v3_v4_m": [
+          0.029392543340681854,
+          0.033060081000873695
+        ],
+        "same_anatomical_shank_direction_error_v3_v4_deg": [
+          9.051721094297791,
+          8.332166869128635
+        ],
+        "qvel_export_difference_error_rad_s": 1.1920928955078125e-07,
+        "maximum_stored_joint_step_rad": 0.07356047630310059,
+        "query_50hz": {
+          "minimum_collision_height_m": 0.0004999740049242973,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.0
+        },
+        "query_100hz": {
+          "minimum_collision_height_m": 0.0004134057089686394,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.001
+        },
+        "all_exported_frames_minimum_collision_height_m": 0.0004999740049242973
+      },
+      {
+        "clip_id": "low_motion_3",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "same_anatomical_target_torso_relative_error_v3_v4_m": [
+          0.0322619377905374,
+          0.032453018915706386
+        ],
+        "same_anatomical_shank_direction_error_v3_v4_deg": [
+          6.769660535307284,
+          6.655950878010897
+        ],
+        "qvel_export_difference_error_rad_s": 2.086162567138672e-07,
+        "maximum_stored_joint_step_rad": 0.11839333921670914,
+        "query_50hz": {
+          "minimum_collision_height_m": 0.0004999740049242973,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.0
+        },
+        "query_100hz": {
+          "minimum_collision_height_m": 0.000445379875600338,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.004
+        },
+        "all_exported_frames_minimum_collision_height_m": 0.0004999740049242973
+      },
+      {
+        "clip_id": "slow_walk_0",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "same_anatomical_target_torso_relative_error_v3_v4_m": [
+          0.022922767083937857,
+          0.023569080795345816
+        ],
+        "same_anatomical_shank_direction_error_v3_v4_deg": [
+          11.031713079524023,
+          10.766606517281883
+        ],
+        "qvel_export_difference_error_rad_s": 1.7881393432617188e-07,
+        "maximum_stored_joint_step_rad": 0.10745134949684143,
+        "query_50hz": {
+          "minimum_collision_height_m": 0.0004999591037631035,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.0
+        },
+        "query_100hz": {
+          "minimum_collision_height_m": 0.00044212769716978073,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.002
+        },
+        "all_exported_frames_minimum_collision_height_m": 0.0004999740049242973
+      },
+      {
+        "clip_id": "slow_walk_1",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "same_anatomical_target_torso_relative_error_v3_v4_m": [
+          0.018759788009388885,
+          0.01952313511731555
+        ],
+        "same_anatomical_shank_direction_error_v3_v4_deg": [
+          6.0390909025617105,
+          5.8991016620033
+        ],
+        "qvel_export_difference_error_rad_s": 1.1920928955078125e-07,
+        "maximum_stored_joint_step_rad": 0.07251584529876709,
+        "query_50hz": {
+          "minimum_collision_height_m": 0.0004999740049242973,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.0
+        },
+        "query_100hz": {
+          "minimum_collision_height_m": 0.0002864031121134758,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.003
+        },
+        "all_exported_frames_minimum_collision_height_m": 0.0004999740049242973
+      },
+      {
+        "clip_id": "slow_walk_2",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "same_anatomical_target_torso_relative_error_v3_v4_m": [
+          0.031554769334978236,
+          0.032155811403260716
+        ],
+        "same_anatomical_shank_direction_error_v3_v4_deg": [
+          5.969760528432946,
+          5.706485624606427
+        ],
+        "qvel_export_difference_error_rad_s": 1.1920928955078125e-07,
+        "maximum_stored_joint_step_rad": 0.07648912072181702,
+        "query_50hz": {
+          "minimum_collision_height_m": 0.0004999740049242973,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.0
+        },
+        "query_100hz": {
+          "minimum_collision_height_m": 0.0002897856757044792,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.001
+        },
+        "all_exported_frames_minimum_collision_height_m": 0.0004999740049242973
+      },
+      {
+        "clip_id": "slow_walk_3",
+        "runtime": {
+          "nominal": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          },
+          "reference_state": {
+            "contact_mismatch_fraction": 0.0,
+            "root_height_error_m": 0.0,
+            "reset_lift_max_m": 0.0
+          }
+        },
+        "same_anatomical_target_torso_relative_error_v3_v4_m": [
+          0.03246799466347968,
+          0.03309393318203752
+        ],
+        "same_anatomical_shank_direction_error_v3_v4_deg": [
+          11.64326536486595,
+          11.533276984198118
+        ],
+        "qvel_export_difference_error_rad_s": 2.384185791015625e-07,
+        "maximum_stored_joint_step_rad": 0.1179913878440857,
+        "query_50hz": {
+          "minimum_collision_height_m": 0.0004999367520213127,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.0
+        },
+        "query_100hz": {
+          "minimum_collision_height_m": 0.00047249626368284225,
+          "penetrating_more_than_0_1mm_fraction": 0.0,
+          "mesh_vs_stored_label_mismatch_fraction": 0.001
+        },
+        "all_exported_frames_minimum_collision_height_m": 0.0004999777302145958
+      }
+    ],
+    "training_approved": false,
+    "source_sha256": "ee8aa2c1e17495e87007b69789773cf72ab93d194f5b2a30d9d981e21ad2166e",
+    "manifest_sha256": "38503aefc258dbd738fb4dfa5a3b583382a5761687269282ec1836f3c0157f44",
+    "scope": "CPU geometric consistency; 100 Hz is an extra interpolation probe, no physical tracking"
+  },
+  "source_support_audit": {
+    "status": "completed",
+    "clips": [
+      {
+        "clip_id": "low_motion_0",
+        "plane_m": 0.020720137474496254,
+        "scored_frames": 150,
+        "support_samples": 291,
+        "double_support_frames": 141,
+        "double_support_height_difference_p50_p95_max_m": [
+          0.0027580588904398094,
+          0.0042044684145533355,
+          0.006601565982712179
+        ],
+        "double_support_difference_over_1cm_fraction": 0.0,
+        "stationary_but_outside_source_plane_band_samples": 0,
+        "support_within_1cm_of_plane_fraction": 1.0,
+        "support_near_speed_threshold_fraction": 0.0,
+        "interpretation": "toe-pivot proxy, not measured source contact; original mask retained without relabeling ambiguous frames"
+      },
+      {
+        "clip_id": "low_motion_1",
+        "plane_m": -0.00040096373132762325,
+        "scored_frames": 150,
+        "support_samples": 264,
+        "double_support_frames": 114,
+        "double_support_height_difference_p50_p95_max_m": [
+          0.004051510724771385,
+          0.007643858827878492,
+          0.009250791389277056
+        ],
+        "double_support_difference_over_1cm_fraction": 0.0,
+        "stationary_but_outside_source_plane_band_samples": 0,
+        "support_within_1cm_of_plane_fraction": 0.9924242424242424,
+        "support_near_speed_threshold_fraction": 0.0,
+        "interpretation": "toe-pivot proxy, not measured source contact; original mask retained without relabeling ambiguous frames"
+      },
+      {
+        "clip_id": "low_motion_2",
+        "plane_m": 0.01976634284995263,
+        "scored_frames": 150,
+        "support_samples": 287,
+        "double_support_frames": 137,
+        "double_support_height_difference_p50_p95_max_m": [
+          0.010230295198598891,
+          0.01527964013215071,
+          0.015488239226455732
+        ],
+        "double_support_difference_over_1cm_fraction": 0.5182481751824818,
+        "stationary_but_outside_source_plane_band_samples": 0,
+        "support_within_1cm_of_plane_fraction": 1.0,
+        "support_near_speed_threshold_fraction": 0.010452961672473868,
+        "interpretation": "toe-pivot proxy, not measured source contact; original mask retained without relabeling ambiguous frames"
+      },
+      {
+        "clip_id": "low_motion_3",
+        "plane_m": 0.010427801315152531,
+        "scored_frames": 150,
+        "support_samples": 231,
+        "double_support_frames": 81,
+        "double_support_height_difference_p50_p95_max_m": [
+          0.0036494612097703587,
+          0.009025179759685158,
+          0.012036532305174888
+        ],
+        "double_support_difference_over_1cm_fraction": 0.037037037037037035,
+        "stationary_but_outside_source_plane_band_samples": 0,
+        "support_within_1cm_of_plane_fraction": 1.0,
+        "support_near_speed_threshold_fraction": 0.008658008658008658,
+        "interpretation": "toe-pivot proxy, not measured source contact; original mask retained without relabeling ambiguous frames"
+      },
+      {
+        "clip_id": "slow_walk_0",
+        "plane_m": 0.01761739501512233,
+        "scored_frames": 150,
+        "support_samples": 209,
+        "double_support_frames": 59,
+        "double_support_height_difference_p50_p95_max_m": [
+          0.005461131607066662,
+          0.009575073947208187,
+          0.012194184308015565
+        ],
+        "double_support_difference_over_1cm_fraction": 0.05084745762711865,
+        "stationary_but_outside_source_plane_band_samples": 0,
+        "support_within_1cm_of_plane_fraction": 0.9760765550239234,
+        "support_near_speed_threshold_fraction": 0.009569377990430622,
+        "interpretation": "toe-pivot proxy, not measured source contact; original mask retained without relabeling ambiguous frames"
+      },
+      {
+        "clip_id": "slow_walk_1",
+        "plane_m": 0.001780987245752984,
+        "scored_frames": 150,
+        "support_samples": 223,
+        "double_support_frames": 73,
+        "double_support_height_difference_p50_p95_max_m": [
+          0.005902148431144164,
+          0.011983331556371704,
+          0.01622543481994175
+        ],
+        "double_support_difference_over_1cm_fraction": 0.2191780821917808,
+        "stationary_but_outside_source_plane_band_samples": 0,
+        "support_within_1cm_of_plane_fraction": 0.9820627802690582,
+        "support_near_speed_threshold_fraction": 0.0,
+        "interpretation": "toe-pivot proxy, not measured source contact; original mask retained without relabeling ambiguous frames"
+      },
+      {
+        "clip_id": "slow_walk_2",
+        "plane_m": 0.018778205874705543,
+        "scored_frames": 150,
+        "support_samples": 226,
+        "double_support_frames": 76,
+        "double_support_height_difference_p50_p95_max_m": [
+          0.004101068527800795,
+          0.013332228678523973,
+          0.01376726553521378
+        ],
+        "double_support_difference_over_1cm_fraction": 0.15789473684210525,
+        "stationary_but_outside_source_plane_band_samples": 0,
+        "support_within_1cm_of_plane_fraction": 0.9557522123893806,
+        "support_near_speed_threshold_fraction": 0.004424778761061947,
+        "interpretation": "toe-pivot proxy, not measured source contact; original mask retained without relabeling ambiguous frames"
+      },
+      {
+        "clip_id": "slow_walk_3",
+        "plane_m": 0.02008267398423336,
+        "scored_frames": 150,
+        "support_samples": 217,
+        "double_support_frames": 72,
+        "double_support_height_difference_p50_p95_max_m": [
+          0.008272926840204399,
+          0.01358595186681492,
+          0.01425999103822045
+        ],
+        "double_support_difference_over_1cm_fraction": 0.1527777777777778,
+        "stationary_but_outside_source_plane_band_samples": 17,
+        "support_within_1cm_of_plane_fraction": 0.8387096774193549,
+        "support_near_speed_threshold_fraction": 0.004608294930875576,
+        "interpretation": "toe-pivot proxy, not measured source contact; original mask retained without relabeling ambiguous frames"
+      }
+    ]
+  }
+}

@@ -38,6 +38,9 @@ def validate_actuator_resume(checkpoint, cfg):
         raise ValueError("resume lacks environment_config; cannot verify actuator settings")
     if saved.get("reset_mode", "nominal") != cfg.reset_mode:
         raise ValueError("resume reset_mode differs; start a fresh reset ablation")
+    for key, legacy in (("physics_external_forces_every_iteration",False), ("physics_min_velocity_iterations",0)):
+        if saved.get(key,legacy)!=getattr(cfg,key):
+            raise ValueError("resume physics settings differ; use the saved solver configuration")
     for key in ("torque_limit", "stiffness", "damping", "default_joint_pos"):
         value = saved.get(key)
         if value is None or tuple(value) != tuple(getattr(cfg, key)):

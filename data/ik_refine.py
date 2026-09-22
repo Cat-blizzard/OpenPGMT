@@ -82,19 +82,21 @@ def _source_keypoints(bvh: BVH, scale: float) -> np.ndarray:
     return np.stack([gpos[:, bvh.joint_index(src)] for src, _ in LEG_KEYPOINTS], axis=1)
 
 
-def _batch_fk(qpos: np.ndarray, root_pos: np.ndarray, root_rot: np.ndarray):
+def _batch_fk(qpos: np.ndarray, root_pos: np.ndarray, root_rot: np.ndarray, kinematics=None):
     """批量 FK（T,29）→ pos/quat 字典。"""
-    pos, quat = g1_forward_kinematics(qpos, root_pos, root_rot, return_quats=True)
+    pos, quat = g1_forward_kinematics(qpos, root_pos, root_rot, return_quats=True, kinematics=kinematics)
     return pos, quat
 
 
 def _batch_jacobian(pos: Dict[str, np.ndarray], quat: Dict[str, np.ndarray],
-                    keypoint_bodies: List[str], joint_names: List[str]) -> np.ndarray:
+                    keypoint_bodies: List[str], joint_names: List[str], kinematics=None) -> np.ndarray:
     """批量几何雅可比 (T, 3K, N)。
 
     正确性三坑（tests/test_ik_refine.py 差分锁定）：严格祖先、子 body
     当前朝向轴、子 body 原点支点。
     """
+    if kinematics is not None:
+        return kinematics.jacobian(pos, quat, keypoint_bodies, joint_names)
     T = next(iter(pos.values())).shape[0]
     J = np.zeros((T, len(keypoint_bodies) * 3, len(joint_names)))
     for k, g1_body in enumerate(keypoint_bodies):
@@ -115,7 +117,7 @@ def _batch_jacobian(pos: Dict[str, np.ndarray], quat: Dict[str, np.ndarray],
 def _refine(data: Dict[str, np.ndarray], targets: np.ndarray,
             joint_idx: List[int], keypoint_bodies: List[str],
             weights: np.ndarray, max_iter: int = 8,
-            damp_init: float = 1e-2, lambda_smooth: float = 0.05) -> np.ndarray:
+            damp_init: float = 1e-2, lambda_smooth: float = 0.05, kinematics=None) -> np.ndarray:
     """通用批量 LM 精修：joint_idx 关节 + keypoint_bodies 目标。
 
     targets: (T, K, 3)（已对齐）；返回精修后的完整 qpos。
@@ -123,6 +125,7 @@ def _refine(data: Dict[str, np.ndarray], targets: np.ndarray,
     qpos = np.asarray(data["qpos"], dtype=np.float64).copy()
     T = qpos.shape[0]
     root_pos, root_rot = data["root_pos"], data["root_rot"]
+    geometry_args = {} if kinematics is None else {"kinematics": kinematics}
     n_j = len(joint_idx)
     lo = np.array([G1_JOINT_LIMITS[G1_JOINT_NAMES[i]][0] for i in joint_idx])
     hi = np.array([G1_JOINT_LIMITS[G1_JOINT_NAMES[i]][1] for i in joint_idx])
@@ -136,7 +139,7 @@ def _refine(data: Dict[str, np.ndarray], targets: np.ndarray,
     def residuals(theta_: np.ndarray) -> np.ndarray:
         q_full = qpos.copy()
         q_full[:, joint_idx] = theta_
-        pos_, _ = _batch_fk(q_full, root_pos, root_rot)
+        pos_, _ = _batch_fk(q_full, root_pos, root_rot, **geometry_args)
         r = np.stack([weights[k] * (pos_[b] - targets[:, k])
                       for k, b in enumerate(keypoint_bodies)], axis=1)
         return r.reshape(T, -1)
@@ -144,9 +147,9 @@ def _refine(data: Dict[str, np.ndarray], targets: np.ndarray,
     for _ in range(max_iter):
         q_full = qpos.copy()
         q_full[:, joint_idx] = theta
-        pos, quat = _batch_fk(q_full, root_pos, root_rot)
+        pos, quat = _batch_fk(q_full, root_pos, root_rot, **geometry_args)
         r = residuals(theta)
-        J = _batch_jacobian(pos, quat, keypoint_bodies, joint_names)
+        J = _batch_jacobian(pos, quat, keypoint_bodies, joint_names, **geometry_args)
         Jw = J * np.repeat(weights, 3)[None, :, None]
         A = np.einsum("tij,tik->tjk", Jw, Jw) \
             + (lam + lambda_smooth)[:, None, None] * np.eye(n_j)
@@ -196,7 +199,7 @@ FULL_WEIGHTS = np.array([
 
 def refine_legs(data: Dict[str, np.ndarray], bvh: BVH,
                 max_iter: int = 8, damp_init: float = 1e-2,
-                lambda_smooth: float = 0.05) -> Dict[str, np.ndarray]:
+                lambda_smooth: float = 0.05, *, kinematics=None) -> Dict[str, np.ndarray]:
     """腿链 IK 精修（批量 LM，M1.5a 接口保留）。data = retarget() 输出。"""
     scale = float(data["scale"])
     gpos_cm, _ = bvh.fk(unit_scale=1.0)
@@ -205,13 +208,13 @@ def refine_legs(data: Dict[str, np.ndarray], bvh: BVH,
     targets = _source_keypoints(bvh, scale) - delta[:, None, :]
     qpos = _refine(data, targets, list(range(12)),
                    [b for _, b in LEG_KEYPOINTS],
-                   KEYPOINT_WEIGHTS, max_iter, damp_init, lambda_smooth)
-    return _finalize(data, qpos)
+                   KEYPOINT_WEIGHTS, max_iter, damp_init, lambda_smooth, kinematics)
+    return _finalize(data, qpos, kinematics=kinematics)
 
 
 def refine_full(data: Dict[str, np.ndarray], bvh: BVH,
                 max_iter: int = 10, damp_init: float = 1e-2,
-                lambda_smooth: float = 0.05) -> Dict[str, np.ndarray]:
+                lambda_smooth: float = 0.05, *, kinematics=None) -> Dict[str, np.ndarray]:
     """全链 IK 精修（29 关节，M1.5b）。data = retarget() 输出。
 
     纯位置残差（FULL_KEYPOINTS）。链接方向残差（上臂/前臂）已实验
@@ -227,11 +230,11 @@ def refine_full(data: Dict[str, np.ndarray], bvh: BVH,
                            axis=1) - delta[:, None, :]
     pos_bodies = [b for _, b in FULL_KEYPOINTS]
     qpos = _refine(data, pos_targets, list(range(29)), pos_bodies,
-                   FULL_WEIGHTS, max_iter, damp_init, lambda_smooth)
-    return _finalize(data, qpos)
+                   FULL_WEIGHTS, max_iter, damp_init, lambda_smooth, kinematics)
+    return _finalize(data, qpos, kinematics=kinematics)
 
 
-def _finalize(data: Dict[str, np.ndarray], qpos: np.ndarray) -> Dict[str, np.ndarray]:
+def _finalize(data: Dict[str, np.ndarray], qpos: np.ndarray, *, kinematics=None) -> Dict[str, np.ndarray]:
     """Project finite hinge coordinates and recompute velocity/contact labels.
 
     qvel directly differentiates the exported bounded qpos. Unwrapping would
@@ -242,6 +245,8 @@ def _finalize(data: Dict[str, np.ndarray], qpos: np.ndarray) -> Dict[str, np.nda
     out = {k: v for k, v in data.items()}
     out["qpos"] = qpos_bounded
     out["qvel"] = qvel.astype(np.float32)
+    if kinematics is not None:
+        return kinematics.finalize_reference(out)
     pos = g1_forward_kinematics(qpos_bounded, root_pos, root_rot)
     # IK 后刚体 z 校正（高度锚定 v2 第二段，2026-09-20）。IK 目标随 root
     # 刚体移动（refine_full 的 delta = 源髋 − root），平移 root 不改变任何

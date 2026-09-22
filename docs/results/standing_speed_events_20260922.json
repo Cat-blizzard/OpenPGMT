@@ -1,0 +1,67 @@
+{
+  "status": "completed",
+  "threshold_rad_s": 45.0,
+  "events": [
+    {
+      "condition": "control",
+      "update": 3,
+      "control_step": 54,
+      "substep": 2,
+      "env_id": 11,
+      "joint": "left_ankle_roll",
+      "peak_signed_rad_s": -45.17302322387695,
+      "episode_step": 54,
+      "control_tick_joint_pos_rad": -0.034663230180740356,
+      "control_tick_joint_vel_rad_s": 1.7390694618225098,
+      "target_rad": 0.0032725301571190357,
+      "estimated_torque_nm": 6.734805107116699,
+      "joint_limit_rad": [
+        -0.26179999113082886,
+        0.26179999113082886
+      ],
+      "within_tick_velocities_rad_s": [
+        0.16830353438854218,
+        -45.17302322387695,
+        -1.5021542310714722,
+        1.7390694618225098
+      ],
+      "pre_reset_root_height_m": 0.4272620379924774,
+      "pre_reset_root_vertical_velocity_m_s": -2.279567003250122,
+      "terminated": false,
+      "source_file": "runs/standing_learning_20260922/physics_v1/control/captures/update_03_before.pt",
+      "source_sha256": "c089c2daff663a2cbca26574acea4639f243417660adc64a44a6967df0abff30"
+    },
+    {
+      "condition": "candidate",
+      "update": 12,
+      "control_step": 274,
+      "substep": 3,
+      "env_id": 5,
+      "joint": "left_ankle_roll",
+      "peak_signed_rad_s": -54.800132751464844,
+      "episode_step": 84,
+      "control_tick_joint_pos_rad": 0.06923808157444,
+      "control_tick_joint_vel_rad_s": -1.182063102722168,
+      "target_rad": 0.015224295668303967,
+      "estimated_torque_nm": 50.0,
+      "joint_limit_rad": [
+        -0.26179999113082886,
+        0.26179999113082886
+      ],
+      "within_tick_velocities_rad_s": [
+        -1.0822300910949707,
+        0.879551887512207,
+        -54.800132751464844,
+        -1.182063102722168
+      ],
+      "pre_reset_root_height_m": 0.49474796652793884,
+      "pre_reset_root_vertical_velocity_m_s": -1.6504311561584473,
+      "terminated": false,
+      "source_file": "runs/standing_learning_20260922/physics_v1/candidate/captures/update_12_before.pt",
+      "source_sha256": "62d3b45477cf13fde0e3ebf8913af604e684b44eaa0f81dccc7f3c66151cb086"
+    }
+  ],
+  "indexing": "control_step/substep/episode_step are one-based; env_id is zero-based",
+  "interpretation": "Transient peaks between control ticks; causal attribution to controller versus contact solver is not established. Torque and position are end-of-control-tick observations, not measurements at the peak substep.",
+  "source_sha256": "e8a67fc1166c3e64fd8644b6631f66eee9240018cb936aeb1cc8102caa2ce265"
+}

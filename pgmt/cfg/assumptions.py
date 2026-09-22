@@ -449,6 +449,17 @@ class TerrainContactCfg:
 
 
 @dataclass(frozen=True)
+class PhysicsSolverCfg:
+    """Engineering PhysX settings validated by identical-action substep probes.
+
+    PGMT does not disclose these solver settings. See the 2026-09-22 physics
+    report and Isaac Lab 2.3.2 PhysxCfg; no reward or termination is changed.
+    """
+    enable_external_forces_every_iteration: bool = True
+    min_velocity_iteration_count: int = 4
+
+
+@dataclass(frozen=True)
 class Assumption:
     aid: str
     name: str
@@ -517,6 +528,10 @@ ASSUMPTIONS: Dict[str, Assumption] = {
                       "forces），但未给任何公式与阈值。度量与尺度集中于此；"
                       "其中 stumble/contact_force 沿用 legged_gym 同名项的传统取值。"
                       "**注意**参考接触标签的数据源与论文不同（速度阈值 vs terrain-mesh 查询）"),
+    "A23": Assumption("A23", "physics_solver", PhysicsSolverCfg(),
+                      "论文未披露 PhysX 求解器设置；2026-09-22 同动作子步对照支持 TGS "
+                      "每次位置迭代应用外力及至少 4 次速度迭代，降低原始关节速度尖峰；"
+                      "保持 5 ms 物理步长、PD、力矩/速度限值、奖励及终止规则"),
 }
 
 

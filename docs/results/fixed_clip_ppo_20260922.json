@@ -1,0 +1,1204 @@
+{
+  "scope": "single-seed, fixed-clip ordinary PPO interface diagnostic; on-policy statistics, not matched evaluation or convergence",
+  "pair_checks_passed": true,
+  "identical_initial_policy_optimizer_rng": true,
+  "manifest_sha256": "008eb1e1d0443d882605b6498b8034c91ee483557508a9e6fb5af9b00369ca7b",
+  "analysis_source_sha256": "70a3b493fb9c1393b85b2aebcc38199b3b9c1444bf55c534a150e0429fc8eb92",
+  "total_transitions": 15360,
+  "runs": {
+    "nominal": {
+      "first5": {
+        "transitions": 1920,
+        "terminations": 22,
+        "timeouts": 0,
+        "ended_episode_mean_s": 1.2054545174945483,
+        "joint_rmse_rad": 0.4078911967548425,
+        "body_rmse_m": 0.12981106940082998
+      },
+      "last5": {
+        "transitions": 1920,
+        "terminations": 31,
+        "timeouts": 0,
+        "ended_episode_mean_s": 1.267096746352411,
+        "joint_rmse_rad": 0.41264911338261473,
+        "body_rmse_m": 0.13422832900675316
+      },
+      "all": {
+        "transitions": 7680,
+        "terminations": 112,
+        "timeouts": 0,
+        "ended_episode_mean_s": 1.259464256465435,
+        "joint_rmse_rad": 0.40956269375226356,
+        "body_rmse_m": 0.1314012283827364
+      },
+      "initial_episode_first_action": {
+        "count": 16,
+        "target_minus_q_rms_rad": 0.18506346414300226,
+        "target_minus_q_max_abs_rad": 0.8948767185211182,
+        "largest_joint_target_gaps": [
+          {
+            "joint": "right_shoulder_pitch",
+            "rms_rad": 0.32948189057886484
+          },
+          {
+            "joint": "left_shoulder_yaw",
+            "rms_rad": 0.31805282899910936
+          },
+          {
+            "joint": "right_hip_yaw",
+            "rms_rad": 0.31042141446767096
+          },
+          {
+            "joint": "left_hip_yaw",
+            "rms_rad": 0.3032082649561258
+          },
+          {
+            "joint": "right_shoulder_yaw",
+            "rms_rad": 0.2836458592504085
+          }
+        ],
+        "state_ee_accel_peak_m_s2": 85.04954515142506,
+        "state_ee_accel_p95_m_s2": 74.33711020885352,
+        "ee_accel_error_p95_m_s2": 73.63767180508246
+      },
+      "all_episode_first_actions": {
+        "count": 128,
+        "target_minus_q_rms_rad": 0.18055286772792986,
+        "target_minus_q_max_abs_rad": 0.8948767185211182,
+        "largest_joint_target_gaps": [
+          {
+            "joint": "right_shoulder_pitch",
+            "rms_rad": 0.2989771689204006
+          },
+          {
+            "joint": "right_hip_yaw",
+            "rms_rad": 0.2811911675929342
+          },
+          {
+            "joint": "left_hip_yaw",
+            "rms_rad": 0.27762213758400883
+          },
+          {
+            "joint": "left_shoulder_yaw",
+            "rms_rad": 0.2741123641090317
+          },
+          {
+            "joint": "left_hip_pitch",
+            "rms_rad": 0.26353620462891936
+          }
+        ],
+        "state_ee_accel_peak_m_s2": 120.36405389957997,
+        "state_ee_accel_p95_m_s2": 78.33698626766225,
+        "ee_accel_error_p95_m_s2": 78.21226063080088
+      },
+      "actor_steps_min": 1,
+      "actor_steps_total": 97,
+      "critic_steps_total": 400,
+      "mean_kl_max": 0.019763704389333725,
+      "max_state_kl": 0.1459808051586151,
+      "p99_kl_max": 0.11031660437583923,
+      "termination_reasons": {
+        "ref_deviation": 0,
+        "root_low": 86,
+        "tilted": 50,
+        "joint_speed": 4
+      },
+      "per_clip": {
+        "low_motion_0": {
+          "transitions": 1931,
+          "joint_rmse_rad": 0.5197511594045826,
+          "body_rmse_m": 0.15928181365178962
+        },
+        "low_motion_2": {
+          "transitions": 1942,
+          "joint_rmse_rad": 0.3772199491582982,
+          "body_rmse_m": 0.1394829013704892
+        },
+        "slow_walk_0": {
+          "transitions": 1909,
+          "joint_rmse_rad": 0.2281493267416163,
+          "body_rmse_m": 0.10079079554099778
+        },
+        "slow_walk_2": {
+          "transitions": 1898,
+          "joint_rmse_rad": 0.4538261064289667,
+          "body_rmse_m": 0.11802416392233835
+        }
+      },
+      "kl_replays": [
+        {
+          "file": "runs/fixed_clip_ppo_20260922/physical_pair_v1/nominal/diagnostics/kl_000.pt",
+          "verified": true,
+          "step": 4,
+          "kl": [
+            0.14598074555397034,
+            0.1287451982498169,
+            0.12459295243024826,
+            0.12091203778982162
+          ],
+          "recovery": [
+            false,
+            false,
+            false,
+            false
+          ],
+          "parameter_max_abs_error": {
+            "old_loc": 3.725290298461914e-09,
+            "old_scale": 7.450580596923828e-09,
+            "new_loc": 5.960464477539063e-08,
+            "new_scale": 7.450580596923828e-09
+          },
+          "observations": {
+            "obs": {
+              "abs_max": 12.838130950927734,
+              "rms": 2.2570629119873047,
+              "finite": true
+            },
+            "history": {
+              "abs_max": 17.57652473449707,
+              "rms": 2.2808375358581543,
+              "finite": true
+            },
+            "future": {
+              "abs_max": 1.910298466682434,
+              "rms": 0.34493812918663025,
+              "finite": true
+            },
+            "privileged": {
+              "abs_max": 3.93190598487854,
+              "rms": 0.9929381012916565,
+              "finite": true
+            }
+          },
+          "scope": "entire accepted update including private critic completion"
+        }
+      ],
+      "overspeed_snapshots": [
+        {
+          "snapshot": "runs/fixed_clip_ppo_20260922/physical_pair_v1/nominal/diagnostics/joint_speed_000.pt",
+          "step": 161,
+          "env_id": 10,
+          "episode_s": 1.0399999618530273,
+          "sequence": "aiming2_subject3",
+          "joint": "left_ankle_roll",
+          "velocity_rad_s": -63.68165588378906,
+          "asset_velocity_limit_rad_s": 37.0,
+          "joint_pos_rad": 0.06117504835128784,
+          "target_rad": -0.042890168726444244,
+          "estimated_torque_nm": 30.010587692260742,
+          "effort_limit_nm": 50.0,
+          "torque_source": "isaaclab_implicit_pd_estimate_last_substep",
+          "root_height_m": 0.6481868028640747
+        },
+        {
+          "snapshot": "runs/fixed_clip_ppo_20260922/physical_pair_v1/nominal/diagnostics/joint_speed_001.pt",
+          "step": 301,
+          "env_id": 7,
+          "episode_s": 1.0199999809265137,
+          "sequence": "walk3_subject4",
+          "joint": "left_ankle_roll",
+          "velocity_rad_s": -54.4176139831543,
+          "asset_velocity_limit_rad_s": 37.0,
+          "joint_pos_rad": 0.0888061374425888,
+          "target_rad": -0.03386985883116722,
+          "estimated_torque_nm": 2.800670623779297,
+          "effort_limit_nm": 50.0,
+          "torque_source": "isaaclab_implicit_pd_estimate_last_substep",
+          "root_height_m": 0.6543707847595215
+        },
+        {
+          "snapshot": "runs/fixed_clip_ppo_20260922/physical_pair_v1/nominal/diagnostics/joint_speed_002.pt",
+          "step": 371,
+          "env_id": 0,
+          "episode_s": 1.1200000047683716,
+          "sequence": "aiming2_subject2",
+          "joint": "left_ankle_roll",
+          "velocity_rad_s": 57.836463928222656,
+          "asset_velocity_limit_rad_s": 37.0,
+          "joint_pos_rad": -0.0779014304280281,
+          "target_rad": -0.027236107736825943,
+          "estimated_torque_nm": 3.3137478828430176,
+          "effort_limit_nm": 50.0,
+          "torque_source": "isaaclab_implicit_pd_estimate_last_substep",
+          "root_height_m": 0.5914831161499023
+        },
+        {
+          "snapshot": "runs/fixed_clip_ppo_20260922/physical_pair_v1/nominal/diagnostics/joint_speed_003.pt",
+          "step": 388,
+          "env_id": 3,
+          "episode_s": 1.3399999141693115,
+          "sequence": "aiming2_subject3",
+          "joint": "left_ankle_roll",
+          "velocity_rad_s": -80.83039855957031,
+          "asset_velocity_limit_rad_s": 37.0,
+          "joint_pos_rad": -0.0016419487074017525,
+          "target_rad": 0.023361334577202797,
+          "estimated_torque_nm": -0.1305636167526245,
+          "effort_limit_nm": 50.0,
+          "torque_source": "isaaclab_implicit_pd_estimate_last_substep",
+          "root_height_m": 0.31039777398109436
+        }
+      ],
+      "overspeed_snapshot_scope": "at most four events; not necessarily every overspeed episode or the whole-run maximum",
+      "update_series": [
+        {
+          "update": 1,
+          "transitions": 384,
+          "terminations": 0,
+          "timeouts": 0,
+          "ended_episode_mean_s": null,
+          "joint_rmse_rad": 0.3940690105645598,
+          "body_rmse_m": 0.09005389944228931,
+          "actor_steps": 15,
+          "critic_steps": 20,
+          "mean_kl": 0.018428772687911987,
+          "max_state_kl": 0.0694400742650032,
+          "p99_kl": 0.05094585195183754
+        },
+        {
+          "update": 2,
+          "transitions": 384,
+          "terminations": 0,
+          "timeouts": 0,
+          "ended_episode_mean_s": null,
+          "joint_rmse_rad": 0.4092213064011675,
+          "body_rmse_m": 0.11860868042392311,
+          "actor_steps": 16,
+          "critic_steps": 20,
+          "mean_kl": 0.019001642242074013,
+          "max_state_kl": 0.05106199532747269,
+          "p99_kl": 0.04838520288467407
+        },
+        {
+          "update": 3,
+          "transitions": 384,
+          "terminations": 16,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2224999815225601,
+          "joint_rmse_rad": 0.41766935838136177,
+          "body_rmse_m": 0.16303500041014646,
+          "actor_steps": 15,
+          "critic_steps": 20,
+          "mean_kl": 0.01888674187163512,
+          "max_state_kl": 0.04970768839120865,
+          "p99_kl": 0.04127609357237816
+        },
+        {
+          "update": 4,
+          "transitions": 384,
+          "terminations": 0,
+          "timeouts": 0,
+          "ended_episode_mean_s": null,
+          "joint_rmse_rad": 0.39614873061858036,
+          "body_rmse_m": 0.098103687144385,
+          "actor_steps": 6,
+          "critic_steps": 20,
+          "mean_kl": 0.019673799475034077,
+          "max_state_kl": 0.1459808051586151,
+          "p99_kl": 0.11031660437583923
+        },
+        {
+          "update": 5,
+          "transitions": 384,
+          "terminations": 6,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.159999946753184,
+          "joint_rmse_rad": 0.42159479307632325,
+          "body_rmse_m": 0.16084806504341104,
+          "actor_steps": 5,
+          "critic_steps": 20,
+          "mean_kl": 0.018399036799867947,
+          "max_state_kl": 0.05828166753053665,
+          "p99_kl": 0.04509824886918068
+        },
+        {
+          "update": 6,
+          "transitions": 384,
+          "terminations": 10,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2559999823570251,
+          "joint_rmse_rad": 0.3980512499919794,
+          "body_rmse_m": 0.12334793448245407,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.01849165993432204,
+          "max_state_kl": 0.06496337801218033,
+          "p99_kl": 0.0496760830283165
+        },
+        {
+          "update": 7,
+          "transitions": 384,
+          "terminations": 1,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.0399999618530273,
+          "joint_rmse_rad": 0.402436168636263,
+          "body_rmse_m": 0.10971919501218545,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.018449166789650917,
+          "max_state_kl": 0.03715796023607254,
+          "p99_kl": 0.03463495522737503
+        },
+        {
+          "update": 8,
+          "transitions": 384,
+          "terminations": 14,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2585714033671789,
+          "joint_rmse_rad": 0.41477653503080464,
+          "body_rmse_m": 0.1650130534274871,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.01820409142722686,
+          "max_state_kl": 0.04372439160943031,
+          "p99_kl": 0.04054927080869675
+        },
+        {
+          "update": 9,
+          "transitions": 384,
+          "terminations": 1,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.399999976158142,
+          "joint_rmse_rad": 0.40862080850349675,
+          "body_rmse_m": 0.10521590646037488,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.018503471588095028,
+          "max_state_kl": 0.03712691366672516,
+          "p99_kl": 0.03444109112024307
+        },
+        {
+          "update": 10,
+          "transitions": 384,
+          "terminations": 2,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2599999904632568,
+          "joint_rmse_rad": 0.4112512390754318,
+          "body_rmse_m": 0.130478677935828,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.019037203242381413,
+          "max_state_kl": 0.04475755989551544,
+          "p99_kl": 0.03390059620141983
+        },
+        {
+          "update": 11,
+          "transitions": 384,
+          "terminations": 13,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2953845812724187,
+          "joint_rmse_rad": 0.4017222582697147,
+          "body_rmse_m": 0.15186877935956195,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.019740167384346325,
+          "max_state_kl": 0.0570499449968338,
+          "p99_kl": 0.046740785241127014
+        },
+        {
+          "update": 12,
+          "transitions": 384,
+          "terminations": 1,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.399999976158142,
+          "joint_rmse_rad": 0.4050607989022942,
+          "body_rmse_m": 0.10921769808352252,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.01873458797732989,
+          "max_state_kl": 0.048893336206674576,
+          "p99_kl": 0.03739127889275551
+        },
+        {
+          "update": 13,
+          "transitions": 384,
+          "terminations": 5,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.171999979019165,
+          "joint_rmse_rad": 0.4268789846796091,
+          "body_rmse_m": 0.142940028457177,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.019174964477618534,
+          "max_state_kl": 0.03954774886369705,
+          "p99_kl": 0.03662555664777756
+        },
+        {
+          "update": 14,
+          "transitions": 384,
+          "terminations": 11,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.3309090354225852,
+          "joint_rmse_rad": 0.41040448140033137,
+          "body_rmse_m": 0.13572835994749938,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.018326933185259502,
+          "max_state_kl": 0.05844618007540703,
+          "p99_kl": 0.04040541499853134
+        },
+        {
+          "update": 15,
+          "transitions": 384,
+          "terminations": 1,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.3799999952316284,
+          "joint_rmse_rad": 0.4085450877089035,
+          "body_rmse_m": 0.1206681406260327,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.019763704389333725,
+          "max_state_kl": 0.04630237817764282,
+          "p99_kl": 0.03957216069102287
+        },
+        {
+          "update": 16,
+          "transitions": 384,
+          "terminations": 11,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2472726973620327,
+          "joint_rmse_rad": 0.4159499267257035,
+          "body_rmse_m": 0.15656495537802648,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.01972099021077156,
+          "max_state_kl": 0.0646962821483612,
+          "p99_kl": 0.049057915806770325
+        },
+        {
+          "update": 17,
+          "transitions": 384,
+          "terminations": 4,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2899999618530273,
+          "joint_rmse_rad": 0.40765827875398913,
+          "body_rmse_m": 0.11139361141838944,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.01807260016600291,
+          "max_state_kl": 0.04875051975250244,
+          "p99_kl": 0.03896407037973404
+        },
+        {
+          "update": 18,
+          "transitions": 384,
+          "terminations": 4,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2649999558925629,
+          "joint_rmse_rad": 0.4174444499102889,
+          "body_rmse_m": 0.14058002827919663,
+          "actor_steps": 1,
+          "critic_steps": 20,
+          "mean_kl": 0.018080394094189007,
+          "max_state_kl": 0.0462343692779541,
+          "p99_kl": 0.04110056161880493
+        },
+        {
+          "update": 19,
+          "transitions": 384,
+          "terminations": 11,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2763636220585217,
+          "joint_rmse_rad": 0.40890721692695037,
+          "body_rmse_m": 0.1416122669525748,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.019081662098566692,
+          "max_state_kl": 0.04685443639755249,
+          "p99_kl": 0.042077917605638504
+        },
+        {
+          "update": 20,
+          "transitions": 384,
+          "terminations": 1,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2999999523162842,
+          "joint_rmse_rad": 0.4131971191594384,
+          "body_rmse_m": 0.1155349346299389,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.019505408902963,
+          "max_state_kl": 0.050426602363586426,
+          "p99_kl": 0.04028208181262016
+        }
+      ],
+      "evidence_sha256": {
+        "metrics.json": "1d24bc5bf443d32a81377415864bcbd7973bd8c3b72e066a6c65be834f7e22aa",
+        "episode_evidence.json": "59e58c48d8da7b02e0a5a7756829f6d0aa1ccddb0c2dd87b9b0dcab5bc4aa026",
+        "manifest.json": "008eb1e1d0443d882605b6498b8034c91ee483557508a9e6fb5af9b00369ca7b",
+        "source_manifest.json": "086cdc52ca755f3901f6e05f81d892ec53a3aebc51a705dfb9030806dd27554f",
+        "initial.pt": "5cfcae806ef41cf760615763d8a4d94c175f0f5fcecd98be9eaa0f69a00ef4b3",
+        "policy.pt": "042734889f675400160a556cf20c3bbc0b0ce98ea0354c2eb456e0b204d5f79a",
+        "initial_evidence.pt": "b825d725cb4ddf29481074f4ff6ea05a06b7096b0e779a83cfc27cf3ec393278",
+        "diagnostics/actuators_000.pt": "ddbc4d7fc897b3ff24b9fbdffe0da4be0daf29991ae366590e666adc5e24ccc4"
+      },
+      "started_at": "2026-09-22T06:08:28.032069+00:00",
+      "finished_at": "2026-09-22T06:12:26.984146+00:00"
+    },
+    "reference_state": {
+      "first5": {
+        "transitions": 1920,
+        "terminations": 28,
+        "timeouts": 0,
+        "ended_episode_mean_s": 1.0335714114563805,
+        "joint_rmse_rad": 0.41742917606478336,
+        "body_rmse_m": 0.1253692775205179
+      },
+      "last5": {
+        "transitions": 1920,
+        "terminations": 32,
+        "timeouts": 0,
+        "ended_episode_mean_s": 1.2687499653548002,
+        "joint_rmse_rad": 0.4057694654341125,
+        "body_rmse_m": 0.1348837429578052
+      },
+      "all": {
+        "transitions": 7680,
+        "terminations": 123,
+        "timeouts": 0,
+        "ended_episode_mean_s": 1.1627642013193147,
+        "joint_rmse_rad": 0.4135931619248895,
+        "body_rmse_m": 0.1308439742786469
+      },
+      "initial_episode_first_action": {
+        "count": 16,
+        "target_minus_q_rms_rad": 0.42643912959744945,
+        "target_minus_q_max_abs_rad": 2.4778735637664795,
+        "largest_joint_target_gaps": [
+          {
+            "joint": "right_shoulder_pitch",
+            "rms_rad": 1.2197812133582733
+          },
+          {
+            "joint": "left_shoulder_pitch",
+            "rms_rad": 1.01762641769959
+          },
+          {
+            "joint": "right_wrist_pitch",
+            "rms_rad": 0.6052377585665746
+          },
+          {
+            "joint": "left_wrist_pitch",
+            "rms_rad": 0.4682492829914473
+          },
+          {
+            "joint": "right_elbow",
+            "rms_rad": 0.43731304265078574
+          }
+        ],
+        "state_ee_accel_peak_m_s2": 162.6452637249485,
+        "state_ee_accel_p95_m_s2": 124.5756267809853,
+        "ee_accel_error_p95_m_s2": 124.41744608920887
+      },
+      "all_episode_first_actions": {
+        "count": 139,
+        "target_minus_q_rms_rad": 0.4143200346016473,
+        "target_minus_q_max_abs_rad": 2.4778735637664795,
+        "largest_joint_target_gaps": [
+          {
+            "joint": "right_shoulder_pitch",
+            "rms_rad": 1.1292450425115794
+          },
+          {
+            "joint": "left_shoulder_pitch",
+            "rms_rad": 0.9773939426333521
+          },
+          {
+            "joint": "right_wrist_pitch",
+            "rms_rad": 0.5775195526442019
+          },
+          {
+            "joint": "left_wrist_pitch",
+            "rms_rad": 0.4765465499906164
+          },
+          {
+            "joint": "left_wrist_roll",
+            "rms_rad": 0.46639010439804024
+          }
+        ],
+        "state_ee_accel_peak_m_s2": 188.68111139859028,
+        "state_ee_accel_p95_m_s2": 127.36888551877529,
+        "ee_accel_error_p95_m_s2": 126.27285759315862
+      },
+      "actor_steps_min": 2,
+      "actor_steps_total": 102,
+      "critic_steps_total": 400,
+      "mean_kl_max": 0.01989481846491496,
+      "max_state_kl": 0.3440912365913391,
+      "p99_kl_max": 0.18137440085411072,
+      "termination_reasons": {
+        "ref_deviation": 0,
+        "root_low": 88,
+        "tilted": 46,
+        "joint_speed": 12
+      },
+      "per_clip": {
+        "low_motion_0": {
+          "transitions": 2407,
+          "joint_rmse_rad": 0.5102525789662244,
+          "body_rmse_m": 0.14374537668048146
+        },
+        "low_motion_2": {
+          "transitions": 2168,
+          "joint_rmse_rad": 0.3757749066666701,
+          "body_rmse_m": 0.13013234695399217
+        },
+        "slow_walk_0": {
+          "transitions": 1668,
+          "joint_rmse_rad": 0.22848954919229597,
+          "body_rmse_m": 0.10396508847783716
+        },
+        "slow_walk_2": {
+          "transitions": 1437,
+          "joint_rmse_rad": 0.45219338537791803,
+          "body_rmse_m": 0.13708543407468093
+        }
+      },
+      "kl_replays": [
+        {
+          "file": "runs/fixed_clip_ppo_20260922/physical_pair_v1/reference_state/diagnostics/kl_000.pt",
+          "verified": true,
+          "step": 3,
+          "kl": [
+            0.15086999535560608,
+            0.1499011516571045,
+            0.1435069590806961,
+            0.14106597006320953
+          ],
+          "recovery": [
+            false,
+            false,
+            false,
+            false
+          ],
+          "parameter_max_abs_error": {
+            "old_loc": 3.725290298461914e-09,
+            "old_scale": 7.450580596923828e-09,
+            "new_loc": 1.4901161193847656e-08,
+            "new_scale": 7.450580596923828e-09
+          },
+          "observations": {
+            "obs": {
+              "abs_max": 17.235675811767578,
+              "rms": 2.6825783252716064,
+              "finite": true
+            },
+            "history": {
+              "abs_max": 21.608627319335938,
+              "rms": 2.7650580406188965,
+              "finite": true
+            },
+            "future": {
+              "abs_max": 1.6370601654052734,
+              "rms": 0.38246312737464905,
+              "finite": true
+            },
+            "privileged": {
+              "abs_max": 4.191619396209717,
+              "rms": 0.9772728681564331,
+              "finite": true
+            }
+          },
+          "scope": "entire accepted update including private critic completion"
+        },
+        {
+          "file": "runs/fixed_clip_ppo_20260922/physical_pair_v1/reference_state/diagnostics/kl_001.pt",
+          "verified": true,
+          "step": 6,
+          "kl": [
+            0.1624569445848465,
+            0.15380708873271942,
+            0.14810028672218323,
+            0.1469663381576538
+          ],
+          "recovery": [
+            false,
+            false,
+            false,
+            false
+          ],
+          "parameter_max_abs_error": {
+            "old_loc": 1.4901161193847656e-08,
+            "old_scale": 7.450580596923828e-09,
+            "new_loc": 5.960464477539063e-08,
+            "new_scale": 7.450580596923828e-09
+          },
+          "observations": {
+            "obs": {
+              "abs_max": 20.443452835083008,
+              "rms": 3.492175817489624,
+              "finite": true
+            },
+            "history": {
+              "abs_max": 21.435546875,
+              "rms": 1.8996200561523438,
+              "finite": true
+            },
+            "future": {
+              "abs_max": 1.6388084888458252,
+              "rms": 0.3865506052970886,
+              "finite": true
+            },
+            "privileged": {
+              "abs_max": 4.47254753112793,
+              "rms": 0.9755475521087646,
+              "finite": true
+            }
+          },
+          "scope": "entire accepted update including private critic completion"
+        },
+        {
+          "file": "runs/fixed_clip_ppo_20260922/physical_pair_v1/reference_state/diagnostics/kl_002.pt",
+          "verified": true,
+          "step": 9,
+          "kl": [
+            0.11438383162021637,
+            0.10349484533071518
+          ],
+          "recovery": [
+            false,
+            false
+          ],
+          "parameter_max_abs_error": {
+            "old_loc": 5.960464477539063e-08,
+            "old_scale": 7.450580596923828e-09,
+            "new_loc": 5.960464477539063e-08,
+            "new_scale": 7.450580596923828e-09
+          },
+          "observations": {
+            "obs": {
+              "abs_max": 19.638673782348633,
+              "rms": 3.8866965770721436,
+              "finite": true
+            },
+            "history": {
+              "abs_max": 16.024511337280273,
+              "rms": 1.4695861339569092,
+              "finite": true
+            },
+            "future": {
+              "abs_max": 1.6388084888458252,
+              "rms": 0.3899074196815491,
+              "finite": true
+            },
+            "privileged": {
+              "abs_max": 7.383700847625732,
+              "rms": 1.387925624847412,
+              "finite": true
+            }
+          },
+          "scope": "entire accepted update including private critic completion"
+        },
+        {
+          "file": "runs/fixed_clip_ppo_20260922/physical_pair_v1/reference_state/diagnostics/kl_003.pt",
+          "verified": true,
+          "step": 12,
+          "kl": [
+            0.344091534614563,
+            0.16279949247837067,
+            0.16213418543338776,
+            0.1601039320230484
+          ],
+          "recovery": [
+            false,
+            false,
+            false,
+            false
+          ],
+          "parameter_max_abs_error": {
+            "old_loc": 5.960464477539063e-08,
+            "old_scale": 7.450580596923828e-09,
+            "new_loc": 2.9802322387695312e-08,
+            "new_scale": 7.450580596923828e-09
+          },
+          "observations": {
+            "obs": {
+              "abs_max": 20.445344924926758,
+              "rms": 3.343325614929199,
+              "finite": true
+            },
+            "history": {
+              "abs_max": 20.445344924926758,
+              "rms": 2.018829107284546,
+              "finite": true
+            },
+            "future": {
+              "abs_max": 1.6388084888458252,
+              "rms": 0.3836944103240967,
+              "finite": true
+            },
+            "privileged": {
+              "abs_max": 5.802779197692871,
+              "rms": 1.1115405559539795,
+              "finite": true
+            }
+          },
+          "scope": "entire accepted update including private critic completion"
+        }
+      ],
+      "overspeed_snapshots": [
+        {
+          "snapshot": "runs/fixed_clip_ppo_20260922/physical_pair_v1/reference_state/diagnostics/joint_speed_000.pt",
+          "step": 33,
+          "env_id": 1,
+          "episode_s": 0.6599999666213989,
+          "sequence": "aiming2_subject2",
+          "joint": "left_ankle_roll",
+          "velocity_rad_s": -90.07660675048828,
+          "asset_velocity_limit_rad_s": 37.0,
+          "joint_pos_rad": 0.08619551360607147,
+          "target_rad": 0.018306713551282883,
+          "estimated_torque_nm": -9.396932601928711,
+          "effort_limit_nm": 50.0,
+          "torque_source": "isaaclab_implicit_pd_estimate_last_substep",
+          "root_height_m": 0.781780481338501
+        },
+        {
+          "snapshot": "runs/fixed_clip_ppo_20260922/physical_pair_v1/reference_state/diagnostics/joint_speed_001.pt",
+          "step": 38,
+          "env_id": 9,
+          "episode_s": 0.7599999904632568,
+          "sequence": "aiming2_subject2",
+          "joint": "left_ankle_roll",
+          "velocity_rad_s": 56.934234619140625,
+          "asset_velocity_limit_rad_s": 37.0,
+          "joint_pos_rad": 0.05826829746365547,
+          "target_rad": -0.02362220548093319,
+          "estimated_torque_nm": -0.9022483825683594,
+          "effort_limit_nm": 50.0,
+          "torque_source": "isaaclab_implicit_pd_estimate_last_substep",
+          "root_height_m": 0.7682812809944153
+        },
+        {
+          "snapshot": "runs/fixed_clip_ppo_20260922/physical_pair_v1/reference_state/diagnostics/joint_speed_002.pt",
+          "step": 44,
+          "env_id": 2,
+          "episode_s": 0.8799999952316284,
+          "sequence": "walk2_subject4",
+          "joint": "left_ankle_roll",
+          "velocity_rad_s": -64.9283447265625,
+          "asset_velocity_limit_rad_s": 37.0,
+          "joint_pos_rad": 0.14305511116981506,
+          "target_rad": 0.021061953157186508,
+          "estimated_torque_nm": -7.722489833831787,
+          "effort_limit_nm": 50.0,
+          "torque_source": "isaaclab_implicit_pd_estimate_last_substep",
+          "root_height_m": 0.6175969243049622
+        },
+        {
+          "snapshot": "runs/fixed_clip_ppo_20260922/physical_pair_v1/reference_state/diagnostics/joint_speed_003.pt",
+          "step": 76,
+          "env_id": 0,
+          "episode_s": 1.5199999809265137,
+          "sequence": "aiming2_subject3",
+          "joint": "left_ankle_roll",
+          "velocity_rad_s": 50.05769348144531,
+          "asset_velocity_limit_rad_s": 37.0,
+          "joint_pos_rad": 0.11636058986186981,
+          "target_rad": -6.112804840086028e-05,
+          "estimated_torque_nm": -6.776566028594971,
+          "effort_limit_nm": 50.0,
+          "torque_source": "isaaclab_implicit_pd_estimate_last_substep",
+          "root_height_m": 0.6015057563781738
+        }
+      ],
+      "overspeed_snapshot_scope": "at most four events; not necessarily every overspeed episode or the whole-run maximum",
+      "update_series": [
+        {
+          "update": 1,
+          "transitions": 384,
+          "terminations": 0,
+          "timeouts": 0,
+          "ended_episode_mean_s": null,
+          "joint_rmse_rad": 0.38743409189461236,
+          "body_rmse_m": 0.087122403860272,
+          "actor_steps": 13,
+          "critic_steps": 20,
+          "mean_kl": 0.018662257740894955,
+          "max_state_kl": 0.05817350745201111,
+          "p99_kl": 0.05380604416131973
+        },
+        {
+          "update": 2,
+          "transitions": 384,
+          "terminations": 8,
+          "timeouts": 0,
+          "ended_episode_mean_s": 0.8149999901652336,
+          "joint_rmse_rad": 0.3975249269417574,
+          "body_rmse_m": 0.12536780301562395,
+          "actor_steps": 16,
+          "critic_steps": 20,
+          "mean_kl": 0.018880542367696762,
+          "max_state_kl": 0.07332628965377808,
+          "p99_kl": 0.05192224308848381
+        },
+        {
+          "update": 3,
+          "transitions": 384,
+          "terminations": 5,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2119999885559083,
+          "joint_rmse_rad": 0.4502058745087884,
+          "body_rmse_m": 0.13727355568373983,
+          "actor_steps": 11,
+          "critic_steps": 20,
+          "mean_kl": 0.01859418737391631,
+          "max_state_kl": 0.15086990594863892,
+          "p99_kl": 0.13768130540847778
+        },
+        {
+          "update": 4,
+          "transitions": 384,
+          "terminations": 7,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.0714285458837236,
+          "joint_rmse_rad": 0.41746858055633296,
+          "body_rmse_m": 0.12998721341452066,
+          "actor_steps": 7,
+          "critic_steps": 20,
+          "mean_kl": 0.01894795149564743,
+          "max_state_kl": 0.1898057460784912,
+          "p99_kl": 0.17469310760498047
+        },
+        {
+          "update": 5,
+          "transitions": 384,
+          "terminations": 8,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.1074999794363976,
+          "joint_rmse_rad": 0.431438288581837,
+          "body_rmse_m": 0.13978259799201623,
+          "actor_steps": 5,
+          "critic_steps": 20,
+          "mean_kl": 0.019316571454207104,
+          "max_state_kl": 0.27358555793762207,
+          "p99_kl": 0.18137440085411072
+        },
+        {
+          "update": 6,
+          "transitions": 384,
+          "terminations": 8,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.1974999755620956,
+          "joint_rmse_rad": 0.42086651069531134,
+          "body_rmse_m": 0.13484542207281625,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.019334460919102032,
+          "max_state_kl": 0.16245687007904053,
+          "p99_kl": 0.14614127576351166
+        },
+        {
+          "update": 7,
+          "transitions": 384,
+          "terminations": 5,
+          "timeouts": 0,
+          "ended_episode_mean_s": 0.9919999837875366,
+          "joint_rmse_rad": 0.38234356619712656,
+          "body_rmse_m": 0.12222545667142791,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.019209425896406174,
+          "max_state_kl": 0.1591648906469345,
+          "p99_kl": 0.1312027871608734
+        },
+        {
+          "update": 8,
+          "transitions": 384,
+          "terminations": 6,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.049999992052714,
+          "joint_rmse_rad": 0.39395935718829317,
+          "body_rmse_m": 0.12080663292557485,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.0195595088104407,
+          "max_state_kl": 0.10144338011741638,
+          "p99_kl": 0.08858636021614075
+        },
+        {
+          "update": 9,
+          "transitions": 384,
+          "terminations": 8,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2374999523162842,
+          "joint_rmse_rad": 0.3975182155355635,
+          "body_rmse_m": 0.1277827568432686,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.019350523749987285,
+          "max_state_kl": 0.11438384652137756,
+          "p99_kl": 0.08777838200330734
+        },
+        {
+          "update": 10,
+          "transitions": 384,
+          "terminations": 8,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.3074999749660492,
+          "joint_rmse_rad": 0.40558932146489546,
+          "body_rmse_m": 0.1359865895148367,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.01989481846491496,
+          "max_state_kl": 0.1256418526172638,
+          "p99_kl": 0.08203993737697601
+        },
+        {
+          "update": 11,
+          "transitions": 384,
+          "terminations": 4,
+          "timeouts": 0,
+          "ended_episode_mean_s": 0.9849999696016312,
+          "joint_rmse_rad": 0.4385833850832237,
+          "body_rmse_m": 0.12528208541381447,
+          "actor_steps": 5,
+          "critic_steps": 20,
+          "mean_kl": 0.019808337713281315,
+          "max_state_kl": 0.1532273292541504,
+          "p99_kl": 0.1282956749200821
+        },
+        {
+          "update": 12,
+          "transitions": 384,
+          "terminations": 5,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.0279999852180481,
+          "joint_rmse_rad": 0.4626942531916552,
+          "body_rmse_m": 0.14103109695563412,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.019269589334726334,
+          "max_state_kl": 0.3440912365913391,
+          "p99_kl": 0.14444857835769653
+        },
+        {
+          "update": 13,
+          "transitions": 384,
+          "terminations": 10,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2479999721050263,
+          "joint_rmse_rad": 0.4257900028612321,
+          "body_rmse_m": 0.1478549719513542,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.019319069882233936,
+          "max_state_kl": 0.11759671568870544,
+          "p99_kl": 0.11015932261943817
+        },
+        {
+          "update": 14,
+          "transitions": 384,
+          "terminations": 3,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.3333332935969036,
+          "joint_rmse_rad": 0.400247682471429,
+          "body_rmse_m": 0.1204951026833103,
+          "actor_steps": 4,
+          "critic_steps": 20,
+          "mean_kl": 0.019878193736076355,
+          "max_state_kl": 0.10083359479904175,
+          "p99_kl": 0.08990415930747986
+        },
+        {
+          "update": 15,
+          "transitions": 384,
+          "terminations": 6,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.1199999749660492,
+          "joint_rmse_rad": 0.42157665125836913,
+          "body_rmse_m": 0.1354422419992059,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.018904830018679302,
+          "max_state_kl": 0.07607673108577728,
+          "p99_kl": 0.06441740691661835
+        },
+        {
+          "update": 16,
+          "transitions": 384,
+          "terminations": 8,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.357499971985817,
+          "joint_rmse_rad": 0.40936904401183544,
+          "body_rmse_m": 0.13512503599100004,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.018536392599344254,
+          "max_state_kl": 0.07227180898189545,
+          "p99_kl": 0.06755669414997101
+        },
+        {
+          "update": 17,
+          "transitions": 384,
+          "terminations": 3,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.3733332951863606,
+          "joint_rmse_rad": 0.39240796717587273,
+          "body_rmse_m": 0.1287731913237319,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.018304865807294846,
+          "max_state_kl": 0.08882678300142288,
+          "p99_kl": 0.0667811930179596
+        },
+        {
+          "update": 18,
+          "transitions": 384,
+          "terminations": 9,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2488888767030504,
+          "joint_rmse_rad": 0.42613099327821563,
+          "body_rmse_m": 0.1404042948635286,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.019107297683755558,
+          "max_state_kl": 0.09557344019412994,
+          "p99_kl": 0.08506280183792114
+        },
+        {
+          "update": 19,
+          "transitions": 384,
+          "terminations": 7,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.2542856761387415,
+          "joint_rmse_rad": 0.409381700508231,
+          "body_rmse_m": 0.144190979738612,
+          "actor_steps": 3,
+          "critic_steps": 20,
+          "mean_kl": 0.019455060983697575,
+          "max_state_kl": 0.11671651899814606,
+          "p99_kl": 0.0726727619767189
+        },
+        {
+          "update": 20,
+          "transitions": 384,
+          "terminations": 5,
+          "timeouts": 0,
+          "ended_episode_mean_s": 1.119999921321869,
+          "joint_rmse_rad": 0.39050770588027167,
+          "body_rmse_m": 0.12498962261789297,
+          "actor_steps": 2,
+          "critic_steps": 20,
+          "mean_kl": 0.019640422115723293,
+          "max_state_kl": 0.11820918321609497,
+          "p99_kl": 0.08895315229892731
+        }
+      ],
+      "evidence_sha256": {
+        "metrics.json": "4922b63506b7b48fef7caba98b40d0e7a8582b8265d6ca6b3af574fa0594f474",
+        "episode_evidence.json": "cd077fda5f9e9ab8f6ba1034594f91d671290df662cca475b9adaf813cd9091a",
+        "manifest.json": "008eb1e1d0443d882605b6498b8034c91ee483557508a9e6fb5af9b00369ca7b",
+        "source_manifest.json": "4fb7568493521f8c4d20230fd1d7f807faf5e99c7ec81a2bb5ed8f17a65de7ec",
+        "initial.pt": "fc8267f83c2202c8aca43e2d07b46fda524550eb36f331b065b5783355432840",
+        "policy.pt": "00a9aad80681d379fe4c783e9d7e48e63529ab104c07a12193a2ff5b65524fae",
+        "initial_evidence.pt": "d365e09345f420f9eb547bacefee2cd9aec15c1ecb6e2d307e1ae47eee6e516d",
+        "diagnostics/actuators_000.pt": "f7e1874b216d5e0db53d9174f518c5296f3db6312b45a6ad471883f0e4b64eb8"
+      },
+      "started_at": "2026-09-22T06:12:30.073673+00:00",
+      "finished_at": "2026-09-22T06:16:11.447544+00:00"
+    }
+  },
+  "reserved_check_evaluated": false,
+  "gpu_evaluation_chained": false
+}

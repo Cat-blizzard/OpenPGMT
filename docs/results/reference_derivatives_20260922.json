@@ -1,0 +1,67 @@
+{
+  "status": "completed",
+  "static_fixture_before_after_max_errors": {
+    "joint_pos": 0.0,
+    "joint_vel": 0.0,
+    "root_pos": 0.0,
+    "root_quat": 0.0,
+    "root_lin_vel": 0.0,
+    "root_ang_vel": 0.0,
+    "body_pos": 0.0,
+    "body_quat": 0.0,
+    "body_lin_vel": 0.0,
+    "body_ang_vel": 0.0,
+    "body_accel": 0.0,
+    "root_accel": 0.0,
+    "future": 0.0,
+    "foot_contact": 0.0
+  },
+  "analytic_checks": [
+    {
+      "case": "static",
+      "source_hz": 30,
+      "control_hz": 50,
+      "velocity_max_error_m_s": 0.0,
+      "acceleration_max_error_m_s2": 0.0
+    },
+    {
+      "case": "translation",
+      "source_hz": 30,
+      "control_hz": 50,
+      "velocity_max_error_m_s": 1.0132789611816406e-06,
+      "acceleration_max_error_m_s2": 5.364418757380918e-05
+    },
+    {
+      "case": "accelerating_translation",
+      "source_hz": 30,
+      "control_hz": 50,
+      "velocity_max_error_m_s": 3.6716461182528803e-06,
+      "acceleration_max_error_m_s2": 0.0001398324966430664
+    },
+    {
+      "case": "yaw",
+      "source_hz": 30,
+      "control_hz": 50,
+      "velocity_max_error_m_s": 1.9718876420882214e-06,
+      "acceleration_max_error_m_s2": 7.824027351771914e-05
+    },
+    {
+      "case": "knee_sine",
+      "source_hz": 30,
+      "control_hz": 50,
+      "velocity_max_error_m_s": 6.0801532840749906e-06,
+      "acceleration_max_error_m_s2": 0.0003831213157395527
+    }
+  ],
+  "reference_kinematics_contract": "reference_linear_derivatives_v3",
+  "physics_source_sha256": "dc440b98a4fece61bad40166b7cfa5099922225716c625bae1dad56d1d401ab7",
+  "final_source_sha256": "176e5ad932827ff4f757f9c0a8b7fa44316e3dae26b82cbac654aa530f4f6a29",
+  "script_sha256": "f1b161ca3ec10dcc02db0b0526ebc86c15aafe1180e408f73deefc967d1625e6",
+  "conventions": {
+    "position": "world-frame body/link origins, metres",
+    "velocity": "m/s at t",
+    "acceleration": "(v(t)-v(max(t-control_dt,0)))/actual elapsed seconds; zero at source start",
+    "physical_acceleration": "pre/post control-step world velocities, dt=0.02 s",
+    "reward": "-0.001 * sum over four EE and xyz of squared acceleration difference; unchanged"
+  }
+}

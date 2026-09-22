@@ -1,0 +1,161 @@
+{
+  "status": "completed",
+  "tests": {
+    "passed": 847,
+    "skipped": 2,
+    "seconds": 46.06,
+    "log": "runs/asset_standing_validation_20260922/full_tests_final.log",
+    "log_sha256": "88068dff7a79ce0470fc0ac09791509254e8a530b64b4790c13477aee5e857d7"
+  },
+  "physical_runs": [
+    {
+      "name": "control_fixed_v1",
+      "command": [
+        "/data/jxc/envs/pbfm_isaaclab/bin/python",
+        "-m",
+        "setup.check_static_support",
+        "--fixture",
+        "/data/jxc/ld/PGMT/runs/asset_standing_validation_20260922/fixture_v4",
+        "--condition",
+        "control",
+        "--mode",
+        "fixed",
+        "--output",
+        "/data/jxc/ld/PGMT/runs/asset_standing_validation_20260922/control_fixed_v1",
+        "--device",
+        "cuda:0",
+        "--urdf",
+        "/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf",
+        "--asset",
+        "/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd"
+      ],
+      "started_unix": 1790076694.9138012,
+      "pid": 3715774,
+      "exit_code": 0,
+      "status": "completed",
+      "transitions": 300,
+      "finished_unix": 1790076727.2614074
+    },
+    {
+      "name": "control_deterministic_v1",
+      "command": [
+        "/data/jxc/envs/pbfm_isaaclab/bin/python",
+        "-m",
+        "setup.check_static_support",
+        "--fixture",
+        "/data/jxc/ld/PGMT/runs/asset_standing_validation_20260922/fixture_v4",
+        "--condition",
+        "control",
+        "--mode",
+        "deterministic",
+        "--output",
+        "/data/jxc/ld/PGMT/runs/asset_standing_validation_20260922/control_deterministic_v1",
+        "--device",
+        "cuda:0",
+        "--urdf",
+        "/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf",
+        "--asset",
+        "/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd"
+      ],
+      "started_unix": 1790076727.3515072,
+      "pid": 3717028,
+      "exit_code": 0,
+      "status": "completed",
+      "transitions": 300,
+      "finished_unix": 1790076760.3080657
+    },
+    {
+      "name": "candidate_fixed_v1",
+      "command": [
+        "/data/jxc/envs/pbfm_isaaclab/bin/python",
+        "-m",
+        "setup.check_static_support",
+        "--fixture",
+        "/data/jxc/ld/PGMT/runs/asset_standing_validation_20260922/fixture_v4",
+        "--condition",
+        "candidate",
+        "--mode",
+        "fixed",
+        "--output",
+        "/data/jxc/ld/PGMT/runs/asset_standing_validation_20260922/candidate_fixed_v1",
+        "--device",
+        "cuda:0",
+        "--urdf",
+        "/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf",
+        "--asset",
+        "/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd"
+      ],
+      "started_unix": 1790076760.39693,
+      "pid": 3718070,
+      "exit_code": 0,
+      "status": "completed",
+      "transitions": 500,
+      "finished_unix": 1790076802.2854908
+    },
+    {
+      "name": "candidate_deterministic_v1",
+      "command": [
+        "/data/jxc/envs/pbfm_isaaclab/bin/python",
+        "-m",
+        "setup.check_static_support",
+        "--fixture",
+        "/data/jxc/ld/PGMT/runs/asset_standing_validation_20260922/fixture_v4",
+        "--condition",
+        "candidate",
+        "--mode",
+        "deterministic",
+        "--output",
+        "/data/jxc/ld/PGMT/runs/asset_standing_validation_20260922/candidate_deterministic_v1",
+        "--device",
+        "cuda:0",
+        "--urdf",
+        "/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/urdf/g1.urdf",
+        "--asset",
+        "/data/jxc/projects/ProtoMotions-v2.3/protomotions/data/assets/usd/g1.usd"
+      ],
+      "started_unix": 1790076802.377701,
+      "pid": 3718993,
+      "exit_code": 0,
+      "status": "completed",
+      "transitions": 496,
+      "finished_unix": 1790076850.1610138
+    }
+  ],
+  "total_transitions": 1596,
+  "budget_transitions": 8000,
+  "ppo_updates": 0,
+  "old_and_new_reference_hashes_verified": true,
+  "new_reference_training_approved": false,
+  "pd_stiffness_damping": [
+    80,
+    2
+  ],
+  "reward_sources_unchanged_from_task_start": {
+    "pgmt/rewards/semantics.py": "c8907cf31b38a9fe7c7997f9f6f893371d701cbab50e52d85a31e6d78e070806",
+    "pgmt/rewards/batched.py": "216d50d4e6edf1afac1abd096d872104d234536ae8000c72be49ed93007b389c",
+    "pgmt/rewards/auxiliary.py": "5cc90004e609b61ca05fd15e42f2d7b5cabe467cfd1d4366181ed5e5eed62691",
+    "pgmt/rewards/spec.py": "fc7de3e5c0d14bac5f2c68f5eeb0e4be3dd76fc823d251c09663ee571320792c",
+    "pgmt/rewards/__init__.py": "94797a34e98a0557ad448742410ba4fa86b6f800619dba97a245c49528b93e9f",
+    "pgmt/rewards/tracking.py": "42006245fd96ccb94e89ec6cdf288accb494cbf3469bc6e3460ffaf9d82b56b6",
+    "pgmt/rewards/terrain_contact.py": "0b8ea6ae03bd421322c8b5180811076f6799fe74601bbd4cd7c0bb414d336c7c"
+  },
+  "production_sources_changed_after_physics": {
+    "pgmt/envs/reference_motion.py": {
+      "physics_sha256": "dc440b98a4fece61bad40166b7cfa5099922225716c625bae1dad56d1d401ab7",
+      "final_sha256": "176e5ad932827ff4f757f9c0a8b7fa44316e3dae26b82cbac654aa530f4f6a29"
+    }
+  },
+  "post_physics_static_equivalence_evidence": "docs/results/reference_derivatives_20260922.json",
+  "gpu_release": {
+    "task_pids_alive": [],
+    "compute_apps_at_final_check": "[N/A], GPU-1f8a72b4-0821-9275-e36f-49ab74f13572, [N/A]\n3707798, GPU-f7101fde-c01f-7cbd-e2ee-b05831d2f988, 4042 MiB\n3731768, GPU-d86528b1-67d4-d67f-db2c-ccae580a1267, 8278 MiB\n3732862, GPU-d86528b1-67d4-d67f-db2c-ccae580a1267, 15660 MiB\n",
+    "other_user_work_may_use_gpu_9": true,
+    "checked_unix": 1790077533.3560812
+  },
+  "files": {
+    "docs/results/asset_standing_validation_20260922.json": "2ff88370f7febeef979cdb07d8ef4e43dfa7f7c9db27af0eeb544c2a7411ef6a",
+    "docs/results/asset_standing_validation_20260922.png": "8373fe1ec50175995a90ffea564a6dfa28c759b06d26ead6878c1ef2d76d8816",
+    "docs/results/reference_derivatives_20260922.json": "a38cc859a620cd1d0c067564058c5ed107cf2efb8abbeacd589723902d8f4442",
+    "eval/manifests/asset_grounded8_diagnostic_20260922.json": "181befac1952270605be954fce72d36b2313c8d35717a0f200c3fa4ea660b77b"
+  }
+}

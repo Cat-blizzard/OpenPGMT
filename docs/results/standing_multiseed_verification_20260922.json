@@ -1,0 +1,109 @@
+{
+  "status": "completed",
+  "training_transitions": 230400,
+  "ppo_updates": 600,
+  "raw_environment_substeps": 921600,
+  "protected_original_source_data_fixture_files": 279,
+  "changed_protected_files": [],
+  "per_run_source_checks": [
+    {
+      "run": "seed0_control",
+      "frozen_source_files_identical": 109,
+      "transitions": 38400,
+      "updates": 100
+    },
+    {
+      "run": "seed0_candidate",
+      "frozen_source_files_identical": 109,
+      "transitions": 38400,
+      "updates": 100
+    },
+    {
+      "run": "seed1_control",
+      "frozen_source_files_identical": 109,
+      "transitions": 38400,
+      "updates": 100
+    },
+    {
+      "run": "seed1_candidate",
+      "frozen_source_files_identical": 109,
+      "transitions": 38400,
+      "updates": 100
+    },
+    {
+      "run": "seed2_control",
+      "frozen_source_files_identical": 109,
+      "transitions": 38400,
+      "updates": 100
+    },
+    {
+      "run": "seed2_candidate",
+      "frozen_source_files_identical": 109,
+      "transitions": 38400,
+      "updates": 100
+    }
+  ],
+  "paired_seeds": [
+    {
+      "seed": 0,
+      "only_parameter_difference": [
+        "actor.mlp.net.6.bias"
+      ],
+      "initial_observations_equal": true,
+      "initial_std_equal": true,
+      "environment_and_ppo_equal": true
+    },
+    {
+      "seed": 1,
+      "only_parameter_difference": [
+        "actor.mlp.net.6.bias"
+      ],
+      "initial_observations_equal": true,
+      "initial_std_equal": true,
+      "environment_and_ppo_equal": true
+    },
+    {
+      "seed": 2,
+      "only_parameter_difference": [
+        "actor.mlp.net.6.bias"
+      ],
+      "initial_observations_equal": true,
+      "initial_std_equal": true,
+      "environment_and_ppo_equal": true
+    }
+  ],
+  "task_gpu_pids": [
+    4000190,
+    4016847,
+    4029975,
+    4043965,
+    4086838,
+    4116392
+  ],
+  "task_pids_alive": [],
+  "current_compute_apps": "[N/A], GPU-1f8a72b4-0821-9275-e36f-49ab74f13572, [N/A]\n",
+  "gpu9_memory_utilization": "28 MiB, 0 %\n",
+  "evaluations_executed": 0,
+  "evaluation_jobs_cpu_validated": 24,
+  "reference_v4_training_approved": false,
+  "tests": {
+    "passed": 874,
+    "skipped": 2,
+    "log": "runs/standing_multiseed_20260922/full_tests_final_v4.log"
+  },
+  "versions": {
+    "torch": "2.7.0+cu128",
+    "numpy": "1.26.0",
+    "scipy": "1.15.3",
+    "pytest": "9.1.1"
+  },
+  "artifact_sha256": {
+    "runs/standing_multiseed_20260922/physics_v1/checkpoint_manifest.json": "fc191e79020de6a5a89b8a7ec00237951f9fc39ab23b912b7468d287bfef11b7",
+    "runs/standing_multiseed_20260922/protocol_v1/plan.json": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28",
+    "runs/standing_multiseed_20260922/cpu_audit_v3/summary.json": "026a3b43ac3909fc2edaec8250b064973e3f2ab2867f28413b767199b4cd99d6",
+    "runs/standing_multiseed_20260922/evaluation_readiness.json": "da92349a2cb56f8d23ac82356fca525aed23da27decc92aef95258f0f83f491d",
+    "runs/standing_multiseed_20260922/reference_v4/summary.json": "25f8ad9c19d7fdadb771b085512d16945460c74b82b1672090eafbcba15bc507",
+    "runs/standing_multiseed_20260922/reference_v4_runtime_audit.json": "27353d6098373c864c15f5d63c3be3eb84f3ddc6e3e1dcc5777075a92230e16c"
+  },
+  "note": "GPU9 briefly contained other-user processes at training release; they later exited independently. No other-user process was signaled."
+}

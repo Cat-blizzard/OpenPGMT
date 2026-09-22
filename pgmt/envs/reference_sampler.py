@@ -73,6 +73,12 @@ class MotionDatabase:
                 value = np.asarray(seq[key])
                 digest.update(str((value.shape, value.dtype)).encode())
                 digest.update(value.tobytes())
+            # Preserve legacy fingerprints, but never reuse a recovery pool
+            # across different ground-placement or asset contracts.
+            if "reference_frame_contract" in seq:
+                for key in ("reference_frame_contract", "reference_ground_z", "kinematic_urdf_sha256"):
+                    digest.update(key.encode())
+                    digest.update(str(np.asarray(seq[key]).item()).encode())
         return digest.hexdigest()
 
     @classmethod
@@ -122,6 +128,16 @@ class MotionDatabase:
         out["frame_time"] = float(dt.reshape(-1)[0])
         if np.any(np.linalg.norm(out["root_rot"], axis=-1) < 1e-8):
             raise ValueError(f"序列 {name} root_rot 含无效零四元数")
+        contract = str(d.get("reference_frame_contract", ""))
+        if contract:
+            if contract != "flat_ground_v1":
+                raise ValueError(f"unknown reference frame contract: {contract}")
+            ground = np.asarray(d.get("reference_ground_z", np.nan))
+            fingerprint = str(d.get("kinematic_urdf_sha256", ""))
+            if ground.shape != () or not np.isfinite(ground) or len(fingerprint) != 64:
+                raise ValueError("flat_ground_v1 requires a finite ground height and URDF fingerprint")
+            if np.asarray(d.get("contacts")).shape != (n_frames, 2):
+                raise ValueError("flat_ground_v1 requires offline foot contacts")
         return out
 
     @property

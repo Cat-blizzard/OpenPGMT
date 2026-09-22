@@ -1,0 +1,59 @@
+{
+  "timestamp_utc": "2026-09-22T07:23:56.270482+00:00",
+  "training_and_check_processes": {
+    "seed0_final_eval_exit.json": {
+      "pid": 1296203,
+      "exit_code": 0
+    },
+    "seed0_initial_eval_exit.json": {
+      "pid": 2609960,
+      "exit_code": 0
+    },
+    "seed0_train_exit.json": {
+      "pid": 1399871,
+      "exit_code": 0
+    },
+    "seed1_final_eval_exit.json": {
+      "pid": 1619323,
+      "exit_code": 0
+    },
+    "seed1_initial_eval_exit.json": {
+      "pid": 3053150,
+      "exit_code": 0
+    },
+    "seed1_train_exit.json": {
+      "pid": 1399854,
+      "exit_code": 0
+    },
+    "seed2_final_eval_exit.json": {
+      "pid": 652019,
+      "exit_code": 0
+    },
+    "seed2_initial_eval_exit.json": {
+      "pid": 2898485,
+      "exit_code": 0
+    },
+    "seed2_train_exit.json": {
+      "pid": 1399881,
+      "exit_code": 0
+    }
+  },
+  "all_nine_exited_zero": true,
+  "own_pids_remaining": [],
+  "task_gpu_processes_remaining": [],
+  "other_gpu_processes_untouched": true,
+  "batch_parent_exit_code": 0,
+  "gpu_uuid": "GPU-d86528b1-67d4-d67f-db2c-ccae580a1267",
+  "cpu_regression": "836 passed, 2 skipped; then 19 focused checks passed after passive substep monitor",
+  "evidence_sha256": {
+    "cpu_regression_tests_v2.log": "c7583df0ad83824ffff810f75bdd40c5b5116681890074eeda8e6bbd961b7185",
+    "cpu_diagnostic_focused.log": "7e6702cbb5c1a5d1314bec8e6c81513c2aafd2bf5e7af73ac279d4bee674560e",
+    "substep_comparison_final.json": "6bca20c6f1145b0ec105b4723c4e8c4d35c4cb190af64803f776347fcb0cec60",
+    "learning_summary_final.json": "9164da56ba1cea1141ef7276350d6d3fbd8862d4d7f8a92ae83e5a48b5186bd5",
+    "gpu_processes_after.csv": "4468ebd70a7047f10228d1185c2ef03aecf0b06768fc5767bfc25aca25e59964"
+  },
+  "analysis_source_sha256": {
+    "setup/analyze_simple_learning.py": "07cda151877d5b13145e6f0d4676e712b5bc3624e74733fd9e695b7114a7e3b8",
+    "setup/analyze_substep_probe.py": "ac33df2cca1fb410b546d8db29783d902baad5d1b5880ea973dc4f465e28e7cc"
+  }
+}
