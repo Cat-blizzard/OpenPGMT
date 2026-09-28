@@ -1,0 +1,333 @@
+{
+  "status": "completed",
+  "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28",
+  "evaluator_sha256": "c367dd77adc83ce83ae460e9435cd7019ec3a0a6d91632d4d34c035496d38405",
+  "runtime_source_files_rechecked": 54,
+  "checkpoint_files_rehashed": 12,
+  "archived_failed_attempt_files_rehashed": 2,
+  "checkpoint_hashes_unchanged": true,
+  "evaluation_source_inference_only_by_static_check": true,
+  "ppo_updates_executed": 0,
+  "ppo_update_evidence": "evaluator source uses torch.no_grad and has no optimizer/backward path; all original checkpoint hashes remain unchanged",
+  "related_tests_run_by_main_task": "10 passed in 2.31s: tests/test_standing_evaluation_analysis.py, tests/test_standing_evaluation_integrity.py, tests/test_standing_multiseed.py",
+  "jobs_checked": 24,
+  "matched_initial_states_and_noise_groups": 6,
+  "summary_pairs_cross_checked": 12,
+  "executed_transitions": 7984,
+  "transition_budget": 48000,
+  "completed_10s_total": 0,
+  "jobs": [
+    {
+      "job": "seed0_control_initial_deterministic",
+      "transitions": 300,
+      "scored_transitions": 292,
+      "first_episode_steps": [
+        74,
+        74,
+        75,
+        69
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "f478407fbad2a117e380a5dc422b22886072d8f0d106ec27e099ccd559635952"
+    },
+    {
+      "job": "seed0_control_initial_stochastic",
+      "transitions": 252,
+      "scored_transitions": 242,
+      "first_episode_steps": [
+        60,
+        63,
+        63,
+        56
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "f478407fbad2a117e380a5dc422b22886072d8f0d106ec27e099ccd559635952"
+    },
+    {
+      "job": "seed0_control_final_deterministic",
+      "transitions": 332,
+      "scored_transitions": 322,
+      "first_episode_steps": [
+        82,
+        82,
+        83,
+        75
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "4b1b81af57e147c69f13d6280acb25a0273eb11988b2b4dfe2d88f21d3c8dcde"
+    },
+    {
+      "job": "seed0_control_final_stochastic",
+      "transitions": 280,
+      "scored_transitions": 250,
+      "first_episode_steps": [
+        70,
+        59,
+        64,
+        57
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "4b1b81af57e147c69f13d6280acb25a0273eb11988b2b4dfe2d88f21d3c8dcde"
+    },
+    {
+      "job": "seed0_candidate_initial_deterministic",
+      "transitions": 496,
+      "scored_transitions": 454,
+      "first_episode_steps": [
+        124,
+        119,
+        120,
+        91
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "aeea6a71faea84843a586562ddae6566b709dbcca07d3487c35ee4867e345196"
+    },
+    {
+      "job": "seed0_candidate_initial_stochastic",
+      "transitions": 312,
+      "scored_transitions": 293,
+      "first_episode_steps": [
+        71,
+        74,
+        78,
+        70
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "aeea6a71faea84843a586562ddae6566b709dbcca07d3487c35ee4867e345196"
+    },
+    {
+      "job": "seed0_candidate_final_deterministic",
+      "transitions": 356,
+      "scored_transitions": 342,
+      "first_episode_steps": [
+        88,
+        86,
+        89,
+        79
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "94d7d0815e1f1ed2609a2becb78706ab9f3d37c1833130437147b33f74038a35"
+    },
+    {
+      "job": "seed0_candidate_final_stochastic",
+      "transitions": 292,
+      "scored_transitions": 261,
+      "first_episode_steps": [
+        60,
+        66,
+        73,
+        62
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "94d7d0815e1f1ed2609a2becb78706ab9f3d37c1833130437147b33f74038a35"
+    },
+    {
+      "job": "seed1_control_initial_deterministic",
+      "transitions": 300,
+      "scored_transitions": 294,
+      "first_episode_steps": [
+        75,
+        75,
+        75,
+        69
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "c98e591afd1d7c27dccb5b3591aa56a659d2e4afa8a26f28013802213530fde9"
+    },
+    {
+      "job": "seed1_control_initial_stochastic",
+      "transitions": 268,
+      "scored_transitions": 247,
+      "first_episode_steps": [
+        64,
+        62,
+        67,
+        54
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "c98e591afd1d7c27dccb5b3591aa56a659d2e4afa8a26f28013802213530fde9"
+    },
+    {
+      "job": "seed1_control_final_deterministic",
+      "transitions": 292,
+      "scored_transitions": 285,
+      "first_episode_steps": [
+        72,
+        72,
+        73,
+        68
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "368ffefc012bf871e074454080f4efdfbec52a44e3428b5308034d0d80bbb394"
+    },
+    {
+      "job": "seed1_control_final_stochastic",
+      "transitions": 256,
+      "scored_transitions": 234,
+      "first_episode_steps": [
+        60,
+        59,
+        64,
+        51
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "368ffefc012bf871e074454080f4efdfbec52a44e3428b5308034d0d80bbb394"
+    },
+    {
+      "job": "seed1_candidate_initial_deterministic",
+      "transitions": 500,
+      "scored_transitions": 458,
+      "first_episode_steps": [
+        125,
+        120,
+        121,
+        92
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "1154a4c0136e6b390393e67a71efd880aad78c5d1e31b09d1a4ee707eda78f6e"
+    },
+    {
+      "job": "seed1_candidate_initial_stochastic",
+      "transitions": 416,
+      "scored_transitions": 352,
+      "first_episode_steps": [
+        104,
+        79,
+        101,
+        68
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "1154a4c0136e6b390393e67a71efd880aad78c5d1e31b09d1a4ee707eda78f6e"
+    },
+    {
+      "job": "seed1_candidate_final_deterministic",
+      "transitions": 408,
+      "scored_transitions": 388,
+      "first_episode_steps": [
+        102,
+        101,
+        100,
+        85
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "2974e4411ba6c8eab337afbf87e6543b8799fa3362080c9c97a270f7b46f7f17"
+    },
+    {
+      "job": "seed1_candidate_final_stochastic",
+      "transitions": 340,
+      "scored_transitions": 300,
+      "first_episode_steps": [
+        85,
+        73,
+        80,
+        62
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "2974e4411ba6c8eab337afbf87e6543b8799fa3362080c9c97a270f7b46f7f17"
+    },
+    {
+      "job": "seed2_control_initial_deterministic",
+      "transitions": 300,
+      "scored_transitions": 293,
+      "first_episode_steps": [
+        74,
+        75,
+        75,
+        69
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "41637da96d40fb8343f054af4a9dae523c58d31622ac1c9d749a6b05abfc9309"
+    },
+    {
+      "job": "seed2_control_initial_stochastic",
+      "transitions": 244,
+      "scored_transitions": 235,
+      "first_episode_steps": [
+        61,
+        56,
+        58,
+        60
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "41637da96d40fb8343f054af4a9dae523c58d31622ac1c9d749a6b05abfc9309"
+    },
+    {
+      "job": "seed2_control_final_deterministic",
+      "transitions": 324,
+      "scored_transitions": 316,
+      "first_episode_steps": [
+        81,
+        80,
+        81,
+        74
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "16fe812e2a01b294d685985a42dcbfae4a061aa63b65c1b31daf4d0deb5d789e"
+    },
+    {
+      "job": "seed2_control_final_stochastic",
+      "transitions": 268,
+      "scored_transitions": 237,
+      "first_episode_steps": [
+        65,
+        55,
+        67,
+        50
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "16fe812e2a01b294d685985a42dcbfae4a061aa63b65c1b31daf4d0deb5d789e"
+    },
+    {
+      "job": "seed2_candidate_initial_deterministic",
+      "transitions": 500,
+      "scored_transitions": 455,
+      "first_episode_steps": [
+        125,
+        119,
+        120,
+        91
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "9ca33eca3c2bfede325edb9a598ed361af7a14f63bb86aa8c897e953a918c68a"
+    },
+    {
+      "job": "seed2_candidate_initial_stochastic",
+      "transitions": 344,
+      "scored_transitions": 285,
+      "first_episode_steps": [
+        86,
+        65,
+        67,
+        67
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "9ca33eca3c2bfede325edb9a598ed361af7a14f63bb86aa8c897e953a918c68a"
+    },
+    {
+      "job": "seed2_candidate_final_deterministic",
+      "transitions": 340,
+      "scored_transitions": 331,
+      "first_episode_steps": [
+        85,
+        85,
+        84,
+        77
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "28b1f793704b9b1e5ff5c6f3322cab96107fd1af39a52d55eb975dbc106c7c8a"
+    },
+    {
+      "job": "seed2_candidate_final_stochastic",
+      "transitions": 264,
+      "scored_transitions": 231,
+      "first_episode_steps": [
+        66,
+        53,
+        60,
+        52
+      ],
+      "completed_10s": 0,
+      "checkpoint_sha256": "28b1f793704b9b1e5ff5c6f3322cab96107fd1af39a52d55eb975dbc106c7c8a"
+    }
+  ]
+}

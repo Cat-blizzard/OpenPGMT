@@ -1,4 +1,4 @@
-# 2026-09-22 进度同步：图表与汇总
+# 2026-09-29 进度同步：图表与汇总
 
 此目录提供可在 GitHub 上直接查看的实验统计。原始逐步日志、检查点、参考数据、
 机器人资产和冻结源码快照保留在服务器的各实验目录，不包含在这里。
@@ -6,7 +6,8 @@
 
 | 实验 | 范围与结论 | 图表 | 数据 |
 |---|---|---|---|
-| [三种子站立学习与参考 v4](../standing_multiseed_20260922.md) | 六场各 100 更新，共 230400 transitions，600 次 CPU 复核通过；训练未完成 10 s，匹配评估后置，GPU 已释放；v4 支撑改善但继续隔离 | [训练 PNG](standing_multiseed_20260922.png) / [v4 PNG](reference_support_v4_20260922.png) | [训练 JSON](standing_multiseed_20260922.json) / [v4 JSON](reference_support_v4_20260922.json) / [验证](standing_multiseed_verification_20260922.json) |
+| [冻结站立策略匹配评估](../standing_evaluation_20260929.md) | 24 项、7984 transitions、0 新增 PPO；0/96 完成 10 s，候选六组配对均退化，原目标无一致收益；独立 CPU 核验通过 | [PNG](standing_evaluation_20260929.png) | [JSON](standing_evaluation_20260929.json) / [验证](standing_evaluation_verification_20260929.json) |
+| [三种子站立学习与参考 v4](../standing_multiseed_20260922.md) | 六场各 100 更新，共 230400 transitions，600 次 CPU 复核通过；训练未完成 10 s，后续匹配评估见上行；v4 支撑改善但继续隔离 | [训练 PNG](standing_multiseed_20260922.png) / [v4 PNG](reference_support_v4_20260922.png) | [训练 JSON](standing_multiseed_20260922.json) / [v4 JSON](reference_support_v4_20260922.json) / [验证](standing_multiseed_verification_20260922.json) |
 | [同动作回放与参考 v3](../standing_replay_reference_20260922.md) | 9600 transitions、0 PPO，峰值与跌倒触地同步；独立 v3 部分改善，支撑和插值仍未通过 | [回放 PNG](standing_replay_20260922.png) / [v3 PNG](reference_support_v3_20260922.png) | [回放 JSON](standing_replay_20260922.json) / [v3 JSON](reference_support_v3_20260922.json) / [验证](standing_replay_reference_verification_20260922.json) |
 | [有界站立学习与八片段病因](../standing_learning_20260922.md) | 两条件各 20 更新，共 15360 transitions，接口复核通过；踝子步峰值及参考支撑问题仍在，GPU 已释放 | [PNG](standing_learning_20260922.png) | [训练 JSON](standing_learning_20260922.json) / [速度事件](standing_speed_events_20260922.json) / [参考病因与 v2](reference_causes_v2_20260922.json) / [验证](standing_learning_verification_20260922.json) |
 | [资产一致参考与载荷候选](../asset_standing_validation_20260922.md) | 新 8 片段仍需质量修正；四组 1596 transitions，固定 PD 平均首次存活 1.47→2.29 s，仍 0/4 完成 10 s | [PNG](asset_standing_validation_20260922.png) | [JSON](asset_standing_validation_20260922.json) / [导数验证](reference_derivatives_20260922.json) / [最终验证](asset_standing_verification_20260922.json) |
@@ -43,5 +44,6 @@ transitions，均未达到预定静态门槛，当时后续物理学习未启动
 随后六场站立训练已完成：原目标/候选逐种子平均 episode 时长的均值约 1.251/1.403 s，
 均没有 10 s timeout，尚无一致训练内改善；不能据此替代冻结策略前后评估。
 新 v4 联合修正根/腿支撑，50 Hz 接触查询一致，仍有残余支撑/连续性及物理验证问题，继续隔离。
-匹配评估的 24 个任务已完成 CPU 准备，实际物理评估继续后置。
-安排见[下一阶段计划](../next_steps_20260922.md)。
+2026-09-29 已完成 24 个匹配物理评估任务；候选确定性存活 2.278→1.768 s、随机 1.550→1.320 s，
+三个种子均退化；原目标无一致收益。全部 96 个首 episode 提前终止，10 s timeout 分支仍未覆盖。
+安排见[下一阶段计划](../next_steps_20260929.md)。

@@ -1,0 +1,4677 @@
+{
+  "date": "2026-09-29",
+  "status": "completed",
+  "actual_transitions": 7984,
+  "budget_transitions": 48000,
+  "new_ppo_updates": 0,
+  "scored_first_episode_transitions": 7397,
+  "episodes": 96,
+  "completed_10s": 0,
+  "termination_reason_counts_nonexclusive": {
+    "root_low": 86,
+    "tilted": 26
+  },
+  "groups": [
+    {
+      "condition": "control",
+      "mode": "deterministic",
+      "training_seeds": 3,
+      "fixed_starts_per_seed": 4,
+      "mean_duration_s_initial_final": [
+        1.4650000035762787,
+        1.5383333067099254
+      ],
+      "sample_sd_of_seed_mean_duration_s_initial_final": [
+        0.004999995231628418,
+        0.09928915817684925
+      ],
+      "mean_paired_delta_s": 0.07333330313364665,
+      "sample_sd_paired_delta_s": 0.1039631480985803,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ]
+    },
+    {
+      "condition": "candidate",
+      "mode": "deterministic",
+      "training_seeds": 3,
+      "fixed_starts_per_seed": 4,
+      "mean_duration_s_initial_final": [
+        2.2783332467079163,
+        1.7683332860469818
+      ],
+      "sample_sd_of_seed_mean_duration_s_initial_final": [
+        0.010408320071173668,
+        0.1511897397915563
+      ],
+      "mean_paired_delta_s": -0.5099999606609344,
+      "sample_sd_paired_delta_s": 0.14177449123793948,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ]
+    },
+    {
+      "condition": "control",
+      "mode": "stochastic",
+      "training_seeds": 3,
+      "fixed_starts_per_seed": 4,
+      "mean_duration_s_initial_final": [
+        1.2066666384538014,
+        1.2016666332880657
+      ],
+      "sample_sd_of_seed_mean_duration_s_initial_final": [
+        0.030138555781016166,
+        0.042524507155788004
+      ],
+      "mean_paired_delta_s": -0.005000005165735881,
+      "sample_sd_paired_delta_s": 0.05408326301535888,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ]
+    },
+    {
+      "condition": "candidate",
+      "mode": "stochastic",
+      "training_seeds": 3,
+      "fixed_starts_per_seed": 4,
+      "mean_duration_s_initial_final": [
+        1.5499999523162842,
+        1.3199999431769054
+      ],
+      "sample_sd_of_seed_mean_duration_s_initial_final": [
+        0.1829617546203726,
+        0.17298843804143768
+      ],
+      "mean_paired_delta_s": -0.23000000913937887,
+      "sample_sd_paired_delta_s": 0.060827608938749764,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ]
+    }
+  ],
+  "paired_seed_rows": [
+    {
+      "seed": 0,
+      "condition": "control",
+      "mode": "deterministic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.4600000083446503,
+        1.6099999845027924
+      ],
+      "mean_first_episode_duration_delta_s": 0.1499999761581421,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.46,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 1168,
+          "max_joint_speed_p99_rad_s": 2.8675146102905273,
+          "max_joint_speed_max_rad_s": 8.441962242126465,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5268591642379761,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        },
+        {
+          "environment_substeps": 1168,
+          "max_joint_speed_p99_rad_s": 3.9935085773468018,
+          "max_joint_speed_max_rad_s": 7.917632579803467,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5681877136230469,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        20.473541736602783,
+        11.030317306518555
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.051143065094947815,
+        0.11116905324161053
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.09284776821732521,
+        0.06582912430167198
+      ]
+    },
+    {
+      "seed": 0,
+      "condition": "control",
+      "mode": "stochastic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.2099999785423279,
+        1.2499999701976776
+      ],
+      "mean_first_episode_duration_delta_s": 0.03999999165534973,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.19,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 952,
+          "max_joint_speed_p99_rad_s": 22.450111389160156,
+          "max_joint_speed_max_rad_s": 31.291465759277344,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.028252679854631424
+        },
+        {
+          "environment_substeps": 952,
+          "max_joint_speed_p99_rad_s": 23.37274742126465,
+          "max_joint_speed_max_rad_s": 31.99904441833496,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.027673138305544853
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        19.99357271194458,
+        12.635400652885437
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.11904357001185417,
+        0.17064528167247772
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.09566553495824337,
+        0.08910585101693869
+      ]
+    },
+    {
+      "seed": 0,
+      "condition": "candidate",
+      "mode": "deterministic",
+      "mean_first_episode_duration_s_initial_final": [
+        2.269999921321869,
+        1.7099999487400055
+      ],
+      "mean_first_episode_duration_delta_s": -0.5599999725818634,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.71,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 1368,
+          "max_joint_speed_p99_rad_s": 1.2795491218566895,
+          "max_joint_speed_max_rad_s": 3.7018933296203613,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5162477493286133,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        },
+        {
+          "environment_substeps": 1368,
+          "max_joint_speed_p99_rad_s": 6.028357982635498,
+          "max_joint_speed_max_rad_s": 11.208606719970703,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.7683025598526001,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        5.497288525104523,
+        21.740585803985596
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.022911325562745333,
+        0.09139130637049675
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.024907766608521342,
+        0.08935276605188847
+      ]
+    },
+    {
+      "seed": 0,
+      "condition": "candidate",
+      "mode": "stochastic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.4649999737739563,
+        1.3049999475479126
+      ],
+      "mean_first_episode_duration_delta_s": -0.1600000262260437,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.305,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 1044,
+          "max_joint_speed_p99_rad_s": 22.752195358276367,
+          "max_joint_speed_max_rad_s": 30.40400505065918,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.028405336663126945
+        },
+        {
+          "environment_substeps": 1044,
+          "max_joint_speed_p99_rad_s": 23.40699577331543,
+          "max_joint_speed_max_rad_s": 31.129106521606445,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.028273219242691994
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        12.58052921295166,
+        24.347458839416504
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.11930116266012192,
+        0.14828824251890182
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.06625315453857183,
+        0.09643006883561611
+      ]
+    },
+    {
+      "seed": 1,
+      "condition": "control",
+      "mode": "deterministic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.469999998807907,
+        1.4249999523162842
+      ],
+      "mean_first_episode_duration_delta_s": -0.045000046491622925,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.425,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 1140,
+          "max_joint_speed_p99_rad_s": 2.8876986503601074,
+          "max_joint_speed_max_rad_s": 8.467195510864258,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5268378257751465,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        },
+        {
+          "environment_substeps": 1140,
+          "max_joint_speed_p99_rad_s": 3.4202001094818115,
+          "max_joint_speed_max_rad_s": 37.70235824584961,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5425529479980469,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        19.25586223602295,
+        19.382054328918457
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.051473092287778854,
+        0.07704751752316952
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.08628540486097336,
+        0.09578518569469452
+      ]
+    },
+    {
+      "seed": 1,
+      "condition": "control",
+      "mode": "stochastic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.23499995470047,
+        1.1699999570846558
+      ],
+      "mean_first_episode_duration_delta_s": -0.06499999761581421,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.17,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 936,
+          "max_joint_speed_p99_rad_s": 22.159645080566406,
+          "max_joint_speed_max_rad_s": 26.395341873168945,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.023872679099440575
+        },
+        {
+          "environment_substeps": 936,
+          "max_joint_speed_p99_rad_s": 23.07472801208496,
+          "max_joint_speed_max_rad_s": 26.590343475341797,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.02416740357875824
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        16.855169534683228,
+        17.772984266281128
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.11881161108613014,
+        0.15234344080090523
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.0812681820243597,
+        0.09853698872029781
+      ]
+    },
+    {
+      "seed": 1,
+      "condition": "candidate",
+      "mode": "deterministic",
+      "mean_first_episode_duration_s_initial_final": [
+        2.2899999022483826,
+        1.9399999678134918
+      ],
+      "mean_first_episode_duration_delta_s": -0.34999993443489075,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.94,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 1552,
+          "max_joint_speed_p99_rad_s": 1.8048722743988037,
+          "max_joint_speed_max_rad_s": 3.7591376304626465,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5213608741760254,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        },
+        {
+          "environment_substeps": 1552,
+          "max_joint_speed_p99_rad_s": 3.0685184001922607,
+          "max_joint_speed_max_rad_s": 11.11808967590332,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5474075078964233,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        7.858441114425659,
+        14.617047786712646
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.03201146982610226,
+        0.0723271369934082
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.03760584490373731,
+        0.08240969851613045
+      ]
+    },
+    {
+      "seed": 1,
+      "condition": "candidate",
+      "mode": "stochastic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.7599999606609344,
+        1.4999999403953552
+      ],
+      "mean_first_episode_duration_delta_s": -0.2600000202655792,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.5,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 1200,
+          "max_joint_speed_p99_rad_s": 22.002696990966797,
+          "max_joint_speed_max_rad_s": 27.06693458557129,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.025057470425963402
+        },
+        {
+          "environment_substeps": 1200,
+          "max_joint_speed_p99_rad_s": 21.928905487060547,
+          "max_joint_speed_max_rad_s": 25.27259635925293,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.025287356227636337
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        8.89186155796051,
+        16.61367154121399
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.11639676429331303,
+        0.15250316634774208
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.05114761367440224,
+        0.09672019816935062
+      ]
+    },
+    {
+      "seed": 2,
+      "condition": "control",
+      "mode": "deterministic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.4650000035762787,
+        1.5799999833106995
+      ],
+      "mean_first_episode_duration_delta_s": 0.11499997973442078,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.465,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 1172,
+          "max_joint_speed_p99_rad_s": 2.893789529800415,
+          "max_joint_speed_max_rad_s": 8.458414077758789,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5267643928527832,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        },
+        {
+          "environment_substeps": 1172,
+          "max_joint_speed_p99_rad_s": 8.147981643676758,
+          "max_joint_speed_max_rad_s": 25.801414489746094,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.873671293258667,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        20.635064125061035,
+        12.770848989486694
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.051149869337677956,
+        0.09974928200244904
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.09369069337844849,
+        0.0722960140556097
+      ]
+    },
+    {
+      "seed": 2,
+      "condition": "control",
+      "mode": "stochastic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.1749999821186066,
+        1.1849999725818634
+      ],
+      "mean_first_episode_duration_delta_s": 0.009999990463256836,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.12,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 896,
+          "max_joint_speed_p99_rad_s": 22.00273895263672,
+          "max_joint_speed_max_rad_s": 25.402347564697266,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.026477832347154617
+        },
+        {
+          "environment_substeps": 896,
+          "max_joint_speed_p99_rad_s": 22.391504287719727,
+          "max_joint_speed_max_rad_s": 26.56171417236328,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.025246305391192436
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        19.017260313034058,
+        14.065826416015625
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.1193682849407196,
+        0.15461056679487228
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.09003462456166744,
+        0.08565950021147728
+      ]
+    },
+    {
+      "seed": 2,
+      "condition": "candidate",
+      "mode": "deterministic",
+      "mean_first_episode_duration_s_initial_final": [
+        2.2749999165534973,
+        1.6549999415874481
+      ],
+      "mean_first_episode_duration_delta_s": -0.6199999749660492,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.655,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 1324,
+          "max_joint_speed_p99_rad_s": 1.286431908607483,
+          "max_joint_speed_max_rad_s": 3.6248483657836914,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.517742395401001,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        },
+        {
+          "environment_substeps": 1324,
+          "max_joint_speed_p99_rad_s": 4.150235176086426,
+          "max_joint_speed_max_rad_s": 17.4117431640625,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 0.5264912247657776,
+          "estimated_torque_saturated_joint_sample_fraction": 0.0
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        4.9387587904930115,
+        17.94761562347412
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.020975117338821292,
+        0.09952056221663952
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.022078779060393572,
+        0.09020384214818478
+      ]
+    },
+    {
+      "seed": 2,
+      "condition": "candidate",
+      "mode": "stochastic",
+      "mean_first_episode_duration_s_initial_final": [
+        1.4249999225139618,
+        1.1549999415874481
+      ],
+      "mean_first_episode_duration_delta_s": -0.26999998092651367,
+      "completed_10s_initial_final": [
+        0,
+        0
+      ],
+      "common_window_mean_duration_s": 1.155,
+      "common_window_tail_initial_final": [
+        {
+          "environment_substeps": 924,
+          "max_joint_speed_p99_rad_s": 22.28129768371582,
+          "max_joint_speed_max_rad_s": 26.868608474731445,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.027914613485336304
+        },
+        {
+          "environment_substeps": 924,
+          "max_joint_speed_p99_rad_s": 22.67511749267578,
+          "max_joint_speed_max_rad_s": 37.100486755371094,
+          "environment_substeps_above_45_rad_s": 0,
+          "estimated_torque_peak_limit_fraction": 1.0,
+          "estimated_torque_saturated_joint_sample_fraction": 0.027168234810233116
+        }
+      ],
+      "mean_per_start_common_window_tilt_deg_initial_final": [
+        10.675062656402588,
+        17.919738292694092
+      ],
+      "mean_per_start_common_window_joint_rmse_initial_final": [
+        0.11594532802700996,
+        0.15931762009859085
+      ],
+      "mean_per_start_common_window_body_rmse_initial_final": [
+        0.05378417577594519,
+        0.09977268800139427
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "job": "seed0_control_initial_deterministic",
+      "executed_transitions": 300,
+      "scored_transitions": 292,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.4800000190734863,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.4800000190734863,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.3799999952316284,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1168,
+        "max_joint_speed_p99_rad_s": 2.8675146102905273,
+        "max_joint_speed_max_rad_s": 8.441962242126465,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5268591642379761,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "f478407fbad2a117e380a5dc422b22886072d8f0d106ec27e099ccd559635952",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed0_control_final_deterministic",
+      "executed_transitions": 332,
+      "scored_transitions": 322,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.6399999856948853,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.6399999856948853,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.659999966621399,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1288,
+        "max_joint_speed_p99_rad_s": 3.9009485244750977,
+        "max_joint_speed_max_rad_s": 7.917632579803467,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5681877136230469,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "4b1b81af57e147c69f13d6280acb25a0273eb11988b2b4dfe2d88f21d3c8dcde",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed0_control_initial_stochastic",
+      "executed_transitions": 252,
+      "scored_transitions": 242,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.1999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.2599999904632568,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.2599999904632568,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.1200000047683716,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 968,
+        "max_joint_speed_p99_rad_s": 22.435083389282227,
+        "max_joint_speed_max_rad_s": 31.291465759277344,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.028640639036893845
+      },
+      "checkpoint_sha256": "f478407fbad2a117e380a5dc422b22886072d8f0d106ec27e099ccd559635952",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed0_control_final_stochastic",
+      "executed_transitions": 280,
+      "scored_transitions": 250,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.399999976158142,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.1799999475479126,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.2799999713897705,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.1399999856948853,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1000,
+        "max_joint_speed_p99_rad_s": 23.2452335357666,
+        "max_joint_speed_max_rad_s": 31.99904441833496,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.027310345321893692
+      },
+      "checkpoint_sha256": "4b1b81af57e147c69f13d6280acb25a0273eb11988b2b4dfe2d88f21d3c8dcde",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed0_candidate_initial_deterministic",
+      "executed_transitions": 496,
+      "scored_transitions": 454,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 2.4800000190734863,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 2.379999876022339,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 2.3999998569488525,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.8199999332427979,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1816,
+        "max_joint_speed_p99_rad_s": 2.7062647342681885,
+        "max_joint_speed_max_rad_s": 3.7018933296203613,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.522305428981781,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "aeea6a71faea84843a586562ddae6566b709dbcca07d3487c35ee4867e345196",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed0_candidate_final_deterministic",
+      "executed_transitions": 356,
+      "scored_transitions": 342,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.7599999904632568,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.71999990940094,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.7799999713897705,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.5799999237060547,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1368,
+        "max_joint_speed_p99_rad_s": 6.028357982635498,
+        "max_joint_speed_max_rad_s": 11.208606719970703,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.7683025598526001,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "94d7d0815e1f1ed2609a2becb78706ab9f3d37c1833130437147b33f74038a35",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed0_candidate_initial_stochastic",
+      "executed_transitions": 312,
+      "scored_transitions": 293,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.4199999570846558,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.4800000190734863,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.559999942779541,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.399999976158142,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1172,
+        "max_joint_speed_p99_rad_s": 22.690719604492188,
+        "max_joint_speed_max_rad_s": 36.985050201416016,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.02765681967139244
+      },
+      "checkpoint_sha256": "aeea6a71faea84843a586562ddae6566b709dbcca07d3487c35ee4867e345196",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed0_candidate_final_stochastic",
+      "executed_transitions": 292,
+      "scored_transitions": 261,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.1999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.3199999332427979,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.459999918937683,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.2400000095367432,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1044,
+        "max_joint_speed_p99_rad_s": 23.40699577331543,
+        "max_joint_speed_max_rad_s": 31.129106521606445,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.028273219242691994
+      },
+      "checkpoint_sha256": "94d7d0815e1f1ed2609a2becb78706ab9f3d37c1833130437147b33f74038a35",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed1_control_initial_deterministic",
+      "executed_transitions": 300,
+      "scored_transitions": 294,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.3799999952316284,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1176,
+        "max_joint_speed_p99_rad_s": 2.885563850402832,
+        "max_joint_speed_max_rad_s": 8.467195510864258,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5268378257751465,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "c98e591afd1d7c27dccb5b3591aa56a659d2e4afa8a26f28013802213530fde9",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed1_control_final_deterministic",
+      "executed_transitions": 292,
+      "scored_transitions": 285,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.4399999380111694,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.4399999380111694,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.459999918937683,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.3600000143051147,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1140,
+        "max_joint_speed_p99_rad_s": 3.4202001094818115,
+        "max_joint_speed_max_rad_s": 37.70235824584961,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5425529479980469,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "368ffefc012bf871e074454080f4efdfbec52a44e3428b5308034d0d80bbb394",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed1_control_initial_stochastic",
+      "executed_transitions": 268,
+      "scored_transitions": 247,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.2799999713897705,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.2400000095367432,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.3399999141693115,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.0799999237060547,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 988,
+        "max_joint_speed_p99_rad_s": 22.30022621154785,
+        "max_joint_speed_max_rad_s": 32.31587600708008,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.023314254358410835
+      },
+      "checkpoint_sha256": "c98e591afd1d7c27dccb5b3591aa56a659d2e4afa8a26f28013802213530fde9",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed1_control_final_stochastic",
+      "executed_transitions": 256,
+      "scored_transitions": 234,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.1999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.1799999475479126,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.2799999713897705,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.0199999809265137,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 936,
+        "max_joint_speed_p99_rad_s": 23.07472801208496,
+        "max_joint_speed_max_rad_s": 26.590343475341797,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.02416740357875824
+      },
+      "checkpoint_sha256": "368ffefc012bf871e074454080f4efdfbec52a44e3428b5308034d0d80bbb394",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed1_candidate_initial_deterministic",
+      "executed_transitions": 500,
+      "scored_transitions": 458,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 2.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 2.3999998569488525,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 2.419999837875366,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.8399999141693115,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1832,
+        "max_joint_speed_p99_rad_s": 2.6638522148132324,
+        "max_joint_speed_max_rad_s": 3.7591376304626465,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5213608741760254,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "1154a4c0136e6b390393e67a71efd880aad78c5d1e31b09d1a4ee707eda78f6e",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed1_candidate_final_deterministic",
+      "executed_transitions": 408,
+      "scored_transitions": 388,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 2.0399999618530273,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 2.0199999809265137,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 2.0,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.6999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1552,
+        "max_joint_speed_p99_rad_s": 3.0685184001922607,
+        "max_joint_speed_max_rad_s": 11.11808967590332,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5474075078964233,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "2974e4411ba6c8eab337afbf87e6543b8799fa3362080c9c97a270f7b46f7f17",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed1_candidate_initial_stochastic",
+      "executed_transitions": 416,
+      "scored_transitions": 352,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 2.0799999237060547,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.5799999237060547,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 2.0199999809265137,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.3600000143051147,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1408,
+        "max_joint_speed_p99_rad_s": 23.77656364440918,
+        "max_joint_speed_max_rad_s": 31.182777404785156,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.026547806337475777
+      },
+      "checkpoint_sha256": "1154a4c0136e6b390393e67a71efd880aad78c5d1e31b09d1a4ee707eda78f6e",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed1_candidate_final_stochastic",
+      "executed_transitions": 340,
+      "scored_transitions": 300,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.6999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.459999918937683,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.5999999046325684,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.2400000095367432,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1200,
+        "max_joint_speed_p99_rad_s": 21.928905487060547,
+        "max_joint_speed_max_rad_s": 25.27259635925293,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.025287356227636337
+      },
+      "checkpoint_sha256": "2974e4411ba6c8eab337afbf87e6543b8799fa3362080c9c97a270f7b46f7f17",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed2_control_initial_deterministic",
+      "executed_transitions": 300,
+      "scored_transitions": 293,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.4800000190734863,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.3799999952316284,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1172,
+        "max_joint_speed_p99_rad_s": 2.893789529800415,
+        "max_joint_speed_max_rad_s": 8.458414077758789,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5267643928527832,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "41637da96d40fb8343f054af4a9dae523c58d31622ac1c9d749a6b05abfc9309",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed2_control_final_deterministic",
+      "executed_transitions": 324,
+      "scored_transitions": 316,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.6200000047683716,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.5999999046325684,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.6200000047683716,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.4800000190734863,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1264,
+        "max_joint_speed_p99_rad_s": 9.931821823120117,
+        "max_joint_speed_max_rad_s": 25.801414489746094,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.873671293258667,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "16fe812e2a01b294d685985a42dcbfae4a061aa63b65c1b31daf4d0deb5d789e",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed2_control_initial_stochastic",
+      "executed_transitions": 244,
+      "scored_transitions": 235,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.2200000286102295,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.1200000047683716,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.159999966621399,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.1999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 940,
+        "max_joint_speed_p99_rad_s": 22.000221252441406,
+        "max_joint_speed_max_rad_s": 25.402347564697266,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.025972120463848114
+      },
+      "checkpoint_sha256": "41637da96d40fb8343f054af4a9dae523c58d31622ac1c9d749a6b05abfc9309",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed2_control_final_stochastic",
+      "executed_transitions": 268,
+      "scored_transitions": 237,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.2999999523162842,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.100000023841858,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.3399999141693115,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.0,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 948,
+        "max_joint_speed_p99_rad_s": 22.802350997924805,
+        "max_joint_speed_max_rad_s": 26.56171417236328,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.02677142433822155
+      },
+      "checkpoint_sha256": "16fe812e2a01b294d685985a42dcbfae4a061aa63b65c1b31daf4d0deb5d789e",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed2_candidate_initial_deterministic",
+      "executed_transitions": 500,
+      "scored_transitions": 455,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 2.5,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 2.379999876022339,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 2.3999998569488525,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.8199999332427979,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1820,
+        "max_joint_speed_p99_rad_s": 2.729534149169922,
+        "max_joint_speed_max_rad_s": 3.6248483657836914,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5218779444694519,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "9ca33eca3c2bfede325edb9a598ed361af7a14f63bb86aa8c897e953a918c68a",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed2_candidate_final_deterministic",
+      "executed_transitions": 340,
+      "scored_transitions": 331,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.6999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.6999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.6799999475479126,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.5399999618530273,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1324,
+        "max_joint_speed_p99_rad_s": 4.150235176086426,
+        "max_joint_speed_max_rad_s": 17.4117431640625,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 0.5264912247657776,
+        "estimated_torque_saturated_joint_sample_fraction": 0.0
+      },
+      "checkpoint_sha256": "28b1f793704b9b1e5ff5c6f3322cab96107fd1af39a52d55eb975dbc106c7c8a",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed2_candidate_initial_stochastic",
+      "executed_transitions": 344,
+      "scored_transitions": 285,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.71999990940094,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.2999999523162842,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.3399999141693115,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.3399999141693115,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 1140,
+        "max_joint_speed_p99_rad_s": 22.406906127929688,
+        "max_joint_speed_max_rad_s": 37.00002670288086,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.028070176020264626
+      },
+      "checkpoint_sha256": "9ca33eca3c2bfede325edb9a598ed361af7a14f63bb86aa8c897e953a918c68a",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    },
+    {
+      "job": "seed2_candidate_final_stochastic",
+      "executed_transitions": 264,
+      "scored_transitions": 231,
+      "completed_10s": 0,
+      "episodes": [
+        {
+          "duration_s": 1.3199999332427979,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low",
+            "tilted"
+          ]
+        },
+        {
+          "duration_s": 1.059999942779541,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.1999999284744263,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        },
+        {
+          "duration_s": 1.0399999618530273,
+          "terminated": true,
+          "timeout": false,
+          "reasons": [
+            "root_low"
+          ]
+        }
+      ],
+      "first_episode_tail": {
+        "environment_substeps": 924,
+        "max_joint_speed_p99_rad_s": 22.67511749267578,
+        "max_joint_speed_max_rad_s": 37.100486755371094,
+        "environment_substeps_above_45_rad_s": 0,
+        "estimated_torque_peak_limit_fraction": 1.0,
+        "estimated_torque_saturated_joint_sample_fraction": 0.027168234810233116
+      },
+      "checkpoint_sha256": "28b1f793704b9b1e5ff5c6f3322cab96107fd1af39a52d55eb975dbc106c7c8a",
+      "plan_sha256": "132c861e2cb48f7b5f000d706231a8ef1a101cc24267606cfd680143d58bdb28"
+    }
+  ],
+  "frozen_comparison": {
+    "status": "completed",
+    "pairs": [
+      {
+        "name": "seed0_control",
+        "seed": 0,
+        "condition": "control",
+        "mode": "deterministic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 1.4800000190734863,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.4800000190734863,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.3799999952316284,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.6399999856948853,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.6399999856948853,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.659999966621399,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 74,
+            "duration_s": 1.48,
+            "tilt_deg_initial_final": [
+              19.8544979095459,
+              10.996345520019531
+            ],
+            "joint_rmse_initial_final": [
+              0.050543200224637985,
+              0.11033517867326736
+            ],
+            "body_rmse_initial_final": [
+              0.09092094749212265,
+              0.06511452794075012
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 74,
+            "duration_s": 1.48,
+            "tilt_deg_initial_final": [
+              19.841150283813477,
+              10.665848731994629
+            ],
+            "joint_rmse_initial_final": [
+              0.05071970447897911,
+              0.11107400059700012
+            ],
+            "body_rmse_initial_final": [
+              0.09084388613700867,
+              0.06370431929826736
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 75,
+            "duration_s": 1.5,
+            "tilt_deg_initial_final": [
+              20.493181228637695,
+              10.481537818908691
+            ],
+            "joint_rmse_initial_final": [
+              0.050590116530656815,
+              0.11079543083906174
+            ],
+            "body_rmse_initial_final": [
+              0.09445950388908386,
+              0.06316480785608292
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 69,
+            "duration_s": 1.3800000000000001,
+            "tilt_deg_initial_final": [
+              21.705337524414062,
+              11.977537155151367
+            ],
+            "joint_rmse_initial_final": [
+              0.05271923914551735,
+              0.11247160285711288
+            ],
+            "body_rmse_initial_final": [
+              0.09516673535108566,
+              0.07133284211158752
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              2.8675146102905273,
+              8.441962242126465
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5268591642379761,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              3.9009485244750977,
+              7.917632579803467
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5681877136230469,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          }
+        ]
+      },
+      {
+        "name": "seed0_control",
+        "seed": 0,
+        "condition": "control",
+        "mode": "stochastic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 1.1999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.2599999904632568,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.2599999904632568,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.1200000047683716,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.399999976158142,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.1799999475479126,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.2799999713897705,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.1399999856948853,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 60,
+            "duration_s": 1.2,
+            "tilt_deg_initial_final": [
+              19.055713653564453,
+              6.970862865447998
+            ],
+            "joint_rmse_initial_final": [
+              0.11937636882066727,
+              0.1605176031589508
+            ],
+            "body_rmse_initial_final": [
+              0.09874415397644043,
+              0.05530856177210808
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 59,
+            "duration_s": 1.18,
+            "tilt_deg_initial_final": [
+              19.054304122924805,
+              15.976494789123535
+            ],
+            "joint_rmse_initial_final": [
+              0.11844123899936676,
+              0.17432694137096405
+            ],
+            "body_rmse_initial_final": [
+              0.08713103085756302,
+              0.1053936779499054
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 63,
+            "duration_s": 1.26,
+            "tilt_deg_initial_final": [
+              20.317277908325195,
+              13.454644203186035
+            ],
+            "joint_rmse_initial_final": [
+              0.1216953694820404,
+              0.17682471871376038
+            ],
+            "body_rmse_initial_final": [
+              0.09866809099912643,
+              0.09675288200378418
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 56,
+            "duration_s": 1.12,
+            "tilt_deg_initial_final": [
+              21.546995162963867,
+              14.13960075378418
+            ],
+            "joint_rmse_initial_final": [
+              0.11666130274534225,
+              0.17091186344623566
+            ],
+            "body_rmse_initial_final": [
+              0.0981188639998436,
+              0.09896828234195709
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              22.435083389282227,
+              31.291465759277344
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.028640639036893845
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              23.2452335357666,
+              31.99904441833496
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.027310345321893692
+          }
+        ]
+      },
+      {
+        "name": "seed0_candidate",
+        "seed": 0,
+        "condition": "candidate",
+        "mode": "deterministic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 2.4800000190734863,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 2.379999876022339,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 2.3999998569488525,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.8199999332427979,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.7599999904632568,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.71999990940094,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.7799999713897705,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.5799999237060547,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 88,
+            "duration_s": 1.76,
+            "tilt_deg_initial_final": [
+              2.9424965381622314,
+              20.48753547668457
+            ],
+            "joint_rmse_initial_final": [
+              0.01392156071960926,
+              0.09186767041683197
+            ],
+            "body_rmse_initial_final": [
+              0.01407905574887991,
+              0.08707444369792938
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 86,
+            "duration_s": 1.72,
+            "tilt_deg_initial_final": [
+              3.6083555221557617,
+              20.855222702026367
+            ],
+            "joint_rmse_initial_final": [
+              0.017547080293297768,
+              0.09184146672487259
+            ],
+            "body_rmse_initial_final": [
+              0.01696198247373104,
+              0.08828840404748917
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 89,
+            "duration_s": 1.78,
+            "tilt_deg_initial_final": [
+              3.959841728210449,
+              21.08401107788086
+            ],
+            "joint_rmse_initial_final": [
+              0.019309716299176216,
+              0.09190390259027481
+            ],
+            "body_rmse_initial_final": [
+              0.01880590431392193,
+              0.08799690008163452
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 79,
+            "duration_s": 1.58,
+            "tilt_deg_initial_final": [
+              11.478460311889648,
+              24.535573959350586
+            ],
+            "joint_rmse_initial_final": [
+              0.04086694493889809,
+              0.08995218575000763
+            ],
+            "body_rmse_initial_final": [
+              0.04978412389755249,
+              0.0940513163805008
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              2.7062647342681885,
+              3.7018933296203613
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.522305428981781,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              6.028357982635498,
+              11.208606719970703
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.7683025598526001,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          }
+        ]
+      },
+      {
+        "name": "seed0_candidate",
+        "seed": 0,
+        "condition": "candidate",
+        "mode": "stochastic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 1.4199999570846558,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.4800000190734863,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.559999942779541,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.399999976158142,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.1999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.3199999332427979,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.459999918937683,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.2400000095367432,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 60,
+            "duration_s": 1.2,
+            "tilt_deg_initial_final": [
+              7.836122512817383,
+              18.576047897338867
+            ],
+            "joint_rmse_initial_final": [
+              0.11336947232484818,
+              0.14706602692604065
+            ],
+            "body_rmse_initial_final": [
+              0.04962780699133873,
+              0.09504210948944092
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 66,
+            "duration_s": 1.32,
+            "tilt_deg_initial_final": [
+              14.703649520874023,
+              25.789756774902344
+            ],
+            "joint_rmse_initial_final": [
+              0.12019989639520645,
+              0.14816035330295563
+            ],
+            "body_rmse_initial_final": [
+              0.0708034336566925,
+              0.09085836261510849
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 73,
+            "duration_s": 1.46,
+            "tilt_deg_initial_final": [
+              13.53324031829834,
+              25.564990997314453
+            ],
+            "joint_rmse_initial_final": [
+              0.12063964456319809,
+              0.15759648382663727
+            ],
+            "body_rmse_initial_final": [
+              0.07297675311565399,
+              0.0976940467953682
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 62,
+            "duration_s": 1.24,
+            "tilt_deg_initial_final": [
+              14.249104499816895,
+              27.45903968811035
+            ],
+            "joint_rmse_initial_final": [
+              0.12299563735723495,
+              0.14033010601997375
+            ],
+            "body_rmse_initial_final": [
+              0.07160462439060211,
+              0.10212575644254684
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              22.690719604492188,
+              36.985050201416016
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.02765681967139244
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              23.40699577331543,
+              31.129106521606445
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.028273219242691994
+          }
+        ]
+      },
+      {
+        "name": "seed1_control",
+        "seed": 1,
+        "condition": "control",
+        "mode": "deterministic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 1.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.3799999952316284,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.4399999380111694,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.4399999380111694,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.459999918937683,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.3600000143051147,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 72,
+            "duration_s": 1.44,
+            "tilt_deg_initial_final": [
+              18.488685607910156,
+              18.757808685302734
+            ],
+            "joint_rmse_initial_final": [
+              0.05095445364713669,
+              0.07650337368249893
+            ],
+            "body_rmse_initial_final": [
+              0.08353491872549057,
+              0.09353110194206238
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 72,
+            "duration_s": 1.44,
+            "tilt_deg_initial_final": [
+              18.476945877075195,
+              18.884450912475586
+            ],
+            "joint_rmse_initial_final": [
+              0.05116409808397293,
+              0.07660958170890808
+            ],
+            "body_rmse_initial_final": [
+              0.0834696814417839,
+              0.09411287307739258
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 73,
+            "duration_s": 1.46,
+            "tilt_deg_initial_final": [
+              19.09397315979004,
+              19.13421058654785
+            ],
+            "joint_rmse_initial_final": [
+              0.05088457092642784,
+              0.07673818618059158
+            ],
+            "body_rmse_initial_final": [
+              0.08687502145767212,
+              0.09584473073482513
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 68,
+            "duration_s": 1.36,
+            "tilt_deg_initial_final": [
+              20.963844299316406,
+              20.751747131347656
+            ],
+            "joint_rmse_initial_final": [
+              0.05288924649357796,
+              0.07833892852067947
+            ],
+            "body_rmse_initial_final": [
+              0.09126199781894684,
+              0.09965203702449799
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              2.885563850402832,
+              8.467195510864258
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5268378257751465,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              3.4202001094818115,
+              37.70235824584961
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5425529479980469,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          }
+        ]
+      },
+      {
+        "name": "seed1_control",
+        "seed": 1,
+        "condition": "control",
+        "mode": "stochastic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 1.2799999713897705,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.2400000095367432,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.3399999141693115,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.0799999237060547,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.1999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.1799999475479126,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.2799999713897705,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.0199999809265137,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 60,
+            "duration_s": 1.2,
+            "tilt_deg_initial_final": [
+              14.831338882446289,
+              17.55327606201172
+            ],
+            "joint_rmse_initial_final": [
+              0.12119197845458984,
+              0.1456638127565384
+            ],
+            "body_rmse_initial_final": [
+              0.07407461106777191,
+              0.09669561684131622
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 59,
+            "duration_s": 1.18,
+            "tilt_deg_initial_final": [
+              14.9619722366333,
+              15.83052921295166
+            ],
+            "joint_rmse_initial_final": [
+              0.11351227015256882,
+              0.14959026873111725
+            ],
+            "body_rmse_initial_final": [
+              0.08147285133600235,
+              0.09622765332460403
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 64,
+            "duration_s": 1.28,
+            "tilt_deg_initial_final": [
+              19.582477569580078,
+              19.532684326171875
+            ],
+            "joint_rmse_initial_final": [
+              0.1128663644194603,
+              0.1481664478778839
+            ],
+            "body_rmse_initial_final": [
+              0.0859387218952179,
+              0.09884116798639297
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 51,
+            "duration_s": 1.02,
+            "tilt_deg_initial_final": [
+              18.044889450073242,
+              18.175447463989258
+            ],
+            "joint_rmse_initial_final": [
+              0.1276758313179016,
+              0.16595323383808136
+            ],
+            "body_rmse_initial_final": [
+              0.08358654379844666,
+              0.10238351672887802
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              22.30022621154785,
+              32.31587600708008
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.023314254358410835
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              23.07472801208496,
+              26.590343475341797
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.02416740357875824
+          }
+        ]
+      },
+      {
+        "name": "seed1_candidate",
+        "seed": 1,
+        "condition": "candidate",
+        "mode": "deterministic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 2.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 2.3999998569488525,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 2.419999837875366,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.8399999141693115,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 2.0399999618530273,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 2.0199999809265137,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 2.0,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.6999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 102,
+            "duration_s": 2.04,
+            "tilt_deg_initial_final": [
+              5.074235916137695,
+              13.898112297058105
+            ],
+            "joint_rmse_initial_final": [
+              0.02569197490811348,
+              0.07142677158117294
+            ],
+            "body_rmse_initial_final": [
+              0.02545006014406681,
+              0.080232635140419
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 101,
+            "duration_s": 2.02,
+            "tilt_deg_initial_final": [
+              6.446049213409424,
+              14.051519393920898
+            ],
+            "joint_rmse_initial_final": [
+              0.03154394030570984,
+              0.07163314521312714
+            ],
+            "body_rmse_initial_final": [
+              0.031979549676179886,
+              0.08078570663928986
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 100,
+            "duration_s": 2.0,
+            "tilt_deg_initial_final": [
+              5.998857021331787,
+              14.024395942687988
+            ],
+            "joint_rmse_initial_final": [
+              0.029887285083532333,
+              0.07174555957317352
+            ],
+            "body_rmse_initial_final": [
+              0.029673729091882706,
+              0.08054473251104355
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 85,
+            "duration_s": 1.7,
+            "tilt_deg_initial_final": [
+              13.91462230682373,
+              16.494163513183594
+            ],
+            "joint_rmse_initial_final": [
+              0.040922679007053375,
+              0.07450307160615921
+            ],
+            "body_rmse_initial_final": [
+              0.06332004070281982,
+              0.08807571977376938
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              2.6638522148132324,
+              3.7591376304626465
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5213608741760254,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              3.0685184001922607,
+              11.11808967590332
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5474075078964233,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          }
+        ]
+      },
+      {
+        "name": "seed1_candidate",
+        "seed": 1,
+        "condition": "candidate",
+        "mode": "stochastic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 2.0799999237060547,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.5799999237060547,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 2.0199999809265137,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.3600000143051147,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.6999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.459999918937683,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.5999999046325684,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.2400000095367432,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 85,
+            "duration_s": 1.7,
+            "tilt_deg_initial_final": [
+              4.71504020690918,
+              15.124528884887695
+            ],
+            "joint_rmse_initial_final": [
+              0.11690640449523926,
+              0.1487809717655182
+            ],
+            "body_rmse_initial_final": [
+              0.03549676761031151,
+              0.08905531466007233
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 73,
+            "duration_s": 1.46,
+            "tilt_deg_initial_final": [
+              11.137996673583984,
+              15.34384536743164
+            ],
+            "joint_rmse_initial_final": [
+              0.11986447125673294,
+              0.14963343739509583
+            ],
+            "body_rmse_initial_final": [
+              0.06758501380681992,
+              0.09585830569267273
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 80,
+            "duration_s": 1.6,
+            "tilt_deg_initial_final": [
+              4.4280877113342285,
+              15.821528434753418
+            ],
+            "joint_rmse_initial_final": [
+              0.10424868762493134,
+              0.14721189439296722
+            ],
+            "body_rmse_initial_final": [
+              0.027974631637334824,
+              0.0915733277797699
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 62,
+            "duration_s": 1.24,
+            "tilt_deg_initial_final": [
+              15.286321640014648,
+              20.164783477783203
+            ],
+            "joint_rmse_initial_final": [
+              0.12456749379634857,
+              0.16438636183738708
+            ],
+            "body_rmse_initial_final": [
+              0.0735340416431427,
+              0.11039384454488754
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              23.77656364440918,
+              31.182777404785156
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.026547806337475777
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              21.928905487060547,
+              25.27259635925293
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.025287356227636337
+          }
+        ]
+      },
+      {
+        "name": "seed2_control",
+        "seed": 2,
+        "condition": "control",
+        "mode": "deterministic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 1.4800000190734863,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.3799999952316284,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.6200000047683716,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.5999999046325684,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.6200000047683716,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.4800000190734863,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 74,
+            "duration_s": 1.48,
+            "tilt_deg_initial_final": [
+              19.849618911743164,
+              11.871383666992188
+            ],
+            "joint_rmse_initial_final": [
+              0.05058249086141586,
+              0.09975011646747589
+            ],
+            "body_rmse_initial_final": [
+              0.09084215015172958,
+              0.06883639842271805
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 75,
+            "duration_s": 1.5,
+            "tilt_deg_initial_final": [
+              20.51059913635254,
+              12.692569732666016
+            ],
+            "joint_rmse_initial_final": [
+              0.05062433332204819,
+              0.09988626837730408
+            ],
+            "body_rmse_initial_final": [
+              0.09449122101068497,
+              0.07372685521841049
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 75,
+            "duration_s": 1.5,
+            "tilt_deg_initial_final": [
+              20.47589111328125,
+              12.171622276306152
+            ],
+            "joint_rmse_initial_final": [
+              0.05062858760356903,
+              0.099429652094841
+            ],
+            "body_rmse_initial_final": [
+              0.09432467073202133,
+              0.07007275521755219
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 69,
+            "duration_s": 1.3800000000000001,
+            "tilt_deg_initial_final": [
+              21.704147338867188,
+              14.347820281982422
+            ],
+            "joint_rmse_initial_final": [
+              0.05276406556367874,
+              0.09993109107017517
+            ],
+            "body_rmse_initial_final": [
+              0.09510473161935806,
+              0.07654804736375809
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              2.893789529800415,
+              8.458414077758789
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5267643928527832,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              9.931821823120117,
+              25.801414489746094
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.873671293258667,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          }
+        ]
+      },
+      {
+        "name": "seed2_control",
+        "seed": 2,
+        "condition": "control",
+        "mode": "stochastic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 1.2200000286102295,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.1200000047683716,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.159999966621399,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.1999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.2999999523162842,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.100000023841858,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.3399999141693115,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.0,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 61,
+            "duration_s": 1.22,
+            "tilt_deg_initial_final": [
+              21.382143020629883,
+              15.39406681060791
+            ],
+            "joint_rmse_initial_final": [
+              0.11793868988752365,
+              0.1591823548078537
+            ],
+            "body_rmse_initial_final": [
+              0.09864673763513565,
+              0.08523682504892349
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 55,
+            "duration_s": 1.1,
+            "tilt_deg_initial_final": [
+              21.628293991088867,
+              15.763421058654785
+            ],
+            "joint_rmse_initial_final": [
+              0.12392792850732803,
+              0.15249018371105194
+            ],
+            "body_rmse_initial_final": [
+              0.10108017921447754,
+              0.0973217561841011
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 58,
+            "duration_s": 1.16,
+            "tilt_deg_initial_final": [
+              19.026226043701172,
+              9.231362342834473
+            ],
+            "joint_rmse_initial_final": [
+              0.11937735974788666,
+              0.1531786024570465
+            ],
+            "body_rmse_initial_final": [
+              0.09765931963920593,
+              0.061725273728370667
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 50,
+            "duration_s": 1.0,
+            "tilt_deg_initial_final": [
+              14.032378196716309,
+              15.874455451965332
+            ],
+            "joint_rmse_initial_final": [
+              0.11622916162014008,
+              0.153591126203537
+            ],
+            "body_rmse_initial_final": [
+              0.06275226175785065,
+              0.09835414588451385
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              22.000221252441406,
+              25.402347564697266
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.025972120463848114
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              22.802350997924805,
+              26.56171417236328
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.02677142433822155
+          }
+        ]
+      },
+      {
+        "name": "seed2_candidate",
+        "seed": 2,
+        "condition": "candidate",
+        "mode": "deterministic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 2.5,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 2.379999876022339,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 2.3999998569488525,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.8199999332427979,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.6999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.6999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.6799999475479126,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.5399999618530273,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 85,
+            "duration_s": 1.7,
+            "tilt_deg_initial_final": [
+              2.5165975093841553,
+              17.141651153564453
+            ],
+            "joint_rmse_initial_final": [
+              0.011816833168268204,
+              0.09878796339035034
+            ],
+            "body_rmse_initial_final": [
+              0.011946392245590687,
+              0.08752116560935974
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 85,
+            "duration_s": 1.7,
+            "tilt_deg_initial_final": [
+              3.405565023422241,
+              17.243709564208984
+            ],
+            "joint_rmse_initial_final": [
+              0.01660214178264141,
+              0.10019274055957794
+            ],
+            "body_rmse_initial_final": [
+              0.015960583463311195,
+              0.0884595736861229
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 84,
+            "duration_s": 1.68,
+            "tilt_deg_initial_final": [
+              3.136667490005493,
+              17.748611450195312
+            ],
+            "joint_rmse_initial_final": [
+              0.01537299994379282,
+              0.09883883595466614
+            ],
+            "body_rmse_initial_final": [
+              0.014703239314258099,
+              0.08997483551502228
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 77,
+            "duration_s": 1.54,
+            "tilt_deg_initial_final": [
+              10.696205139160156,
+              19.656490325927734
+            ],
+            "joint_rmse_initial_final": [
+              0.04010849446058273,
+              0.10026270896196365
+            ],
+            "body_rmse_initial_final": [
+              0.04570490121841431,
+              0.09485979378223419
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              2.729534149169922,
+              3.6248483657836914
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5218779444694519,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              4.150235176086426,
+              17.4117431640625
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 0.5264912247657776,
+            "first_episode_estimated_torque_saturated_fraction": 0.0
+          }
+        ]
+      },
+      {
+        "name": "seed2_candidate",
+        "seed": 2,
+        "condition": "candidate",
+        "mode": "stochastic",
+        "initial_final_episodes": [
+          [
+            {
+              "duration_s": 1.71999990940094,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.2999999523162842,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.3399999141693115,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.3399999141693115,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ],
+          [
+            {
+              "duration_s": 1.3199999332427979,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low",
+                "tilted"
+              ]
+            },
+            {
+              "duration_s": 1.059999942779541,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.1999999284744263,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            },
+            {
+              "duration_s": 1.0399999618530273,
+              "terminated": true,
+              "timeout": false,
+              "reasons": [
+                "root_low"
+              ]
+            }
+          ]
+        ],
+        "completed_10s_initial_final": [
+          0,
+          0
+        ],
+        "common_window_per_start": [
+          {
+            "start_index": 0,
+            "steps": 66,
+            "duration_s": 1.32,
+            "tilt_deg_initial_final": [
+              8.543037414550781,
+              19.032482147216797
+            ],
+            "joint_rmse_initial_final": [
+              0.11807482689619064,
+              0.16819366812705994
+            ],
+            "body_rmse_initial_final": [
+              0.04113916680216789,
+              0.10168599337339401
+            ]
+          },
+          {
+            "start_index": 1,
+            "steps": 53,
+            "duration_s": 1.06,
+            "tilt_deg_initial_final": [
+              14.03255558013916,
+              19.80660057067871
+            ],
+            "joint_rmse_initial_final": [
+              0.11553378403186798,
+              0.15328939259052277
+            ],
+            "body_rmse_initial_final": [
+              0.05805520713329315,
+              0.09972353279590607
+            ]
+          },
+          {
+            "start_index": 2,
+            "steps": 60,
+            "duration_s": 1.2,
+            "tilt_deg_initial_final": [
+              10.731719970703125,
+              14.955961227416992
+            ],
+            "joint_rmse_initial_final": [
+              0.11697287112474442,
+              0.1580110788345337
+            ],
+            "body_rmse_initial_final": [
+              0.06778228282928467,
+              0.09751340746879578
+            ]
+          },
+          {
+            "start_index": 3,
+            "steps": 52,
+            "duration_s": 1.04,
+            "tilt_deg_initial_final": [
+              9.392937660217285,
+              17.883909225463867
+            ],
+            "joint_rmse_initial_final": [
+              0.11319983005523682,
+              0.157776340842247
+            ],
+            "body_rmse_initial_final": [
+              0.048160046339035034,
+              0.10016781836748123
+            ]
+          }
+        ],
+        "physics_initial_final": [
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              22.406906127929688,
+              37.00002670288086
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.028070176020264626
+          },
+          {
+            "first_episode_substep_speed_p99_max_rad_s": [
+              22.67511749267578,
+              37.100486755371094
+            ],
+            "first_episode_estimated_torque_peak_limit_fraction": 1.0,
+            "first_episode_estimated_torque_saturated_fraction": 0.027168234810233116
+          }
+        ]
+      }
+    ],
+    "actual_transitions": 7984,
+    "budget_transitions": 48000,
+    "scope": "three training seeds reported individually; four starts are not independent training seeds"
+  },
+  "checkpoint_latent_std": {
+    "scope": "CPU read-only checkpoint exploration scale; latent pre-tanh units, not joint radians",
+    "rows": [
+      {
+        "seed": 0,
+        "condition": "control",
+        "latent_std_initial_final": [
+          {
+            "mean": 0.09999998658895493,
+            "min": 0.09999999403953552,
+            "max": 0.09999999403953552,
+            "per_joint": [
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552
+            ]
+          },
+          {
+            "mean": 0.10015806555747986,
+            "min": 0.09991927444934845,
+            "max": 0.1003255844116211,
+            "per_joint": [
+              0.10022744536399841,
+              0.10024017840623856,
+              0.10017918795347214,
+              0.10010843724012375,
+              0.10001304000616074,
+              0.1000155657529831,
+              0.10002904385328293,
+              0.10012257099151611,
+              0.10030566155910492,
+              0.10017641633749008,
+              0.10005902498960495,
+              0.10017911344766617,
+              0.10026759654283524,
+              0.1003255844116211,
+              0.100227490067482,
+              0.10003991425037384,
+              0.100055992603302,
+              0.09994067251682281,
+              0.10013329237699509,
+              0.10014241188764572,
+              0.1002325788140297,
+              0.10030955821275711,
+              0.10024187713861465,
+              0.10015866905450821,
+              0.09991927444934845,
+              0.1002587303519249,
+              0.10019215941429138,
+              0.1002749353647232,
+              0.1002073734998703
+            ]
+          }
+        ]
+      },
+      {
+        "seed": 0,
+        "condition": "candidate",
+        "latent_std_initial_final": [
+          {
+            "mean": 0.09999998658895493,
+            "min": 0.09999999403953552,
+            "max": 0.09999999403953552,
+            "per_joint": [
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552
+            ]
+          },
+          {
+            "mean": 0.10014345496892929,
+            "min": 0.09980347007513046,
+            "max": 0.10047176480293274,
+            "per_joint": [
+              0.10010559856891632,
+              0.10026850551366806,
+              0.10038535296916962,
+              0.10008200258016586,
+              0.10020331293344498,
+              0.10001160949468613,
+              0.09980347007513046,
+              0.10016631335020065,
+              0.10025624185800552,
+              0.10023991763591766,
+              0.10003447532653809,
+              0.10017187893390656,
+              0.10020706057548523,
+              0.10047176480293274,
+              0.10013042390346527,
+              0.10004904866218567,
+              0.09994808584451675,
+              0.10003411769866943,
+              0.100066177546978,
+              0.10009472072124481,
+              0.10029344260692596,
+              0.10031046718358994,
+              0.1002107635140419,
+              0.10009624809026718,
+              0.09987273812294006,
+              0.10023769736289978,
+              0.10010457783937454,
+              0.10012925416231155,
+              0.10017505288124084
+            ]
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "condition": "control",
+        "latent_std_initial_final": [
+          {
+            "mean": 0.09999998658895493,
+            "min": 0.09999999403953552,
+            "max": 0.09999999403953552,
+            "per_joint": [
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552
+            ]
+          },
+          {
+            "mean": 0.10008543729782104,
+            "min": 0.09972605109214783,
+            "max": 0.10041608661413193,
+            "per_joint": [
+              0.09987787902355194,
+              0.10037705302238464,
+              0.10007207095623016,
+              0.10007166862487793,
+              0.10024560987949371,
+              0.10015518218278885,
+              0.10007703304290771,
+              0.10027720779180527,
+              0.10027109086513519,
+              0.10010161250829697,
+              0.10011176019906998,
+              0.10007596015930176,
+              0.09994498640298843,
+              0.10041608661413193,
+              0.10008693486452103,
+              0.09992306679487228,
+              0.10020381212234497,
+              0.09972605109214783,
+              0.09998316317796707,
+              0.10018604248762131,
+              0.10030810534954071,
+              0.09997336566448212,
+              0.10013230890035629,
+              0.0999077707529068,
+              0.09981415420770645,
+              0.09979987889528275,
+              0.10030781477689743,
+              0.09992337226867676,
+              0.1001269668340683
+            ]
+          }
+        ]
+      },
+      {
+        "seed": 1,
+        "condition": "candidate",
+        "latent_std_initial_final": [
+          {
+            "mean": 0.09999998658895493,
+            "min": 0.09999999403953552,
+            "max": 0.09999999403953552,
+            "per_joint": [
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552
+            ]
+          },
+          {
+            "mean": 0.10007980465888977,
+            "min": 0.0996234118938446,
+            "max": 0.10035886615514755,
+            "per_joint": [
+              0.10003495216369629,
+              0.10025758296251297,
+              0.09995435178279877,
+              0.10011858493089676,
+              0.10015977174043655,
+              0.10006599128246307,
+              0.10026561468839645,
+              0.10009390860795975,
+              0.10021501779556274,
+              0.1001969575881958,
+              0.10001210868358612,
+              0.10019466280937195,
+              0.09992280602455139,
+              0.10035886615514755,
+              0.1001269668340683,
+              0.09994757920503616,
+              0.10022897273302078,
+              0.0996234118938446,
+              0.10012713074684143,
+              0.10003083199262619,
+              0.10031221807003021,
+              0.10012756288051605,
+              0.10013388842344284,
+              0.09994351118803024,
+              0.0998246967792511,
+              0.0998038724064827,
+              0.10019786655902863,
+              0.09990110248327255,
+              0.10013402998447418
+            ]
+          }
+        ]
+      },
+      {
+        "seed": 2,
+        "condition": "control",
+        "latent_std_initial_final": [
+          {
+            "mean": 0.09999998658895493,
+            "min": 0.09999999403953552,
+            "max": 0.09999999403953552,
+            "per_joint": [
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552
+            ]
+          },
+          {
+            "mean": 0.10012447088956833,
+            "min": 0.09973931312561035,
+            "max": 0.10041884332895279,
+            "per_joint": [
+              0.10000109672546387,
+              0.09993385523557663,
+              0.10022586584091187,
+              0.10021451860666275,
+              0.10041031986474991,
+              0.10030834376811981,
+              0.10028832405805588,
+              0.10038434714078903,
+              0.10000533610582352,
+              0.09994496405124664,
+              0.10027991235256195,
+              0.10027594119310379,
+              0.10000436007976532,
+              0.10021377354860306,
+              0.10008290410041809,
+              0.10001334547996521,
+              0.09973931312561035,
+              0.09987802803516388,
+              0.10012015700340271,
+              0.10015103220939636,
+              0.09995301812887192,
+              0.10041884332895279,
+              0.10001654177904129,
+              0.10035790503025055,
+              0.09979497641324997,
+              0.10035254806280136,
+              0.10010569542646408,
+              0.09995139390230179,
+              0.10018298029899597
+            ]
+          }
+        ]
+      },
+      {
+        "seed": 2,
+        "condition": "candidate",
+        "latent_std_initial_final": [
+          {
+            "mean": 0.09999998658895493,
+            "min": 0.09999999403953552,
+            "max": 0.09999999403953552,
+            "per_joint": [
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552,
+              0.09999999403953552
+            ]
+          },
+          {
+            "mean": 0.10013353079557419,
+            "min": 0.09977689385414124,
+            "max": 0.10039375722408295,
+            "per_joint": [
+              0.09982945770025253,
+              0.09996862709522247,
+              0.10014589875936508,
+              0.10035376995801926,
+              0.10027627646923065,
+              0.10032697021961212,
+              0.10029248893260956,
+              0.10023308545351028,
+              0.09996652603149414,
+              0.09999246150255203,
+              0.1002916768193245,
+              0.10037101805210114,
+              0.09998888522386551,
+              0.1003655418753624,
+              0.10009954124689102,
+              0.10001244395971298,
+              0.09993938356637955,
+              0.09984611719846725,
+              0.10010364651679993,
+              0.10022782534360886,
+              0.10002646595239639,
+              0.10039375722408295,
+              0.1000714972615242,
+              0.1003655418753624,
+              0.09977689385414124,
+              0.10029342025518417,
+              0.10012106597423553,
+              0.09994200617074966,
+              0.10025050491094589
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "conventions": {
+    "duration": "Per-seed means of four fixed first episodes; mean and sample SD across three training seeds.",
+    "tracking": "Arithmetic mean of four per-start RMSE/tilt values over the initial/final common survival window; body RMSE in meters.",
+    "tail": "p99 over the maximum absolute joint speed per environment substep; estimated PD torque is not solver-measured torque.",
+    "windows": "Full first-episode tails are reported separately from common-window initial/final tails.",
+    "scope": "Static reference, four prescribed starts, three seeds and one fixed noise tape per seed; no formal benchmark or generalization claim.",
+    "timeout": "A configured 10-second horizon does not validate the physical timeout branch when all episodes terminate early."
+  },
+  "provenance": {
+    "gpu_uuid": "GPU-d86528b1-67d4-d67f-db2c-ccae580a1267",
+    "cuda_device": 0,
+    "vulkan_device": 9,
+    "training_commit": "5f8b4b80d1d9933b75bded54c6670b81e20ef550",
+    "script_path": "runs/standing_multiseed_20260922/evaluation_20260929/publish_results.py",
+    "script_sha256": "055729134432d19a149a77883cc8309828cd9b1bfa324a80b71dbce9cf2ebb6b",
+    "summary_path": "runs/standing_multiseed_20260922/deferred_evaluation_summary.json",
+    "summary_sha256": "f50cea78fdb389aafd395df3ec4c3a1cc696de05576c70fae4a1ac8780a9a89d",
+    "sources": [
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_initial_deterministic/metrics.json",
+        "sha256": "4534aa163441fd9124e694ae7646b2a624d573a0496a806914f8e7bd30ba11df"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_initial_deterministic/trajectory.pt",
+        "sha256": "7bcfe6816795f40ab57e417d4ead0119cca9fe532b4ed9279518bc44ab27c08b"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_initial_deterministic/initial_evidence.pt",
+        "sha256": "a073bf30ef66af6575d32a06133872808788c40b30bdd0836ce2ada5b0f0e713"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_final_deterministic/metrics.json",
+        "sha256": "8f02b70c6d9ddedd6aa55d1eb18cc645835e0e4a8b65bae9ffb250670d1299e9"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_final_deterministic/trajectory.pt",
+        "sha256": "4f5b14ebbff0819179718c7dec60979e70b033f329ef1926a07662642681a4f1"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_final_deterministic/initial_evidence.pt",
+        "sha256": "a073bf30ef66af6575d32a06133872808788c40b30bdd0836ce2ada5b0f0e713"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_initial_stochastic/metrics.json",
+        "sha256": "36f9a9e186e8ecf8adf45001319c7a7b7a31f457ce8e93a2f022d06366ec7aa9"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_initial_stochastic/trajectory.pt",
+        "sha256": "322848a09636756d0ce9704283f1adb3acade6d6f41daf8bd1f400b2d6ee32de"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_initial_stochastic/initial_evidence.pt",
+        "sha256": "a073bf30ef66af6575d32a06133872808788c40b30bdd0836ce2ada5b0f0e713"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_final_stochastic/metrics.json",
+        "sha256": "158475f9e1742005ead30b21730d4c2eb73b631c76952ca40ffb0815703c3bbb"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_final_stochastic/trajectory.pt",
+        "sha256": "97594e95d3637f62c323517d0c3c5e458b35577c6b999dab79601743b57ea44d"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_control_final_stochastic/initial_evidence.pt",
+        "sha256": "a073bf30ef66af6575d32a06133872808788c40b30bdd0836ce2ada5b0f0e713"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_initial_deterministic/metrics.json",
+        "sha256": "a1b2bc0101a7efe9ac59be35262e6ffafaebb44e9106d6b48142a892e3a46511"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_initial_deterministic/trajectory.pt",
+        "sha256": "59ca97de7718f4f78f7482cc93632d0d5cdfa44c1740bf1203098336ebad5663"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_initial_deterministic/initial_evidence.pt",
+        "sha256": "a073bf30ef66af6575d32a06133872808788c40b30bdd0836ce2ada5b0f0e713"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_final_deterministic/metrics.json",
+        "sha256": "186ffe80eff84242be9e98ac5cecddf3d9f2cb9b74310040b4efd91a29a40ec5"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_final_deterministic/trajectory.pt",
+        "sha256": "e965a4c57685054a77bcab11249b2b88922584d302a82f2cb8415d2a96fa588e"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_final_deterministic/initial_evidence.pt",
+        "sha256": "a073bf30ef66af6575d32a06133872808788c40b30bdd0836ce2ada5b0f0e713"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_initial_stochastic/metrics.json",
+        "sha256": "3b4ed0741066aa146225768292e68012724d575e89f21b17c90e6bce689c7153"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_initial_stochastic/trajectory.pt",
+        "sha256": "60f2ae7235aa2b0a81d5ea2556d6c0ab48213fe8f9e7afbab1956894d9262cf1"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_initial_stochastic/initial_evidence.pt",
+        "sha256": "a073bf30ef66af6575d32a06133872808788c40b30bdd0836ce2ada5b0f0e713"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_final_stochastic/metrics.json",
+        "sha256": "af526db73d14b51a62f5d3dbe47ed60592e9d2db15933b1d73fab890d4cda053"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_final_stochastic/trajectory.pt",
+        "sha256": "5e7239dc74a0341663bdad280790ec8151e8099455cb37a305f50ae9eae62556"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed0_candidate_final_stochastic/initial_evidence.pt",
+        "sha256": "a073bf30ef66af6575d32a06133872808788c40b30bdd0836ce2ada5b0f0e713"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_initial_deterministic/metrics.json",
+        "sha256": "7ebe30cdcf065b16d21e818221a394a4acf8ec1236e138192a39404801c75fe9"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_initial_deterministic/trajectory.pt",
+        "sha256": "39549429b52b5f976e73435f39f7fbf0858d944da66bf4dbf4f04e0e17677653"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_initial_deterministic/initial_evidence.pt",
+        "sha256": "d702376dfcc80860b9de926c0824341bb40c5a58c1474a5763fe2e032932d02f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_final_deterministic/metrics.json",
+        "sha256": "3df8bdf62619f93becf3892147b1a202db043549fc86ce1e06628f6d98cc8b1a"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_final_deterministic/trajectory.pt",
+        "sha256": "81bfd946150d61aedf226b816274729ebe6e2ba94884e868c975b524c854be06"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_final_deterministic/initial_evidence.pt",
+        "sha256": "d702376dfcc80860b9de926c0824341bb40c5a58c1474a5763fe2e032932d02f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_initial_stochastic/metrics.json",
+        "sha256": "06b98e3430242956e831de0fe80e4c6f7dda815ecf9cbd1903165dfd63caf0b1"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_initial_stochastic/trajectory.pt",
+        "sha256": "7cba03807212637ed54a7ca8a90dd54dbdfdf660fd73f9f9d26e7b99bef1d8cb"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_initial_stochastic/initial_evidence.pt",
+        "sha256": "d702376dfcc80860b9de926c0824341bb40c5a58c1474a5763fe2e032932d02f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_final_stochastic/metrics.json",
+        "sha256": "8f19f7985ee5b778b2f817297f85b067369a4a46f13e5b4314a3b36cff9e3700"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_final_stochastic/trajectory.pt",
+        "sha256": "834e44ee8fb4cadd5bccb6630be6a4ff99107e8ada907ef0e87313422e129b8a"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_control_final_stochastic/initial_evidence.pt",
+        "sha256": "d702376dfcc80860b9de926c0824341bb40c5a58c1474a5763fe2e032932d02f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_initial_deterministic/metrics.json",
+        "sha256": "2106f79ab8155052409960a20b7fbd79c1d62a3479e2a944b1523aa5d4e696f7"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_initial_deterministic/trajectory.pt",
+        "sha256": "a5843987dc3e4f911ca91f8e1f77cff7cb0e05a797aa4cf26a51996073442014"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_initial_deterministic/initial_evidence.pt",
+        "sha256": "d702376dfcc80860b9de926c0824341bb40c5a58c1474a5763fe2e032932d02f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_final_deterministic/metrics.json",
+        "sha256": "de9233e20598ea7e3be2b6e6673760cb968e905d6321c3e9c9a2fdb2b53d5d98"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_final_deterministic/trajectory.pt",
+        "sha256": "30d8f05be4c9b779d53e039de0b5050209bb6541d5a030845c36878274b1d343"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_final_deterministic/initial_evidence.pt",
+        "sha256": "d702376dfcc80860b9de926c0824341bb40c5a58c1474a5763fe2e032932d02f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_initial_stochastic/metrics.json",
+        "sha256": "9980ebb4152a218725667ca87ea7c36a7c9d633dfd797d3f7d35820b3734d29f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_initial_stochastic/trajectory.pt",
+        "sha256": "1ec50de31a38f15c4c3ab7874b0d36b9d237f26babb2bee48786bac70255ad9d"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_initial_stochastic/initial_evidence.pt",
+        "sha256": "d702376dfcc80860b9de926c0824341bb40c5a58c1474a5763fe2e032932d02f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_final_stochastic/metrics.json",
+        "sha256": "9bb2b9c034296a47958d3923bc0108da785b14e7b010aa57da5d880607014d60"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_final_stochastic/trajectory.pt",
+        "sha256": "92de561572ede506808a492fca8425f6184d02ba37852eaa8b1a492ae3cbc9b6"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed1_candidate_final_stochastic/initial_evidence.pt",
+        "sha256": "d702376dfcc80860b9de926c0824341bb40c5a58c1474a5763fe2e032932d02f"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_initial_deterministic/metrics.json",
+        "sha256": "f45edbb4603e17266cc295720a144e722dccb5de4e8b5bf747d33770fa279b98"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_initial_deterministic/trajectory.pt",
+        "sha256": "3fcd44c1ca16be51024eee5f79600a833f329c7d971a21c0720c6aea6da1924e"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_initial_deterministic/initial_evidence.pt",
+        "sha256": "47d15ca10443440e0ebf7a3fc1fed9c1015dab5704c5c25202b50cdbcc58b727"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_final_deterministic/metrics.json",
+        "sha256": "b2bd020be51a0ac6ceb8f41732d4644b83b131d73e88b6f3e09e865a2a41577d"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_final_deterministic/trajectory.pt",
+        "sha256": "1ba74de6d62cdd8518f2faf26727cfec77d365e84ba22ba2cd786e191db487f0"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_final_deterministic/initial_evidence.pt",
+        "sha256": "47d15ca10443440e0ebf7a3fc1fed9c1015dab5704c5c25202b50cdbcc58b727"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_initial_stochastic/metrics.json",
+        "sha256": "10b2f5da5549ac284ba96d2d6b6768efa362932fff0d6c5603a0ba9c125aedcf"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_initial_stochastic/trajectory.pt",
+        "sha256": "09bd775466283dae618928ab045d5872f2d596e3b9383f679d19456370bff4c1"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_initial_stochastic/initial_evidence.pt",
+        "sha256": "47d15ca10443440e0ebf7a3fc1fed9c1015dab5704c5c25202b50cdbcc58b727"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_final_stochastic/metrics.json",
+        "sha256": "e82875a6153b74f4d81fb7e8367848393e777a18f7f921a32898e58f1d00e856"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_final_stochastic/trajectory.pt",
+        "sha256": "5eed38e67fdfaabe28a6b938a27206be2ce3823aa40e0aa3305efa9adf2fba8b"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_control_final_stochastic/initial_evidence.pt",
+        "sha256": "47d15ca10443440e0ebf7a3fc1fed9c1015dab5704c5c25202b50cdbcc58b727"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_initial_deterministic/metrics.json",
+        "sha256": "c20319c316eb79ea8f61c587810dd5ed7919a8040efbbc2f999b32b58a524520"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_initial_deterministic/trajectory.pt",
+        "sha256": "562c7afdf4cc7c4f4251d24669aae57d0a7a0ccaf186bec2f9758764f24e0b83"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_initial_deterministic/initial_evidence.pt",
+        "sha256": "47d15ca10443440e0ebf7a3fc1fed9c1015dab5704c5c25202b50cdbcc58b727"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_final_deterministic/metrics.json",
+        "sha256": "be909083b393b8640243b4730ae2ba951b5892920737839ed863ad3fa5b0acc5"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_final_deterministic/trajectory.pt",
+        "sha256": "064405182020ec000f0edf88d6e06738a46d672292b6dd4e292dd9a9d4c832c8"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_final_deterministic/initial_evidence.pt",
+        "sha256": "47d15ca10443440e0ebf7a3fc1fed9c1015dab5704c5c25202b50cdbcc58b727"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_initial_stochastic/metrics.json",
+        "sha256": "209876c6944ae12012d6eaa866ec099236bb7932486352cdd6cda5d8733bd90a"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_initial_stochastic/trajectory.pt",
+        "sha256": "facd8fcc56575de8e56b62ca673c45fedd4e236b97b0b6d99e35d71a77f384ed"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_initial_stochastic/initial_evidence.pt",
+        "sha256": "47d15ca10443440e0ebf7a3fc1fed9c1015dab5704c5c25202b50cdbcc58b727"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_final_stochastic/metrics.json",
+        "sha256": "efcefd3e6528f27dc09d067b33dcab950d220bcc90edc85aae228cc00870b84d"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_final_stochastic/trajectory.pt",
+        "sha256": "ece48a5a3fbc6227de1b4e526ec8d902a32b72598c3a85cd09be9c6a86394482"
+      },
+      {
+        "path": "runs/standing_multiseed_20260922/physics_v1/deferred_evaluation/seed2_candidate_final_stochastic/initial_evidence.pt",
+        "sha256": "47d15ca10443440e0ebf7a3fc1fed9c1015dab5704c5c25202b50cdbcc58b727"
+      }
+    ]
+  }
+}
